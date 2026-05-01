@@ -1,9 +1,9 @@
-name: Sync Bounty Tracker to Airtable
+name: Sync Contribution Tracker to Airtable
 
 on:
   push:
     paths:
-      - '000-docs/002-PM-BKLG-bounty-tracker.csv'
+      - '000-docs/002-PM-BKLG-contribution-tracker.csv'
     branches:
       - master
       - main

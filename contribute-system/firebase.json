@@ -9,7 +9,7 @@
     "rewrites": [
       {
         "source": "**",
-        "run": { "serviceId": "bounty-dashboard", "region": "us-central1" }
+        "run": { "serviceId": "contributions-dashboard", "region": "us-central1" }
       }
     ]
   },

@@ -16,8 +16,8 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    // Bounties - readable by all authenticated users, writable by admins
-    match /bounties/{bountyId} {
+    // Contributions - readable by all authenticated users, writable by admins
+    match /contributions/{contributionId} {
       allow read: if isAuthenticated();
       allow create, update: if isAdmin();
       allow delete: if isAdmin();

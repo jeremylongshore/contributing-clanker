@@ -530,7 +530,7 @@ Note: Orchestrator deployment to Vertex AI will add cost (~$50-100/month dependi
 | Key | Purpose | Example |
 |-----|---------|---------|
 | `projectId` | GCP project | `contribute-system-prod` |
-| `proofBucket` | GCS bucket | `gs://bounty-proofs` |
+| `proofBucket` | GCS bucket | `gs://contribution-proofs` |
 | `githubToken` | GitHub API token | `ghp_xxxxx` |
 
 ### Critical URLs

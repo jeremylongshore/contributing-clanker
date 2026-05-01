@@ -4,18 +4,18 @@ on:
   push:
     branches: [main, master]
     paths:
-      - 'bounty-system/**'
+      - 'contribute-system/**'
   pull_request:
     branches: [main, master]
     paths:
-      - 'bounty-system/**'
+      - 'contribute-system/**'
   workflow_dispatch:
 
 env:
   PROJECT_ID: intentional-bounty
   REGION: us-central1
-  SERVICE_NAME: bounty-dashboard
-  WORKING_DIR: bounty-system
+  SERVICE_NAME: contributions-dashboard
+  WORKING_DIR: contribute-system
 
 jobs:
   build-and-deploy:

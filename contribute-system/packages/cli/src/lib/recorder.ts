@@ -5,7 +5,7 @@
  *
  * Prerequisites:
  *   - asciinema installed: pip install asciinema
- *   - GCS bucket configured: bounty config set proofBucket gs://your-bucket
+ *   - GCS bucket configured: contribute config set proofBucket gs://your-bucket
  */
 
 import { spawn, ChildProcess } from 'child_process';
@@ -15,7 +15,7 @@ import { homedir } from 'os';
 import { Storage } from '@google-cloud/storage';
 import { getConfig } from './config';
 
-const RECORDINGS_DIR = join(homedir(), '.bounty', 'recordings');
+const RECORDINGS_DIR = join(homedir(), '.contribute', 'recordings');
 
 export interface RecordingSession {
   id: string;
@@ -167,7 +167,7 @@ export async function uploadRecording(session: RecordingSession): Promise<Record
 
   if (!config.proofBucket) {
     console.warn('No proof bucket configured. Skipping upload.');
-    console.warn('Set with: bounty config set proofBucket gs://your-bucket-name');
+    console.warn('Set with: contribute config set proofBucket gs://your-bucket-name');
     return session;
   }
 
