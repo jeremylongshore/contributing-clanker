@@ -1,0 +1,39 @@
+{
+  "name": "@contribute/cli",
+  "version": "0.2.0",
+  "description": "CLI for contribute-system - track, record, and prove your OSS contributions",
+  "bin": {
+    "contribute": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --dts --clean",
+    "dev": "tsup src/index.ts --format cjs --dts --watch",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@contribute/core": "workspace:*",
+    "@contribute/vetting": "workspace:*",
+    "@google-cloud/firestore": "^7.0.0",
+    "@google-cloud/storage": "^7.0.0",
+    "@libsql/client": "^0.5.0",
+    "@octokit/rest": "^20.0.0",
+    "chalk": "^5.3.0",
+    "commander": "^12.0.0",
+    "conf": "^12.0.0",
+    "dotenv": "^16.0.0",
+    "ora": "^8.0.0",
+    "table": "^6.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
