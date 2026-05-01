@@ -1,15 +1,15 @@
 # OSS Contributions HQ
 
-Tracking open source contributions across upstream projects with paid contribution programs.
+Workspace for tracking open source contributions. Contains clones of upstream projects with paid-contribution programs (Algora, Gumroad, Cortex, etc.) plus the contribution tracker.
 
-## Quick Stats
+The actual workflow lives in the **[`/contribute` Claude Code skill](https://github.com/jeremylongshore/dotfiles)** at `~/.claude/skills/contribute/`. Run `/contribute` in any Claude Code session to discover, qualify, and submit contributions. The skill auto-refreshes state from `gh` + the local SQLite tracker on invoke.
 
-| Metric | Value |
-|--------|-------|
-| Total Available | ~$40,000+ |
-| In Progress | 1 |
-| Submitted | 1 ($1,500) |
-| Earned | $0 |
+## Tracking
+
+- **[contribution-tracker.csv](./000-docs/002-PM-BKLG-contribution-tracker.csv)** — canonical contribution backlog
+- **[payment-tracker.md](./000-docs/001-BL-TRCK-payment-tracker.md)** — payment status across programs
+- **`~/.contribute-system/contribute.db`** — local SQLite (28 contributions). Source of truth, derived from CSV + GitHub state.
+- **[surgical-contributions.md](./surgical-contributions.md)** — curated <100 LOC template-based opportunities
 
 ## Active Work
 
@@ -17,58 +17,39 @@ Tracking open source contributions across upstream projects with paid contributi
 |------|------|--------|--------|-----|
 | gumroad | _legacy.scss | $1,500 | PR Submitted | [#2573](https://github.com/antiwork/gumroad/pull/2573) |
 
-## Tracking
+## Repos in this Workspace
 
-Full tracking in [contribution-tracker.csv](./000-docs/002-PM-BKLG-contribution-tracker.csv).
-
-## Repos
-
-| Repo | Reward | Stack | Notes |
-|------|--------|-------|-------|
-| [gumroad/](./gumroad/) | $1.5K/file | CSS/Tailwind | Tailwind migration - ACTIVE |
-| [screenpipe](https://algora.io/mediar-ai/bounties/community) | $25-500 | TypeScript/AI | $4,910 pool - 27 contributions |
-| [tscircuit](https://algora.io/tscircuit/bounties/community) | $25-150 | React/TS | $5,502 pool - PCB design |
-| [golemcloud](https://algora.io/golemcloud/bounties/community) | $3.5K | Rust/WASM | MCP/TTS contributions |
-| [zio/](./zio/) | $2-4K | Scala | Schema/Patch contributions |
-| [projectdiscovery/](./projectdiscovery/) | $100 | YAML | CVE templates |
-| [cal-com/](./cal-com/) | $20-500 | TypeScript | Low value, many claimed |
-
-## Recommended Next Contributions
-
-### Best ROI (Your Skills)
-1. **screenpipe** - TypeScript/AI - $25-500 each - Active program
-2. **gumroad/_definitions.scss** - 296 lines - $1,500 - Core SCSS file
-3. **gumroad/_global.scss** - 308 lines - $1,500 - Medium complexity
-
-### Blocked (Competing PRs)
-- gumroad/_dropdown.scss - PR #2275 (active)
-- gumroad/_button.scss - PR #2324 (active)
-- gumroad/_forms.scss - PR #2536
-- gumroad/_stack.scss - PR #2558
-
-### High Value (Different Stack)
-- golemcloud MCP CLI - $3,500 (Rust)
-- ZIO Schema Migration - $4,000 (Scala)
+| Repo | Stack | Reward | Notes |
+|------|-------|--------|-------|
+| [gumroad/](./gumroad/) | CSS/Tailwind | $1.5K/file | Tailwind migration |
+| [screenpipe](https://algora.io/mediar-ai/bounties/community) | TypeScript/AI | $25-500 | $4,910 pool |
+| [tscircuit](https://algora.io/tscircuit/bounties/community) | React/TS | $25-150 | PCB design |
+| [golemcloud](https://algora.io/golemcloud/bounties/community) | Rust/WASM | $3.5K | MCP/TTS |
+| [zio/](./zio/), [zio-blocks/](./zio-blocks/) | Scala 3 | $2-4K | Schema/Patch |
+| [cal-com/](./cal-com/), [calcom/](./calcom/) | TS/Next.js | $20-500 | |
+| [posthog/](./posthog/) | Python/Django + React | Varies | |
+| [cortex/](./cortex/) | Python | $50-200 | CLA required |
+| [feishin/](./feishin/) | React + Electron | Contrib | |
+| [tldraw/](./tldraw/) | TS/React | Varies | |
+| [appsmith/](./appsmith/) | Java + React/TS | Varies | |
+| [vertex-ai-samples/](./vertex-ai-samples/) | Python notebooks | Contrib | CLA required |
+| [filament/](./filament/) | PHP/Laravel | Varies | own CLAUDE.md |
+| [shadcn-ui/](./shadcn-ui/) | TS/React | Varies | own CLAUDE.md |
+| [projectdiscovery/](./projectdiscovery/) | YAML | $100 | CVE templates |
 
 ## Payment Process
 
-### Gumroad
-1. PR gets merged
-2. Email `bounties@antiwork.com` with PR link + payment email
-3. Payment via Stripe (bank, PayPal, crypto)
-
-### Algora
-Algora's platform calls them "bounties" externally; we treat them as contributions internally.
-1. Claim via `/bounty` comment on the upstream issue (Algora's command — not our `/contribute` skill)
-2. Submit PR
-3. Platform handles payment (120+ countries)
+| Program | Process |
+|---------|---------|
+| Algora | Platform handles payment automatically (120+ countries) |
+| Gumroad | Email `bounties@antiwork.com` with PR link + payment email; Stripe payout |
+| Cortex | Bitcoin (preferred), USDC, or PayPal within 48h |
 
 ## Sources
 
-- [Algora Bounties](https://algora.io/bounties/)
+- [Algora](https://algora.io/bounties/) · [IssueHunt](https://issuehunt.io/) · [BountyHub](https://www.bountyhub.dev/)
 - [Gumroad #1055](https://github.com/antiwork/gumroad/issues/1055)
-- [Screenpipe Bounties](https://algora.io/mediar-ai/bounties/community)
-- [tscircuit Bounties](https://algora.io/tscircuit/bounties/community)
-- [Golem Cloud Bounties](https://algora.io/golemcloud/bounties/community)
-- [IssueHunt](https://issuehunt.io/)
-- [BountyHub](https://www.bountyhub.dev/)
+
+## What was deprecated 2026-04-30
+
+A previous version of this repo had an internal `contribute-system/` monorepo (Next.js dashboard, TS CLI, Cloud Functions, Vertex AI orchestrator). It was never used in practice. On 2026-04-30 it was deleted; the GCP project `intentional-bounty` was scheduled for deletion; the workflow collapsed into the `/contribute` skill. Historical planning docs are in [`99-archived-system-docs/`](./99-archived-system-docs/). Code lives in git history.
