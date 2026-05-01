@@ -12,7 +12,8 @@ import { spawn, ChildProcess } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { Storage } from '@google-cloud/storage';
+// GCS upload removed in the local-first migration. Recordings are kept on
+// disk under ~/.contribute/recordings/ and never leave the machine.
 import { getConfig } from './config';
 
 const RECORDINGS_DIR = join(homedir(), '.contribute', 'recordings');
@@ -161,56 +162,18 @@ export async function stopRecording(session: RecordingSession): Promise<Recordin
   return session;
 }
 
-// Upload recording to Cloud Storage
+// Local-first: recordings stay on disk. The function is kept so callers don't
+// break, but it's now a no-op that just confirms the local file exists.
 export async function uploadRecording(session: RecordingSession): Promise<RecordingSession> {
-  const config = getConfig();
-
-  if (!config.proofBucket) {
-    console.warn('No proof bucket configured. Skipping upload.');
-    console.warn('Set with: contribute config set proofBucket gs://your-bucket-name');
-    return session;
-  }
-
   if (!existsSync(session.localPath)) {
-    console.warn('Recording file not found, skipping upload');
+    console.warn('Recording file not found');
+    session.status = 'failed';
     return session;
   }
 
-  try {
-    const bucketName = config.proofBucket.replace('gs://', '');
-    const storage = new Storage({ projectId: config.projectId });
-    const bucket = storage.bucket(bucketName);
-
-    const destination = `recordings/${session.contributionId}/${session.filename}`;
-
-    console.log(`Uploading to ${config.proofBucket}/${destination}...`);
-
-    await bucket.upload(session.localPath, {
-      destination,
-      metadata: {
-        contentType: 'application/x-asciicast',
-        metadata: {
-          contributionId: session.contributionId,
-          sessionId: session.id,
-          duration: session.duration?.toString() || '0',
-          recordedAt: session.startedAt
-        }
-      }
-    });
-
-    session.uploadedUrl = `https://storage.googleapis.com/${bucketName}/${destination}`;
-    session.status = 'uploaded';
-
-    console.log(`Uploaded: ${session.uploadedUrl}`);
-
-    // Optionally delete local file after successful upload
-    // unlinkSync(session.localPath);
-
-  } catch (error) {
-    console.error('Upload failed:', error);
-    session.status = 'failed';
-  }
-
+  session.uploadedUrl = `file://${session.localPath}`;
+  session.status = 'uploaded';
+  console.log(`Recording stored locally: ${session.localPath}`);
   return session;
 }
 

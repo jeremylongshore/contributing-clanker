@@ -1,9 +1,12 @@
 /**
  * libSQL Database Client
  *
- * Local-first SQLite-compatible database using libSQL/Turso.
- * Stores bounties, repo profiles, workflow state, and config locally.
- * Can optionally sync to Turso Cloud for backup/multi-device.
+ * Local-only SQLite-compatible database using libSQL.
+ * Stores contributions, repo profiles, workflow state, and config locally
+ * at ~/.contribute-system/contribute.db. No cloud sync.
+ *
+ * BOUNTY_DB env var still honored for backward compatibility with installations
+ * that point at the old ~/.bounty-system/bounty.db path.
  */
 
 import { createClient, type Client } from '@libsql/client';
@@ -11,9 +14,9 @@ import { homedir } from 'os';
 import { join } from 'path';
 import { mkdirSync, existsSync } from 'fs';
 
-// Database path - defaults to ~/.bounty-system/bounty.db
-const DB_DIR = join(homedir(), '.bounty-system');
-const DB_PATH = process.env.BOUNTY_DB || `file:${join(DB_DIR, 'bounty.db')}`;
+// Database path - defaults to ~/.contribute-system/contribute.db
+const DB_DIR = join(homedir(), '.contribute-system');
+const DB_PATH = process.env.CONTRIBUTE_DB || process.env.BOUNTY_DB || `file:${join(DB_DIR, 'contribute.db')}`;
 
 let _client: Client | null = null;
 
@@ -26,24 +29,7 @@ export function getDb(): Client {
     if (!existsSync(DB_DIR)) {
       mkdirSync(DB_DIR, { recursive: true });
     }
-
-    // Check for Turso cloud sync
-    const tursoUrl = process.env.TURSO_DATABASE_URL;
-    const tursoToken = process.env.TURSO_AUTH_TOKEN;
-
-    if (tursoUrl && tursoToken) {
-      // Cloud mode with local replica
-      _client = createClient({
-        url: tursoUrl,
-        authToken: tursoToken,
-        syncUrl: DB_PATH
-      });
-    } else {
-      // Local-only mode
-      _client = createClient({
-        url: DB_PATH
-      });
-    }
+    _client = createClient({ url: DB_PATH });
   }
 
   return _client;

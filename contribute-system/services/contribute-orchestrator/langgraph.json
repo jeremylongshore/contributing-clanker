@@ -1,7 +1,0 @@
-{
-  "dependencies": ["./contribute_agent"],
-  "graphs": {
-    "contribute_workflow": "./contribute_agent/agent.py:graph"
-  },
-  "env": ".env"
-}

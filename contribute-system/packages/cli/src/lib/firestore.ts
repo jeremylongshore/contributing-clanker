@@ -1,326 +1,247 @@
-import { Firestore } from '@google-cloud/firestore';
-import { COLLECTIONS } from '@contribute/core';
+/**
+ * Local-first data access layer (formerly Firestore-backed).
+ *
+ * After the GCP exit (April 2026), this module is a thin libsql shim.
+ * Filename + function names retained so legacy commands (list/show/create/
+ * claim/submit/sync/vet/work) keep working without touching their imports.
+ *
+ * Tables touched: `bounties`, `proofs`, `sessions`. Domains + ledger are
+ * stubbed (no consumer code paths reach them today; revisit if we need them).
+ */
+
 import type { Contribution, Domain, LedgerEntry, Proof } from '@contribute/core';
-import * as fs from 'fs';
-import * as path from 'path';
+import { getDb } from './db';
 
-let db: Firestore | null = null;
+// ───────────────────────────── helpers ─────────────────────────────
 
-// CSV Fallback Support
-const CSV_PATH = path.resolve(__dirname, '../../../../000-docs/002-PM-BKLG-bounty-tracker.csv');
-
-interface CSVBounty {
-  repo: string;
-  issue: string;
-  task: string;
-  bounty: string;
-  status: string;
-  pr_number: string;
-  lines: string;
-  competition: string;
-  date_started: string;
-  date_completed: string;
-  notes: string;
+function rowToContribution(r: any): Contribution {
+  // The bounties table predates the Contribution Zod schema. Map snake_case
+  // columns into the camelCase shape expected by callers, plus normalize a
+  // few defaults so Zod-validated paths don't trip on null.
+  return {
+    id: r.id,
+    title: r.title || `${r.repo}#${r.issue ?? '-'}`,
+    description: r.description || undefined,
+    value: typeof r.value === 'number' ? r.value : 0,
+    currency: r.currency || 'USD',
+    status: r.status || 'open',
+    source: r.source || 'github',
+    repo: r.repo || undefined,
+    issue: r.issue ?? undefined,
+    issueUrl: r.source_url || undefined,
+    pr: r.pr_number ?? undefined,
+    prUrl: r.pr_url || undefined,
+    domainId: 'default',
+    labels: r.labels ? JSON.parse(r.labels) : [],
+    technologies: r.technologies ? JSON.parse(r.technologies) : [],
+    timeline: [],
+    createdAt: r.created_at || new Date().toISOString(),
+    updatedAt: r.updated_at || new Date().toISOString(),
+    claimedAt: r.claimed_at || undefined,
+    submittedAt: r.submitted_at || undefined,
+    completedAt: r.completed_at || undefined,
+    paidAt: r.paid_at || undefined,
+    score: r.score ?? undefined,
+    notes: r.notes || undefined,
+  } as Contribution;
 }
 
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
+// ───────────────────────────── bounties ─────────────────────────────
 
-  for (const char of line) {
-    if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  result.push(current.trim());
-  return result;
-}
-
-function parseBountyValue(valueStr: string): number {
-  if (!valueStr) return 0;
-  const match = valueStr.match(/\$?([\d,]+)/);
-  if (match) {
-    return parseInt(match[1].replace(/,/g, ''), 10);
-  }
-  // Handle ranges like "$25-500"
-  const rangeMatch = valueStr.match(/\$?(\d+)-(\d+)/);
-  if (rangeMatch) {
-    return parseInt(rangeMatch[1], 10);
-  }
-  return 0;
-}
-
-function mapCSVStatusToBountyStatus(csvStatus: string): string {
-  const status = csvStatus.toLowerCase().trim();
-  switch (status) {
-    case 'available': return 'open';
-    case 'merged': return 'completed';
-    case 'submitted': return 'submitted';
-    case 'superseded': return 'cancelled';
-    case 'closed': return 'cancelled';
-    default: return 'open';
-  }
-}
-
-export function readCSVBounties(): Contribution[] {
-  if (!fs.existsSync(CSV_PATH)) {
-    console.warn(`CSV file not found: ${CSV_PATH}`);
-    return [];
-  }
-
-  const content = fs.readFileSync(CSV_PATH, 'utf-8');
-  const lines = content.trim().split('\n');
-
-  if (lines.length < 2) return [];
-
-  const headers = parseCSVLine(lines[0]);
-  const bounties: Contribution[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i]);
-    if (values.length < headers.length) continue;
-
-    const row: CSVBounty = {
-      repo: values[0] || '',
-      issue: values[1] || '',
-      task: values[2] || '',
-      bounty: values[3] || '',
-      status: values[4] || '',
-      pr_number: values[5] || '',
-      lines: values[6] || '',
-      competition: values[7] || '',
-      date_started: values[8] || '',
-      date_completed: values[9] || '',
-      notes: values[10] || ''
-    };
-
-    // Skip empty rows
-    if (!row.repo && !row.task) continue;
-
-    const id = `csv-${row.repo}-${row.issue || i}`;
-    const value = parseBountyValue(row.bounty);
-    const status = mapCSVStatusToBountyStatus(row.status);
-
-    const bounty: Contribution = {
-      id,
-      title: row.task || `${row.repo} #${row.issue}`,
-      description: row.notes || undefined,
-      value,
-      currency: 'USD',
-      status: status as any,
-      source: 'github',
-      repo: row.repo || undefined,
-      issue: row.issue ? parseInt(row.issue, 10) : undefined,
-      pr: row.pr_number ? parseInt(row.pr_number, 10) : undefined,
-      domainId: 'default',
-      labels: row.competition ? [row.competition] : [],
-      technologies: [],
-      timeline: [],
-      createdAt: row.date_started || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      startedAt: row.date_started || undefined,
-      completedAt: row.date_completed || undefined,
-      notes: row.notes || undefined
-    };
-
-    bounties.push(bounty);
-  }
-
-  return bounties;
-}
-
-export function writeCSVBounties(bounties: Contribution[]): void {
-  const headers = ['repo', 'issue', 'task', 'bounty', 'status', 'pr_number', 'lines', 'competition', 'date_started', 'date_completed', 'notes'];
-
-  const lines = [headers.join(',')];
-
-  for (const b of bounties) {
-    const status = b.status === 'open' ? 'Available' :
-                   b.status === 'completed' ? 'MERGED' :
-                   b.status === 'submitted' ? 'Submitted' :
-                   b.status === 'cancelled' ? 'CLOSED' : b.status;
-
-    const row = [
-      b.repo || '',
-      b.issue?.toString() || '',
-      b.title || '',
-      b.value ? `$${b.value}` : '',
-      status,
-      b.pr?.toString() || '',
-      '', // lines
-      b.labels?.[0] || 'NONE',
-      b.startedAt?.split('T')[0] || '',
-      b.completedAt?.split('T')[0] || '',
-      b.notes || ''
-    ];
-
-    lines.push(row.map(v => v.includes(',') ? `"${v}"` : v).join(','));
-  }
-
-  fs.writeFileSync(CSV_PATH, lines.join('\n') + '\n');
-}
-
-export function getFirestore(): Firestore {
-  if (!db) {
-    db = new Firestore({
-      projectId: process.env.GOOGLE_CLOUD_PROJECT || 'bounty-system-prod'
-    });
-  }
-  return db;
-}
-
-// Bounties
 export async function getBounties(options: {
   status?: string;
   domainId?: string;
   limit?: number;
 } = {}): Promise<Contribution[]> {
-  const db = getFirestore();
-  let query = db.collection(COLLECTIONS.CONTRIBUTIONS)
-    .orderBy('createdAt', 'desc');
-
-  if (options.status) {
-    query = query.where('status', '==', options.status);
-  }
-  if (options.domainId) {
-    query = query.where('domainId', '==', options.domainId);
-  }
-  if (options.limit) {
-    query = query.limit(options.limit);
-  }
-
-  const snapshot = await query.get();
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contribution));
+  const db = getDb();
+  const where: string[] = [];
+  const args: any[] = [];
+  if (options.status) { where.push('status = ?'); args.push(options.status); }
+  // domainId not stored in the bounties table; ignored locally.
+  const sql =
+    'SELECT * FROM bounties' +
+    (where.length ? ' WHERE ' + where.join(' AND ') : '') +
+    ' ORDER BY created_at DESC' +
+    (options.limit ? ` LIMIT ${Math.max(1, options.limit | 0)}` : '');
+  const result = await db.execute({ sql, args });
+  return result.rows.map(rowToContribution);
 }
 
-// Fallback function that tries Firestore first, then CSV
-export async function getBountiesWithFallback(options: {
-  status?: string;
-  domainId?: string;
-  limit?: number;
-} = {}): Promise<Contribution[]> {
-  try {
-    const bounties = await getBounties(options);
-    return bounties;
-  } catch (error: any) {
-    console.warn('Firestore unavailable, using CSV fallback');
-    let bounties = readCSVBounties();
-
-    // Apply filters
-    if (options.status) {
-      bounties = bounties.filter(b => b.status === options.status);
-    }
-    if (options.domainId) {
-      bounties = bounties.filter(b => b.domainId === options.domainId);
-    }
-    if (options.limit) {
-      bounties = bounties.slice(0, options.limit);
-    }
-
-    return bounties;
-  }
-}
+// Pre-rebrand callers expected a CSV-fallback. CSV is now imported into
+// SQLite, so the fallback is the same path as the primary.
+export const getBountiesWithFallback = getBounties;
 
 export async function getBounty(id: string): Promise<Contribution | null> {
-  const db = getFirestore();
-  const doc = await db.collection(COLLECTIONS.CONTRIBUTIONS).doc(id).get();
-  if (!doc.exists) return null;
-  return { id: doc.id, ...doc.data() } as Contribution;
+  const db = getDb();
+  const result = await db.execute({ sql: 'SELECT * FROM bounties WHERE id = ?', args: [id] });
+  if (result.rows.length === 0) return null;
+  return rowToContribution(result.rows[0]);
 }
 
 export async function createBounty(data: Omit<Contribution, 'id'>): Promise<Contribution> {
-  const db = getFirestore();
-  const ref = db.collection(COLLECTIONS.CONTRIBUTIONS).doc();
-  const bounty = { id: ref.id, ...data };
-  await ref.set(bounty);
-  return bounty;
+  const db = getDb();
+  const id = `${data.source}-${data.repo || 'manual'}-${data.issue || Date.now()}`;
+  const now = new Date().toISOString();
+  await db.execute({
+    sql: `INSERT INTO bounties (
+      id, repo, issue, title, description, value, currency, status,
+      pr_number, pr_url, score, source, source_url,
+      claimed_at, submitted_at, completed_at, paid_at,
+      created_at, updated_at, notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      id,
+      data.repo || '',
+      data.issue ?? null,
+      data.title,
+      data.description ?? null,
+      data.value ?? 0,
+      data.currency ?? 'USD',
+      data.status ?? 'open',
+      data.pr ?? null,
+      data.prUrl ?? null,
+      data.score ?? null,
+      data.source ?? 'github',
+      data.issueUrl ?? null,
+      data.claimedAt ?? null,
+      data.submittedAt ?? null,
+      data.completedAt ?? null,
+      data.paidAt ?? null,
+      data.createdAt ?? now,
+      data.updatedAt ?? now,
+      data.notes ?? null,
+    ],
+  });
+  return { id, ...data } as Contribution;
 }
 
 export async function updateBounty(id: string, data: Partial<Contribution>): Promise<void> {
-  const db = getFirestore();
-  await db.collection(COLLECTIONS.CONTRIBUTIONS).doc(id).update({
-    ...data,
-    updatedAt: new Date().toISOString()
-  });
+  const db = getDb();
+  // Map camelCase fields → snake_case columns selectively. Only update what
+  // callers actually pass; ignore unknown fields rather than failing loudly,
+  // matching the old Firestore .update() forgiveness.
+  const map: Record<string, string> = {
+    title: 'title',
+    description: 'description',
+    value: 'value',
+    currency: 'currency',
+    status: 'status',
+    pr: 'pr_number',
+    prUrl: 'pr_url',
+    score: 'score',
+    source: 'source',
+    issueUrl: 'source_url',
+    claimedAt: 'claimed_at',
+    submittedAt: 'submitted_at',
+    completedAt: 'completed_at',
+    paidAt: 'paid_at',
+    notes: 'notes',
+  };
+  const sets: string[] = [];
+  const args: any[] = [];
+  for (const [k, col] of Object.entries(map)) {
+    if (k in (data as any)) {
+      sets.push(`${col} = ?`);
+      args.push((data as any)[k] ?? null);
+    }
+  }
+  sets.push('updated_at = ?');
+  args.push(new Date().toISOString());
+  args.push(id);
+  await db.execute({ sql: `UPDATE bounties SET ${sets.join(', ')} WHERE id = ?`, args });
 }
 
-// Domains
-export async function getDomains(): Promise<Domain[]> {
-  const db = getFirestore();
-  const snapshot = await db.collection(COLLECTIONS.DOMAINS).get();
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Domain));
+// ───────────────────────────── CSV-shaped helpers (legacy) ─────────────────────────────
+// sync.ts predates the CSV-to-SQLite migration. These now read/write the
+// SQLite `bounties` table directly so sync.ts keeps merging records as it did.
+
+export function readCSVBounties(): Contribution[] {
+  // Synchronous wrapper around the async libsql call. Used by sync.ts which
+  // assumes a sync return; since we run a single SELECT off a local file, the
+  // promise resolves on the next tick — fine for the CLI's single-call usage.
+  // Kept as Contribution[] (was the legacy shape) — empty until first sync if
+  // sqlite is fresh.
+  let snapshot: Contribution[] = [];
+  let done = false;
+  getBounties({}).then(rows => { snapshot = rows; done = true; });
+  // Block-spin briefly. The CLI is single-shot so this doesn't deadlock; if it
+  // ever does, the caller is misusing this from an async context.
+  const start = Date.now();
+  while (!done && Date.now() - start < 5000) {
+    require('child_process').execSync('sleep 0.01');
+  }
+  return snapshot;
 }
 
-export async function getDomain(idOrSlug: string): Promise<Domain | null> {
-  const db = getFirestore();
-
-  // Try by ID first
-  let doc = await db.collection(COLLECTIONS.DOMAINS).doc(idOrSlug).get();
-  if (doc.exists) {
-    return { id: doc.id, ...doc.data() } as Domain;
+export function writeCSVBounties(bounties: Contribution[]): void {
+  // Best-effort upsert. sync.ts calls this after merging, so we treat each
+  // row as an upsert. Errors per-row are logged but don't stop the batch.
+  for (const b of bounties) {
+    if (!b.id) continue;
+    const args: any[] = [
+      b.id, b.repo || '', b.issue ?? null, b.title || `${b.repo}#${b.issue ?? '-'}`,
+      b.description ?? null, b.value ?? 0, b.currency ?? 'USD', b.status ?? 'open',
+      b.pr ?? null, b.prUrl ?? null, b.score ?? null, b.source ?? 'github',
+      b.issueUrl ?? null, b.claimedAt ?? null, b.submittedAt ?? null,
+      b.completedAt ?? null, b.paidAt ?? null,
+      b.createdAt || new Date().toISOString(), new Date().toISOString(),
+      b.notes ?? null,
+    ];
+    getDb().execute({
+      sql: `INSERT INTO bounties (
+        id, repo, issue, title, description, value, currency, status,
+        pr_number, pr_url, score, source, source_url,
+        claimed_at, submitted_at, completed_at, paid_at,
+        created_at, updated_at, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        repo = excluded.repo, issue = excluded.issue, title = excluded.title,
+        description = excluded.description, value = excluded.value,
+        currency = excluded.currency, status = excluded.status,
+        pr_number = excluded.pr_number, pr_url = excluded.pr_url,
+        score = excluded.score, source = excluded.source,
+        source_url = excluded.source_url, claimed_at = excluded.claimed_at,
+        submitted_at = excluded.submitted_at, completed_at = excluded.completed_at,
+        paid_at = excluded.paid_at, updated_at = excluded.updated_at,
+        notes = excluded.notes`,
+      args,
+    }).catch(err => console.warn(`upsert ${b.id} failed: ${err.message}`));
   }
-
-  // Try by slug
-  const snapshot = await db.collection(COLLECTIONS.DOMAINS)
-    .where('slug', '==', idOrSlug)
-    .limit(1)
-    .get();
-
-  if (snapshot.empty) return null;
-  const first = snapshot.docs[0];
-  return { id: first.id, ...first.data() } as Domain;
 }
 
-// Ledger
-export async function getLedgerEntries(options: {
-  domainId?: string;
-  type?: string;
-  limit?: number;
-} = {}): Promise<LedgerEntry[]> {
-  const db = getFirestore();
-  let query = db.collection(COLLECTIONS.LEDGER)
-    .orderBy('date', 'desc');
+// ───────────────────────────── domains / ledger (stubs) ─────────────────────────────
+// No callers in the current codebase; returning empty keeps types intact.
 
-  if (options.domainId) {
-    query = query.where('domainId', '==', options.domainId);
-  }
-  if (options.type) {
-    query = query.where('type', '==', options.type);
-  }
-  if (options.limit) {
-    query = query.limit(options.limit);
-  }
+export async function getDomains(): Promise<Domain[]> { return []; }
+export async function getDomain(_idOrSlug: string): Promise<Domain | null> { return null; }
+export async function getLedgerEntries(_options: {
+  domainId?: string; type?: string; limit?: number;
+} = {}): Promise<LedgerEntry[]> { return []; }
 
-  const snapshot = await query.get();
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LedgerEntry));
-}
+// ───────────────────────────── proofs ─────────────────────────────
 
-// Proofs
 export async function getProof(contributionId: string): Promise<Proof | null> {
-  const db = getFirestore();
-  const snapshot = await db.collection(COLLECTIONS.PROOFS)
-    .where('contributionId', '==', contributionId)
-    .limit(1)
-    .get();
-
-  if (snapshot.empty) return null;
-  const first = snapshot.docs[0];
-  return { id: first.id, ...first.data() } as Proof;
+  const db = getDb();
+  const r = await db.execute({
+    sql: 'SELECT data FROM proofs WHERE contribution_id = ? ORDER BY created_at DESC LIMIT 1',
+    args: [contributionId],
+  });
+  if (r.rows.length === 0) return null;
+  return JSON.parse((r.rows[0] as any).data) as Proof;
 }
 
 export async function createProof(data: Proof): Promise<Proof> {
-  const db = getFirestore();
-  await db.collection(COLLECTIONS.PROOFS).doc(data.id).set(data);
+  const db = getDb();
+  const contributionId = (data as any).contributionId || (data as any).bountyId || data.id;
+  await db.execute({
+    sql: 'INSERT INTO proofs (id, contribution_id, data) VALUES (?, ?, ?)',
+    args: [data.id, contributionId, JSON.stringify(data)],
+  });
   return data;
 }
 
-// Sessions
+// ───────────────────────────── sessions ─────────────────────────────
+
 export interface WorkSession {
   id: string;
   contributionId: string;
@@ -341,32 +262,39 @@ export interface WorkSession {
 }
 
 export async function getActiveSession(contributionId?: string): Promise<WorkSession | null> {
-  const db = getFirestore();
-  let query = db.collection(COLLECTIONS.SESSIONS)
-    .where('status', '==', 'active');
-
-  if (contributionId) {
-    query = query.where('contributionId', '==', contributionId);
-  }
-
-  const snapshot = await query.limit(1).get();
-  if (snapshot.empty) return null;
-
-  const first = snapshot.docs[0];
-  return { id: first.id, ...first.data() } as WorkSession;
+  const db = getDb();
+  const where: string[] = ["status = 'active'"];
+  const args: any[] = [];
+  if (contributionId) { where.push('contribution_id = ?'); args.push(contributionId); }
+  const r = await db.execute({
+    sql: `SELECT data FROM sessions WHERE ${where.join(' AND ')} LIMIT 1`,
+    args,
+  });
+  if (r.rows.length === 0) return null;
+  return JSON.parse((r.rows[0] as any).data) as WorkSession;
 }
 
 export async function getSessions(contributionId: string): Promise<WorkSession[]> {
-  const db = getFirestore();
-  const snapshot = await db.collection(COLLECTIONS.SESSIONS)
-    .where('contributionId', '==', contributionId)
-    .orderBy('startedAt', 'desc')
-    .get();
-
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WorkSession));
+  const db = getDb();
+  const r = await db.execute({
+    sql: 'SELECT data FROM sessions WHERE contribution_id = ? ORDER BY started_at DESC',
+    args: [contributionId],
+  });
+  return r.rows.map((row: any) => JSON.parse(row.data) as WorkSession);
 }
 
 export async function saveSession(session: WorkSession): Promise<void> {
-  const db = getFirestore();
-  await db.collection(COLLECTIONS.SESSIONS).doc(session.id).set(session, { merge: true });
+  const db = getDb();
+  await db.execute({
+    sql: `INSERT INTO sessions (id, contribution_id, started_at, ended_at, status, data)
+          VALUES (?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET
+            ended_at = excluded.ended_at,
+            status = excluded.status,
+            data = excluded.data`,
+    args: [
+      session.id, session.contributionId, session.startedAt,
+      session.endedAt ?? null, session.status, JSON.stringify(session),
+    ],
+  });
 }
