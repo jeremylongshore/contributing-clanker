@@ -12,11 +12,11 @@ import {
 } from 'lucide-react';
 import { Header } from '@/components/layout/header';
 import { useProofs } from '@/lib/hooks/use-proofs';
-import { useBounties } from '@/lib/hooks/use-bounties';
+import { useContributions } from '@/lib/hooks/use-contributions';
 
 export default function ProofsPage() {
   const { proofs, loading } = useProofs();
-  const { bounties } = useBounties();
+  const { bounties } = useContributions();
 
   // Create a map for quick bounty lookup
   const bountyMap = new Map(bounties.map(b => [b.id, b]));
@@ -81,7 +81,7 @@ export default function ProofsPage() {
         ) : (
           <div className="space-y-4">
             {proofs.map((proof) => {
-              const bounty = bountyMap.get(proof.bountyId);
+              const bounty = bountyMap.get(proof.contributionId);
 
               return (
                 <div
@@ -95,10 +95,10 @@ export default function ProofsPage() {
                       </div>
                       <div>
                         <Link
-                          href={`/dashboard/bounties/${proof.bountyId}`}
+                          href={`/dashboard/bounties/${proof.contributionId}`}
                           className="font-semibold text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400"
                         >
-                          {bounty?.title || `Bounty ${proof.bountyId}`}
+                          {bounty?.title || `Contribution ${proof.contributionId}`}
                         </Link>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                           {format(new Date(proof.createdAt), 'MMM d, yyyy h:mm a')}

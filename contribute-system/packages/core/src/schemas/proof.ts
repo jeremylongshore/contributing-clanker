@@ -38,7 +38,7 @@ export const VettingSummary = z.object({
 
 export const ProofSchema = z.object({
   id: z.string(),
-  bountyId: z.string(),
+  contributionId: z.string(),
 
   // Recordings
   recordings: z.array(Recording).default([]),

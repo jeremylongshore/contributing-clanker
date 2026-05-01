@@ -38,7 +38,7 @@ export function useCompetition(repo?: string, issue?: string | number) {
     setError(null);
 
     try {
-      const res = await fetch(`/api/bounty/competition?repo=${encodeURIComponent(repo)}&issue=${issue}`);
+      const res = await fetch(`/api/contribution/competition?repo=${encodeURIComponent(repo)}&issue=${issue}`);
       const result = await res.json();
 
       if (result.error) {

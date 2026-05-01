@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              text: ':test_tube: Test notification from Bounty System - Your Slack integration is working!',
+              text: ':test_tube: Test notification from Contribution System - Your Slack integration is working!',
             }),
           });
           results.slack = { success: response.ok };

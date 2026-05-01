@@ -1,5 +1,5 @@
 /**
- * Bounty Scoring Demo
+ * Contribution Scoring Demo
  *
  * Run with: npx ts-node packages/vetting/src/scoring/demo.ts
  */
@@ -7,7 +7,7 @@
 import { BountyScorer } from './scorer';
 import type { BountyInput } from './types';
 
-console.log('Bounty Scoring Algorithm Demo\n');
+console.log('Contribution Scoring Algorithm Demo\n');
 console.log('='.repeat(70));
 
 // Configure scorer with my tech preferences

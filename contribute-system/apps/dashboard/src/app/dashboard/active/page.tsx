@@ -21,9 +21,9 @@ import {
   Plus,
 } from 'lucide-react';
 import { Header } from '@/components/layout/header';
-import { useBounties, Bounty } from '@/lib/hooks/use-bounties';
+import { useContributions, Contribution } from '@/lib/hooks/use-contributions';
 
-const ACTIVE_STATUSES: Bounty['status'][] = ['claimed', 'in_progress', 'submitted', 'vetting', 'revision'];
+const ACTIVE_STATUSES: Contribution['status'][] = ['claimed', 'in_progress', 'submitted', 'vetting', 'revision'];
 
 const phases = [
   { key: 'claimed', label: 'Claimed', icon: Circle },
@@ -33,13 +33,13 @@ const phases = [
   { key: 'completed', label: 'Completed', icon: CheckCircle },
 ] as const;
 
-function getPhaseIndex(status: Bounty['status']): number {
+function getPhaseIndex(status: Contribution['status']): number {
   if (status === 'revision') return 2; // Back to submitted level
   const idx = phases.findIndex(p => p.key === status);
   return idx >= 0 ? idx : 0;
 }
 
-function PhaseTracker({ status }: { status: Bounty['status'] }) {
+function PhaseTracker({ status }: { status: Contribution['status'] }) {
   const currentPhase = getPhaseIndex(status);
   const isRevision = status === 'revision';
 
@@ -82,7 +82,7 @@ function PhaseTracker({ status }: { status: Bounty['status'] }) {
   );
 }
 
-function ActiveBountyCard({ bounty }: { bounty: Bounty }) {
+function ActiveContributionCard({ bounty }: { bounty: Contribution }) {
   const phaseLabel = phases.find(p => p.key === bounty.status)?.label || bounty.status;
 
   return (
@@ -165,7 +165,7 @@ function ActiveBountyCard({ bounty }: { bounty: Bounty }) {
 }
 
 export default function ActiveBountiesPage() {
-  const { bounties, loading } = useBounties({ status: ACTIVE_STATUSES });
+  const { bounties, loading } = useContributions({ status: ACTIVE_STATUSES });
 
   // Group by status
   const inProgress = bounties.filter(b => b.status === 'in_progress' || b.status === 'claimed');
@@ -231,7 +231,7 @@ export default function ActiveBountiesPage() {
                 </h2>
                 <div className="space-y-4">
                   {revision.map(bounty => (
-                    <ActiveBountyCard key={bounty.id} bounty={bounty} />
+                    <ActiveContributionCard key={bounty.id} bounty={bounty} />
                   ))}
                 </div>
               </div>
@@ -245,7 +245,7 @@ export default function ActiveBountiesPage() {
                 </h2>
                 <div className="space-y-4">
                   {inProgress.map(bounty => (
-                    <ActiveBountyCard key={bounty.id} bounty={bounty} />
+                    <ActiveContributionCard key={bounty.id} bounty={bounty} />
                   ))}
                 </div>
               </div>
@@ -259,7 +259,7 @@ export default function ActiveBountiesPage() {
                 </h2>
                 <div className="space-y-4">
                   {submitted.map(bounty => (
-                    <ActiveBountyCard key={bounty.id} bounty={bounty} />
+                    <ActiveContributionCard key={bounty.id} bounty={bounty} />
                   ))}
                 </div>
               </div>

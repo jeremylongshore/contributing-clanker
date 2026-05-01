@@ -1,5 +1,5 @@
 /**
- * Bounty Scoring Types
+ * Contribution Scoring Types
  *
  * Types for evaluating bounty opportunities before claiming.
  */

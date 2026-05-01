@@ -23,7 +23,7 @@ interface GitHubIssue {
   created_at: string;
 }
 
-// Bounty label patterns
+// Contribution label patterns
 const BOUNTY_LABELS = ['bounty', 'bounty:open', 'has bounty', 'cash bounty', 'paid', '$$', 'reward'];
 const BOUNTY_AMOUNT_REGEX = /\$(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:bounty|reward|USD)?/i;
 

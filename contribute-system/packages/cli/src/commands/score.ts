@@ -1,5 +1,5 @@
 /**
- * Bounty Scoring Commands
+ * Contribution Scoring Commands
  *
  * Pre-work evaluation of bounty opportunities.
  * Uses the scoring algorithm to evaluate value, complexity, competition, and fit.
@@ -19,14 +19,14 @@ import {
 } from '@contribute/vetting';
 
 export const scoreCommand = new Command('score')
-  .description('Score and discover bounty opportunities');
+  .description('Score and discover contribution opportunities');
 
 /**
  * Score a single bounty by URL
  */
 scoreCommand
   .command('url <url>')
-  .description('Score a bounty from a GitHub issue URL')
+  .description('Score a contribution from a GitHub issue URL')
   .option('-v, --verbose', 'Show detailed breakdown')
   .action(async (url, options) => {
     const spinner = ora('Analyzing bounty...').start();
@@ -84,10 +84,10 @@ scoreCommand
  */
 scoreCommand
   .command('discover')
-  .description('Search GitHub for bounties and score them')
+  .description('Search GitHub for contributions and score them')
   .option('-o, --org <org>', 'Search specific organization')
   .option('-r, --repo <repo>', 'Search specific repo (owner/repo)')
-  .option('-l, --label <label>', 'Bounty label to search for', 'bounty')
+  .option('-l, --label <label>', 'Contribution label to search for', 'bounty')
   .option('-n, --limit <n>', 'Max bounties to fetch', '20')
   .option('--min-score <n>', 'Only show bounties with score >= N')
   .option('--claim', 'Only show bounties recommended for claiming')

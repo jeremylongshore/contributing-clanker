@@ -5,8 +5,8 @@ import { getBounty, getProof } from '../lib/firestore';
 import { formatBountyDetail } from '../lib/format';
 
 export const showCommand = new Command('show')
-  .description('Show bounty details')
-  .argument('<id>', 'Bounty ID')
+  .description('Show contribution details')
+  .argument('<id>', 'Contribution ID')
   .option('--proof', 'Include proof bundle info')
   .action(async (id, options) => {
     const spinner = ora('Fetching bounty...').start();
@@ -15,7 +15,7 @@ export const showCommand = new Command('show')
       const bounty = await getBounty(id);
 
       if (!bounty) {
-        spinner.fail(`Bounty not found: ${id}`);
+        spinner.fail(`Contribution not found: ${id}`);
         process.exit(1);
       }
 

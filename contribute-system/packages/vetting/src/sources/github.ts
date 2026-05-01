@@ -1,5 +1,5 @@
 /**
- * GitHub Bounty Source
+ * GitHub Contribution Source
  *
  * Fetches bounty-labeled issues from GitHub using the GraphQL API.
  * No web scraping - pure API calls.

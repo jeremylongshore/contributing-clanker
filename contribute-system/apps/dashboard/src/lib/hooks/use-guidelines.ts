@@ -27,7 +27,7 @@ export function useGuidelines(repo?: string) {
     setError(null);
 
     try {
-      const res = await fetch(`/api/bounty/guidelines?repo=${encodeURIComponent(repo)}`);
+      const res = await fetch(`/api/contribution/guidelines?repo=${encodeURIComponent(repo)}`);
       const result = await res.json();
 
       if (result.error) {

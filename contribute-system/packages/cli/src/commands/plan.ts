@@ -13,8 +13,8 @@ import { getDb, closeDb } from '../lib/db';
 import { notifyPlan } from '../lib/slack';
 
 export const planCommand = new Command('plan')
-  .description('Draft implementation plan for a qualified bounty')
-  .argument('<id>', 'Bounty ID (e.g., owner/repo#123)')
+  .description('Draft implementation plan for a qualified contribution')
+  .argument('<id>', 'Contribution ID (e.g., owner/repo#123)')
   .option('--no-slack', 'Skip Slack notification')
   .action(async (id, options) => {
     const spinner = ora('Loading bounty...').start();
@@ -24,16 +24,16 @@ export const planCommand = new Command('plan')
       const db = getDb();
 
       // Normalize ID format
-      const bountyId = normalizeId(id);
+      const contributionId = normalizeId(id);
 
       // Load bounty from database
       const bountyResult = await db.execute({
         sql: 'SELECT * FROM bounties WHERE id = ?',
-        args: [bountyId]
+        args: [contributionId]
       });
 
       if (bountyResult.rows.length === 0) {
-        spinner.fail('Bounty not found');
+        spinner.fail('Contribution not found');
         console.log(chalk.dim(`Run: bounty qualify <github-url> first`));
         process.exit(1);
       }
@@ -42,13 +42,13 @@ export const planCommand = new Command('plan')
 
       // Check workflow state
       const workflowResult = await db.execute({
-        sql: 'SELECT * FROM workflow_state WHERE bounty_id = ?',
-        args: [bountyId]
+        sql: 'SELECT * FROM workflow_state WHERE contribution_id = ?',
+        args: [contributionId]
       });
 
       const workflow = workflowResult.rows[0];
       if (!workflow || workflow.step === 'hunt') {
-        spinner.fail('Bounty not qualified yet');
+        spinner.fail('Contribution not qualified yet');
         console.log(chalk.dim(`Run: bounty qualify <github-url> first`));
         process.exit(1);
       }
@@ -85,7 +85,7 @@ export const planCommand = new Command('plan')
         const threadTs = workflow?.slack_thread_ts as string | undefined;
 
         const slackResult = await notifyPlan(
-          bountyId,
+          contributionId,
           bounty.repo as string,
           bounty.title as string,
           plan,
@@ -100,8 +100,8 @@ export const planCommand = new Command('plan')
           await db.execute({
             sql: `UPDATE workflow_state
                   SET step = 'plan', plan_content = ?, updated_at = ?
-                  WHERE bounty_id = ?`,
-            args: [plan, now, bountyId]
+                  WHERE contribution_id = ?`,
+            args: [plan, now, contributionId]
           });
 
           console.log(chalk.dim('\nReview plan in Slack'));
@@ -115,11 +115,11 @@ export const planCommand = new Command('plan')
       // Update bounty status
       await db.execute({
         sql: 'UPDATE bounties SET status = ?, updated_at = ? WHERE id = ?',
-        args: ['planning', new Date().toISOString(), bountyId]
+        args: ['planning', new Date().toISOString(), contributionId]
       });
 
       console.log(chalk.bold('\nNext step:'));
-      console.log(chalk.cyan(`  bounty draft ${bountyId}`));
+      console.log(chalk.cyan(`  bounty draft ${contributionId}`));
       console.log(chalk.dim('  (after plan approval in Slack)'));
       console.log('');
 

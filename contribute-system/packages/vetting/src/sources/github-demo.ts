@@ -16,7 +16,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('GitHub Bounty Source Demo\n');
+  console.log('GitHub Contribution Source Demo\n');
   console.log('='.repeat(70));
 
   // Create GitHub source client
@@ -53,7 +53,7 @@ async function main() {
         'screenpipe/screenpipe',
         'calcom/cal.com'
       ], {
-        labels: ['bounty', '💎 Bounty'],
+        labels: ['bounty', '💎 Contribution'],
         limit: 5
       });
 

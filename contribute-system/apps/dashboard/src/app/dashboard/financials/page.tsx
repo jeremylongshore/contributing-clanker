@@ -21,10 +21,10 @@ import {
   Bar
 } from 'recharts';
 import { Header } from '@/components/layout/header';
-import { useBounties } from '@/lib/hooks/use-bounties';
+import { useContributions } from '@/lib/hooks/use-contributions';
 
 export default function FinancialsPage() {
-  const { bounties, loading } = useBounties();
+  const { bounties, loading } = useContributions();
 
   const stats = useMemo(() => {
     const completed = bounties.filter(b => b.status === 'completed');
@@ -161,7 +161,7 @@ export default function FinancialsPage() {
                 <PieChart className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Avg Bounty</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Avg Contribution</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   ${Math.round(stats.avgBountyValue).toLocaleString()}
                 </p>

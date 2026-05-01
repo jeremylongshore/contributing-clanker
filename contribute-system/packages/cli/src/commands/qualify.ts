@@ -58,7 +58,7 @@ import {
 } from '../lib/eligibility';
 
 export const qualifyCommand = new Command('qualify')
-  .description('Evaluate a bounty with eligibility, rules, CLA, and EV analysis')
+  .description('Evaluate a contribution with eligibility, rules, CLA, and EV analysis')
   .argument('<url>', 'GitHub issue URL')
   .option('-v, --verbose', 'Show detailed breakdown')
   .option('--no-slack', 'Skip Slack notification')
@@ -708,7 +708,7 @@ function printQualifyResults(data: {
   // Issue info
   console.log(`\n${chalk.bold('Issue:')} ${data.repo}#${data.issueNumber}`);
   console.log(`${chalk.bold('Title:')} ${truncate(data.title, 55)}`);
-  console.log(`${chalk.bold('Type:')} ${data.isPaid ? chalk.green('Paid Bounty') : chalk.cyan('Reputation PR')}`);
+  console.log(`${chalk.bold('Type:')} ${data.isPaid ? chalk.green('Paid Contribution') : chalk.cyan('Reputation PR')}`);
   if (data.bountyAmount) {
     console.log(`${chalk.bold('Value:')} ${chalk.green(`$${data.bountyAmount}`)}`);
   }

@@ -56,7 +56,7 @@ function parseCommand(body: string): BountyCommand | null {
   return null;
 }
 
-function generateBountyId(repo: string, issue: number): string {
+function generateContributionId(repo: string, issue: number): string {
   const repoSlug = repo.toLowerCase().replace(/[^a-z0-9]/g, '-');
   return `gh-${repoSlug}-${issue}`;
 }
@@ -75,27 +75,27 @@ export async function handleIssueCommentEvent(db: Firestore, payload: CommentPay
   }
 
   const repo = repository.full_name;
-  const bountyId = generateBountyId(repo, issue.number);
+  const contributionId = generateContributionId(repo, issue.number);
   const user = comment.user.login;
 
-  console.log(`Bounty command: /${command.command} from ${user} on ${repo}#${issue.number}`);
+  console.log(`Contribution command: /${command.command} from ${user} on ${repo}#${issue.number}`);
 
   switch (command.command) {
     case 'claim':
-      await handleClaimCommand(db, bountyId, user, issue.number, repo);
+      await handleClaimCommand(db, contributionId, user, issue.number, repo);
       break;
 
     case 'unclaim':
-      await handleUnclaimCommand(db, bountyId, user);
+      await handleUnclaimCommand(db, contributionId, user);
       break;
 
     case 'status':
-      await handleStatusCommand(db, bountyId);
+      await handleStatusCommand(db, contributionId);
       break;
 
     case 'value':
       if (command.args[0]) {
-        await handleValueCommand(db, bountyId, command.args[0], user);
+        await handleValueCommand(db, contributionId, command.args[0], user);
       }
       break;
 
@@ -110,12 +110,12 @@ export async function handleIssueCommentEvent(db: Firestore, payload: CommentPay
 
 async function handleClaimCommand(
   db: Firestore,
-  bountyId: string,
+  contributionId: string,
   user: string,
   issueNumber: number,
   repo: string
 ): Promise<void> {
-  const bountyRef = db.collection(COLLECTIONS.BOUNTIES).doc(bountyId);
+  const bountyRef = db.collection(COLLECTIONS.CONTRIBUTIONS).doc(contributionId);
   const existing = await bountyRef.get();
 
   if (!existing.exists) {
@@ -126,7 +126,7 @@ async function handleClaimCommand(
   const bounty = existing.data();
 
   if (bounty?.status !== 'open') {
-    console.log(`Bounty is not open (status: ${bounty?.status}) - cannot claim`);
+    console.log(`Contribution is not open (status: ${bounty?.status}) - cannot claim`);
     return;
   }
 
@@ -144,15 +144,15 @@ async function handleClaimCommand(
     })
   });
 
-  console.log(`Bounty ${bountyId} claimed by ${user}`);
+  console.log(`Contribution ${contributionId} claimed by ${user}`);
 }
 
 async function handleUnclaimCommand(
   db: Firestore,
-  bountyId: string,
+  contributionId: string,
   user: string
 ): Promise<void> {
-  const bountyRef = db.collection(COLLECTIONS.BOUNTIES).doc(bountyId);
+  const bountyRef = db.collection(COLLECTIONS.CONTRIBUTIONS).doc(contributionId);
   const existing = await bountyRef.get();
 
   if (!existing.exists) {
@@ -163,7 +163,7 @@ async function handleUnclaimCommand(
   const bounty = existing.data();
 
   if (bounty?.status !== 'claimed') {
-    console.log(`Bounty is not claimed (status: ${bounty?.status}) - cannot unclaim`);
+    console.log(`Contribution is not claimed (status: ${bounty?.status}) - cannot unclaim`);
     return;
   }
 
@@ -187,14 +187,14 @@ async function handleUnclaimCommand(
     })
   });
 
-  console.log(`Bounty ${bountyId} unclaimed by ${user}`);
+  console.log(`Contribution ${contributionId} unclaimed by ${user}`);
 }
 
 async function handleStatusCommand(
   db: Firestore,
-  bountyId: string
+  contributionId: string
 ): Promise<void> {
-  const bountyRef = db.collection(COLLECTIONS.BOUNTIES).doc(bountyId);
+  const bountyRef = db.collection(COLLECTIONS.CONTRIBUTIONS).doc(contributionId);
   const existing = await bountyRef.get();
 
   if (!existing.exists) {
@@ -203,14 +203,14 @@ async function handleStatusCommand(
   }
 
   const bounty = existing.data();
-  console.log(`Bounty status: ${bounty?.status}, value: $${bounty?.value}`);
+  console.log(`Contribution status: ${bounty?.status}, value: $${bounty?.value}`);
 
   // In production, would post a comment with status details
 }
 
 async function handleValueCommand(
   db: Firestore,
-  bountyId: string,
+  contributionId: string,
   valueStr: string,
   user: string
 ): Promise<void> {
@@ -223,7 +223,7 @@ async function handleValueCommand(
 
   const value = parseFloat(match[1].replace(/,/g, ''));
 
-  const bountyRef = db.collection(COLLECTIONS.BOUNTIES).doc(bountyId);
+  const bountyRef = db.collection(COLLECTIONS.CONTRIBUTIONS).doc(contributionId);
   const existing = await bountyRef.get();
 
   if (!existing.exists) {
@@ -243,5 +243,5 @@ async function handleValueCommand(
     })
   });
 
-  console.log(`Bounty ${bountyId} value set to $${value}`);
+  console.log(`Contribution ${contributionId} value set to $${value}`);
 }

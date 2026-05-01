@@ -5,8 +5,8 @@ import { getBounty, updateBounty } from '../lib/firestore';
 import { nowISO } from '@contribute/core';
 
 export const claimCommand = new Command('claim')
-  .description('Claim a bounty for work')
-  .argument('<id>', 'Bounty ID')
+  .description('Claim a contribution for work')
+  .argument('<id>', 'Contribution ID')
   .option('--skip-preflight', 'Skip pre-flight checks (not recommended)')
   .option('-n, --note <note>', 'Note to add when claiming')
   .action(async (id, options) => {
@@ -16,12 +16,12 @@ export const claimCommand = new Command('claim')
       const bounty = await getBounty(id);
 
       if (!bounty) {
-        spinner.fail(`Bounty not found: ${id}`);
+        spinner.fail(`Contribution not found: ${id}`);
         process.exit(1);
       }
 
       if (bounty.status !== 'open') {
-        spinner.fail(`Bounty is not open (status: ${bounty.status})`);
+        spinner.fail(`Contribution is not open (status: ${bounty.status})`);
         process.exit(1);
       }
 
@@ -49,7 +49,7 @@ export const claimCommand = new Command('claim')
           ...(bounty.timeline || []),
           {
             timestamp: now,
-            message: options.note || 'Bounty claimed',
+            message: options.note || 'Contribution claimed',
             type: 'status_change'
           }
         ]
@@ -70,8 +70,8 @@ export const claimCommand = new Command('claim')
   });
 
 export const unclaimCommand = new Command('unclaim')
-  .description('Unclaim a bounty (return to open)')
-  .argument('<id>', 'Bounty ID')
+  .description('Unclaim a contribution (return to open)')
+  .argument('<id>', 'Contribution ID')
   .option('-r, --reason <reason>', 'Reason for unclaiming')
   .action(async (id, options) => {
     const spinner = ora('Unclaiming bounty...').start();
@@ -80,12 +80,12 @@ export const unclaimCommand = new Command('unclaim')
       const bounty = await getBounty(id);
 
       if (!bounty) {
-        spinner.fail(`Bounty not found: ${id}`);
+        spinner.fail(`Contribution not found: ${id}`);
         process.exit(1);
       }
 
       if (bounty.status !== 'claimed') {
-        spinner.fail(`Bounty is not claimed (status: ${bounty.status})`);
+        spinner.fail(`Contribution is not claimed (status: ${bounty.status})`);
         process.exit(1);
       }
 
@@ -97,7 +97,7 @@ export const unclaimCommand = new Command('unclaim')
           ...(bounty.timeline || []),
           {
             timestamp: now,
-            message: options.reason || 'Bounty unclaimed',
+            message: options.reason || 'Contribution unclaimed',
             type: 'status_change'
           }
         ]

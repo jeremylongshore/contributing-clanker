@@ -1,5 +1,5 @@
 /**
- * CSV Bounty Import API Route
+ * CSV Contribution Import API Route
  *
  * Imports bounties from CSV files for manual tracking.
  * Supports common CSV formats from various bounty platforms.

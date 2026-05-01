@@ -15,7 +15,7 @@ import { notifySubmitted } from '../lib/slack';
 
 export const workflowSubmitCommand = new Command('claim-submit')
   .description('Post approved claim to GitHub (Step 4)')
-  .argument('<id>', 'Bounty ID (e.g., owner/repo#123)')
+  .argument('<id>', 'Contribution ID (e.g., owner/repo#123)')
   .option('--dry-run', 'Show what would be posted without posting')
   .action(async (id, options) => {
     const spinner = ora('Loading bounty...').start();
@@ -25,16 +25,16 @@ export const workflowSubmitCommand = new Command('claim-submit')
       const db = getDb();
 
       // Normalize ID
-      const bountyId = normalizeId(id);
+      const contributionId = normalizeId(id);
 
       // Load bounty
       const bountyResult = await db.execute({
         sql: 'SELECT * FROM bounties WHERE id = ?',
-        args: [bountyId]
+        args: [contributionId]
       });
 
       if (bountyResult.rows.length === 0) {
-        spinner.fail('Bounty not found');
+        spinner.fail('Contribution not found');
         process.exit(1);
       }
 
@@ -42,15 +42,15 @@ export const workflowSubmitCommand = new Command('claim-submit')
 
       // Load workflow state
       const workflowResult = await db.execute({
-        sql: 'SELECT * FROM workflow_state WHERE bounty_id = ?',
-        args: [bountyId]
+        sql: 'SELECT * FROM workflow_state WHERE contribution_id = ?',
+        args: [contributionId]
       });
 
       const workflow = workflowResult.rows[0];
 
       if (!workflow || workflow.step !== 'draft') {
         spinner.fail('Draft not approved yet');
-        console.log(chalk.dim(`Run: bounty draft ${bountyId} first`));
+        console.log(chalk.dim(`Run: bounty draft ${contributionId} first`));
         process.exit(1);
       }
 
@@ -101,20 +101,20 @@ export const workflowSubmitCommand = new Command('claim-submit')
         sql: `UPDATE bounties
               SET status = 'claimed', claimed_at = ?, updated_at = ?
               WHERE id = ?`,
-        args: [now, now, bountyId]
+        args: [now, now, contributionId]
       });
 
       // Update workflow state
       await db.execute({
         sql: `UPDATE workflow_state
               SET step = 'claimed', updated_at = ?
-              WHERE bounty_id = ?`,
-        args: [now, bountyId]
+              WHERE contribution_id = ?`,
+        args: [now, contributionId]
       });
 
       // Notify Slack
       await notifySubmitted(
-        bountyId,
+        contributionId,
         bounty.repo as string,
         issueUrl,
         {
@@ -123,8 +123,8 @@ export const workflowSubmitCommand = new Command('claim-submit')
         }
       );
 
-      console.log(chalk.green('\n✅ Bounty Claimed!'));
-      console.log(chalk.dim(`\nStart work with: bounty work start ${bountyId}`));
+      console.log(chalk.green('\n✅ Contribution Claimed!'));
+      console.log(chalk.dim(`\nStart work with: bounty work start ${contributionId}`));
 
       // Show payment info if available
       if (bounty.payment_method || bounty.payment_terms) {

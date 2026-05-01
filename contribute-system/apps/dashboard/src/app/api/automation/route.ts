@@ -58,7 +58,7 @@ export interface AutomationLog {
   ruleName: string;
   type: string;
   action: string;
-  bountyId?: string;
+  contributionId?: string;
   bountyTitle?: string;
   success: boolean;
   error?: string;

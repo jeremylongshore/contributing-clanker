@@ -26,7 +26,7 @@ import {
 } from './stages';
 
 export interface PipelineOptions {
-  bountyId: string;
+  contributionId: string;
   repo: string;
   pr: number;
   commitSha: string;
@@ -41,20 +41,20 @@ export interface PipelineOptions {
 
 export class VettingPipeline {
   private config: VettingConfig;
-  private bountyId: string;
+  private contributionId: string;
   private stages: VettingStage[];
   private skipStages: VettingStage[];
   private onStageStart?: (stage: VettingStage) => void;
   private onStageComplete?: (result: StageResult) => void;
 
   constructor(options: PipelineOptions) {
-    this.bountyId = options.bountyId;
+    this.contributionId = options.contributionId;
     this.config = {
       repo: options.repo,
       pr: options.pr,
       commitSha: options.commitSha,
       baseBranch: options.baseBranch || 'main',
-      workDir: options.workDir || join(tmpdir(), `bounty-vet-${options.bountyId}`),
+      workDir: options.workDir || join(tmpdir(), `bounty-vet-${options.contributionId}`),
       timeout: options.timeout || 600000
     };
     this.stages = options.stages || [];
@@ -191,7 +191,7 @@ export class VettingPipeline {
     const summary = this.buildSummary(results, detection);
     return {
       id: `vet_${Date.now().toString(36)}`,
-      bountyId: this.bountyId,
+      contributionId: this.contributionId,
       config: this.config,
       status: 'running',
       stages: results,
@@ -215,7 +215,7 @@ export class VettingPipeline {
 
     return {
       id: `vet_${Date.now().toString(36)}`,
-      bountyId: this.bountyId,
+      contributionId: this.contributionId,
       config: this.config,
       status,
       stages: results,

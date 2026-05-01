@@ -1,5 +1,5 @@
 /**
- * Maintainer Intel CRM - Phase 6 of Bounty Flywheel
+ * Maintainer Intel CRM - Phase 6 of Contribution Flywheel
  *
  * Track maintainer responsiveness, fairness, and merge velocity.
  * Data feeds into win probability calculations.

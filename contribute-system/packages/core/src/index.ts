@@ -3,7 +3,7 @@ export * from './schemas';
 
 // Constants
 export const COLLECTIONS = {
-  BOUNTIES: 'bounties',
+  CONTRIBUTIONS: 'contributions',
   PROOFS: 'proofs',
   DOMAINS: 'domains',
   LEDGER: 'ledger',

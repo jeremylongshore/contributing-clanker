@@ -1,5 +1,5 @@
 /**
- * GitHub Search Query Pack for Bounty Seed Discovery
+ * GitHub Search Query Pack for Contribution Seed Discovery
  *
  * Contains 25+ queries organized by category:
  * - Keyword/Payout (12 queries): money-related terms

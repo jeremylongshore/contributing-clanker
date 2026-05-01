@@ -1,5 +1,5 @@
 /**
- * Source Management Commands - Phase 2 of Bounty Flywheel
+ * Source Management Commands - Phase 2 of Contribution Flywheel
  *
  * Manage bounty sources (Algora, GitHub search, GitHub orgs, etc.)
  * Sources feed into the incremental ingestion system.
@@ -36,14 +36,14 @@ interface Source {
 }
 
 export const sourceCommand = new Command('source')
-  .description('Manage bounty sources for ingestion');
+  .description('Manage contribution sources for ingestion');
 
 /**
  * Add a new source
  */
 sourceCommand
   .command('add <type>')
-  .description('Add a new bounty source')
+  .description('Add a new contribution source')
   .requiredOption('-n, --name <name>', 'Unique name for the source')
   .option('-q, --query <query>', 'Search query (for github_search type)')
   .option('-o, --org <org>', 'GitHub organization (for github_org type)')
@@ -183,7 +183,7 @@ sourceCommand
  */
 sourceCommand
   .command('list')
-  .description('List all bounty sources')
+  .description('List all contribution sources')
   .option('-a, --all', 'Include disabled sources')
   .action(async (options) => {
     try {

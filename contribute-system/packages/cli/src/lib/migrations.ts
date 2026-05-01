@@ -81,7 +81,7 @@ const migrations: Record<number, string[]> = {
 
     // Workflow state - progressive steps
     `CREATE TABLE IF NOT EXISTS workflow_state (
-      bounty_id TEXT PRIMARY KEY,
+      contribution_id TEXT PRIMARY KEY,
       step TEXT DEFAULT 'hunt',
       slack_thread_ts TEXT,
       slack_channel TEXT,
@@ -92,7 +92,7 @@ const migrations: Record<number, string[]> = {
       draft_content TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (bounty_id) REFERENCES bounties(id)
+      FOREIGN KEY (contribution_id) REFERENCES bounties(id)
     )`,
 
     // Workflow state index
@@ -231,12 +231,12 @@ const migrations: Record<number, string[]> = {
       pr_url TEXT,
       title TEXT,
       status TEXT DEFAULT 'discovered',
-      bounty_id TEXT,
+      contribution_id TEXT,
       issue_index_id INTEGER,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (repo) REFERENCES repos(repo),
-      FOREIGN KEY (bounty_id) REFERENCES bounties(id),
+      FOREIGN KEY (contribution_id) REFERENCES bounties(id),
       FOREIGN KEY (issue_index_id) REFERENCES issues_index(id)
     )`,
 
@@ -755,7 +755,7 @@ const migrations: Record<number, string[]> = {
     `ALTER TABLE repos ADD COLUMN maintainer_response_hours INTEGER`,
     `ALTER TABLE repos ADD COLUMN reputation_score INTEGER DEFAULT 50`,
 
-    // Bounty activity (computed from issues_index):
+    // Contribution activity (computed from issues_index):
     `ALTER TABLE repos ADD COLUMN open_bounty_count INTEGER DEFAULT 0`,
     `ALTER TABLE repos ADD COLUMN closed_bounty_count INTEGER DEFAULT 0`,
     `ALTER TABLE repos ADD COLUMN avg_bounty_close_days REAL`,

@@ -11,7 +11,7 @@ import { getDb, getDbPath, isDbInitialized, closeDb } from '../lib/db';
 import { runMigrations, getSchemaVersion, getTableCounts, resetDatabase } from '../lib/migrations';
 
 export const dbCommand = new Command('db')
-  .description('Manage the local bounty database');
+  .description('Manage the local contribution database');
 
 /**
  * Initialize the database

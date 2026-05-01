@@ -14,7 +14,7 @@ export interface Notification {
   type: 'new_bounty' | 'deadline' | 'pr_status' | 'completed' | 'high_value' | 'competition' | 'comment' | 'payment';
   title: string;
   message: string;
-  bountyId?: string;
+  contributionId?: string;
   bountyTitle?: string;
   bountyValue?: number;
   prUrl?: string;

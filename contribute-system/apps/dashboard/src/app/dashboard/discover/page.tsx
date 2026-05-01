@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Bounty Discovery Page
+ * Contribution Discovery Page
  *
  * Search and score bounties from GitHub and Algora.
  * Uses the scoring algorithm to recommend best opportunities.
@@ -11,7 +11,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search, AlertCircle, RefreshCw, Settings } from 'lucide-react';
 import { Header } from '@/components/layout/header';
-import { BountyCard, type BountyCardData } from '@/components/bounty/bounty-card';
+import { ContributionCard, type ContributionCardData } from '@/components/contribution/contribution-card';
 import { useDiscoverBounties, type DiscoveredBounty } from '@/lib/hooks/use-discover';
 
 type Source = 'github' | 'algora' | 'all';
@@ -52,7 +52,7 @@ export default function DiscoverPage() {
 
 
   // Convert API response to card format
-  const toBountyCardData = (bounty: DiscoveredBounty): BountyCardData => {
+  const toContributionCardData = (bounty: DiscoveredBounty): ContributionCardData => {
     const postedDate = bounty.createdAt || bounty.updatedAt;
     const staleDays = postedDate
       ? Math.floor((Date.now() - new Date(postedDate).getTime()) / (1000 * 60 * 60 * 24))
@@ -189,7 +189,7 @@ export default function DiscoverPage() {
             {/* Label Filter */}
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Bounty Label
+                Contribution Label
               </label>
               <input
                 type="text"
@@ -266,12 +266,12 @@ export default function DiscoverPage() {
               {filteredBounties.length} bounties found
             </div>
 
-            {/* Bounty Cards - Mobile optimized */}
+            {/* Contribution Cards - Mobile optimized */}
             <div className="space-y-3 md:space-y-4">
               {filteredBounties.map((bounty) => (
-                <BountyCard
+                <ContributionCard
                   key={bounty.id}
-                  bounty={toBountyCardData(bounty)}
+                  bounty={toContributionCardData(bounty)}
                   onClick={() => window.open(bounty.sourceUrl, '_blank')}
                 />
               ))}

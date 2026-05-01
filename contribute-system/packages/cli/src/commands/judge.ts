@@ -379,7 +379,7 @@ function checkStyleGate(profile: any, metrics: any): JudgeCheck {
 async function checkToneLint(engagement: any, profile: any, db: any): Promise<JudgeCheck> {
   // Get draft content if available
   const workflowResult = await db.execute({
-    sql: 'SELECT * FROM workflow_state WHERE bounty_id = ?',
+    sql: 'SELECT * FROM workflow_state WHERE contribution_id = ?',
     args: [engagement.id]
   });
   const workflow = workflowResult.rows[0] as any;

@@ -3,13 +3,13 @@
 import { Target, DollarSign, Clock, CheckCircle, TrendingUp, Code } from 'lucide-react';
 import { Header } from '@/components/layout/header';
 import { StatsCard } from '@/components/dashboard/stats-card';
-import { BountyTable } from '@/components/dashboard/bounty-table';
+import { BountyTable } from '@/components/dashboard/contribution-table';
 import { ActivityFeed } from '@/components/dashboard/activity-feed';
-import { useBounties } from '@/lib/hooks/use-bounties';
+import { useContributions } from '@/lib/hooks/use-contributions';
 import { useStats } from '@/lib/hooks/use-stats';
 
 export default function DashboardPage() {
-  const { bounties, loading: bountiesLoading } = useBounties({ limit: 10 });
+  const { bounties, loading: bountiesLoading } = useContributions({ limit: 10 });
   const { stats, loading: statsLoading } = useStats();
 
   return (

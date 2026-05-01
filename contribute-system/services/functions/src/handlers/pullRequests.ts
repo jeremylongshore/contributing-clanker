@@ -59,7 +59,7 @@ function extractIssueNumbers(text: string): number[] {
   return Array.from(issues);
 }
 
-function generateBountyId(repo: string, issue: number): string {
+function generateContributionId(repo: string, issue: number): string {
   const repoSlug = repo.toLowerCase().replace(/[^a-z0-9]/g, '-');
   return `gh-${repoSlug}-${issue}`;
 }
@@ -111,8 +111,8 @@ async function handlePROpened(
   console.log(`PR #${pr.number} references issues: ${issueNumbers.join(', ')}`);
 
   for (const issueNum of issueNumbers) {
-    const bountyId = generateBountyId(repo, issueNum);
-    const bountyRef = db.collection(COLLECTIONS.BOUNTIES).doc(bountyId);
+    const contributionId = generateContributionId(repo, issueNum);
+    const bountyRef = db.collection(COLLECTIONS.CONTRIBUTIONS).doc(contributionId);
     const existing = await bountyRef.get();
 
     if (!existing.exists) {
@@ -137,7 +137,7 @@ async function handlePROpened(
       })
     });
 
-    console.log(`Linked PR #${pr.number} to bounty ${bountyId}`);
+    console.log(`Linked PR #${pr.number} to bounty ${contributionId}`);
   }
 }
 
@@ -147,7 +147,7 @@ async function handlePRMerged(
   repo: string
 ): Promise<void> {
   // Find bounties linked to this PR
-  const bountiesRef = db.collection(COLLECTIONS.BOUNTIES);
+  const bountiesRef = db.collection(COLLECTIONS.CONTRIBUTIONS);
   const snapshot = await bountiesRef
     .where('repo', '==', repo)
     .where('pr', '==', pr.number)
@@ -193,7 +193,7 @@ async function handlePRClosed(
   repo: string
 ): Promise<void> {
   // Find bounties linked to this PR
-  const bountiesRef = db.collection(COLLECTIONS.BOUNTIES);
+  const bountiesRef = db.collection(COLLECTIONS.CONTRIBUTIONS);
   const snapshot = await bountiesRef
     .where('repo', '==', repo)
     .where('pr', '==', pr.number)
@@ -237,7 +237,7 @@ async function handlePRUpdated(
   repo: string
 ): Promise<void> {
   // Find bounties linked to this PR
-  const bountiesRef = db.collection(COLLECTIONS.BOUNTIES);
+  const bountiesRef = db.collection(COLLECTIONS.CONTRIBUTIONS);
   const snapshot = await bountiesRef
     .where('repo', '==', repo)
     .where('pr', '==', pr.number)

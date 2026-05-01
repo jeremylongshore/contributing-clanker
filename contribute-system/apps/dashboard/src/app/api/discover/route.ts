@@ -1,5 +1,5 @@
 /**
- * Bounty Discovery API Route
+ * Contribution Discovery API Route
  *
  * Server-side endpoint for discovering and scoring bounties from GitHub.
  * Keeps API tokens secure (not exposed to client).

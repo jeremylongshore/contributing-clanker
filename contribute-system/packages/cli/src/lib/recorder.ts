@@ -19,7 +19,7 @@ const RECORDINGS_DIR = join(homedir(), '.bounty', 'recordings');
 
 export interface RecordingSession {
   id: string;
-  bountyId: string;
+  contributionId: string;
   filename: string;
   startedAt: string;
   endedAt?: string;
@@ -70,7 +70,7 @@ export async function checkAsciinema(): Promise<{ available: boolean; version?: 
 // Start a new recording session
 export async function startRecording(
   sessionId: string,
-  bountyId: string,
+  contributionId: string,
   title?: string
 ): Promise<RecordingSession> {
   ensureRecordingsDir();
@@ -81,7 +81,7 @@ export async function startRecording(
 
   const session: RecordingSession = {
     id: sessionId,
-    bountyId,
+    contributionId,
     filename,
     startedAt,
     localPath,
@@ -101,7 +101,7 @@ export async function startRecording(
     'rec',
     '--stdin',
     '--overwrite',
-    '-t', title || `Bounty ${bountyId} - ${sessionId}`,
+    '-t', title || `Contribution ${contributionId} - ${sessionId}`,
     localPath
   ];
 
@@ -181,7 +181,7 @@ export async function uploadRecording(session: RecordingSession): Promise<Record
     const storage = new Storage({ projectId: config.projectId });
     const bucket = storage.bucket(bucketName);
 
-    const destination = `recordings/${session.bountyId}/${session.filename}`;
+    const destination = `recordings/${session.contributionId}/${session.filename}`;
 
     console.log(`Uploading to ${config.proofBucket}/${destination}...`);
 
@@ -190,7 +190,7 @@ export async function uploadRecording(session: RecordingSession): Promise<Record
       metadata: {
         contentType: 'application/x-asciicast',
         metadata: {
-          bountyId: session.bountyId,
+          contributionId: session.contributionId,
           sessionId: session.id,
           duration: session.duration?.toString() || '0',
           recordedAt: session.startedAt
@@ -249,7 +249,7 @@ export function listLocalRecordings(): RecordingSession[] {
 
     return {
       id: sessionId,
-      bountyId: 'unknown',
+      contributionId: 'unknown',
       filename,
       localPath,
       startedAt: stats.birthtime.toISOString(),

@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { table } from 'table';
-import type { Bounty, Domain, LedgerEntry } from '@contribute/core';
+import type { Contribution, Domain, LedgerEntry } from '@contribute/core';
 
 const STATUS_COLORS: Record<string, (s: string) => string> = {
   open: chalk.green,
@@ -26,7 +26,7 @@ export function formatValue(value: number, currency: string = 'USD'): string {
   return `${value} ${currency}`;
 }
 
-export function formatBountyRow(b: Bounty): string[] {
+export function formatBountyRow(b: Contribution): string[] {
   return [
     chalk.dim(b.id.slice(0, 8)),
     b.title.slice(0, 40) + (b.title.length > 40 ? '...' : ''),
@@ -37,7 +37,7 @@ export function formatBountyRow(b: Bounty): string[] {
   ];
 }
 
-export function formatBountiesTable(bounties: Bounty[]): string {
+export function formatBountiesTable(bounties: Contribution[]): string {
   if (bounties.length === 0) {
     return chalk.dim('No bounties found');
   }
@@ -68,7 +68,7 @@ export function formatBountiesTable(bounties: Bounty[]): string {
   });
 }
 
-export function formatBountyDetail(b: Bounty): string {
+export function formatBountyDetail(b: Contribution): string {
   const lines = [
     '',
     chalk.bold(`${b.title}`),

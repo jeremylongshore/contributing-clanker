@@ -4,12 +4,12 @@ import chalk from 'chalk';
 import { createBounty } from '../lib/firestore';
 import { getConfig } from '../lib/config';
 import { nowISO } from '@contribute/core';
-import type { BountySource } from '@contribute/core';
+import type { ContributionSource } from '@contribute/core';
 
 export const createCommand = new Command('create')
-  .description('Create a new bounty manually')
-  .requiredOption('-t, --title <title>', 'Bounty title')
-  .requiredOption('-v, --value <value>', 'Bounty value in USD')
+  .description('Create a new contribution manually')
+  .requiredOption('-t, --title <title>', 'Contribution title')
+  .requiredOption('-v, --value <value>', 'Contribution value in USD')
   .option('-s, --source <source>', 'Source (github, algora, internal, etc.)', 'internal')
   .option('-r, --repo <repo>', 'Repository (org/repo)')
   .option('-i, --issue <number>', 'Issue number')
@@ -27,7 +27,7 @@ export const createCommand = new Command('create')
         value: parseFloat(options.value),
         currency: 'USD',
         status: 'open',
-        source: options.source as BountySource,
+        source: options.source as ContributionSource,
         repo: options.repo,
         issue: options.issue ? parseInt(options.issue, 10) : undefined,
         issueUrl: options.url,
@@ -37,7 +37,7 @@ export const createCommand = new Command('create')
         technologies: [],
         timeline: [{
           timestamp: now,
-          message: 'Bounty created',
+          message: 'Contribution created',
           type: 'status_change'
         }],
         createdAt: now,

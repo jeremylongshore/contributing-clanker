@@ -9,10 +9,10 @@ import {
   PlayCircle,
   FileCheck
 } from 'lucide-react';
-import type { Bounty } from '@/lib/hooks/use-bounties';
+import type { Contribution } from '@/lib/hooks/use-contributions';
 
 interface ActivityFeedProps {
-  bounties: Bounty[];
+  bounties: Contribution[];
   loading?: boolean;
 }
 
@@ -42,7 +42,7 @@ export function ActivityFeed({ bounties, loading }: ActivityFeedProps) {
     .flatMap(bounty =>
       (bounty.timeline || []).map(event => ({
         ...event,
-        bountyId: bounty.id,
+        contributionId: bounty.id,
         bountyTitle: bounty.title,
       }))
     )
@@ -80,7 +80,7 @@ export function ActivityFeed({ bounties, loading }: ActivityFeedProps) {
         const colorClass = colorMap[activity.type] || colorMap.default;
 
         return (
-          <div key={`${activity.bountyId}-${index}`} className="flex gap-4">
+          <div key={`${activity.contributionId}-${index}`} className="flex gap-4">
             <div className={`flex h-10 w-10 items-center justify-center rounded-full ${colorClass}`}>
               <Icon className="h-5 w-5" />
             </div>

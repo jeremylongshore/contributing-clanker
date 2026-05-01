@@ -33,7 +33,7 @@ export async function getSlackConfig(): Promise<SlackConfig> {
 // Message types for different notification scenarios
 export type MessageType =
   | 'hunt_results'         // Hunt results summary
-  | 'bounty_qualified'     // Step 1: Bounty passed scoring, show CONTRIBUTING.md
+  | 'bounty_qualified'     // Step 1: Contribution passed scoring, show CONTRIBUTING.md
   | 'bounty_plan'          // Step 2: Implementation plan for review
   | 'bounty_draft'         // Step 3: Draft claim comment for review
   | 'bounty_submitted'     // Step 4: Claim posted to GitHub
@@ -47,7 +47,7 @@ export type MessageType =
 
 export interface SlackMessage {
   type: MessageType;
-  bountyId?: string;
+  contributionId?: string;
   repo?: string;
   title?: string;
   value?: number;
@@ -233,7 +233,7 @@ function buildSlackPayload(message: SlackMessage): Record<string, unknown> {
         {
           type: 'section',
           fields: [
-            { type: 'mrkdwn', text: `*Bounty:*\n${message.repo}#${message.bountyId}` },
+            { type: 'mrkdwn', text: `*Contribution:*\n${message.repo}#${message.contributionId}` },
             { type: 'mrkdwn', text: `*Title:*\n${truncate(message.title || '', 50)}` }
           ]
         },
@@ -263,7 +263,7 @@ function buildSlackPayload(message: SlackMessage): Record<string, unknown> {
         },
         {
           type: 'section',
-          text: { type: 'mrkdwn', text: `Ready to post claim for *${message.repo}#${message.bountyId}*` }
+          text: { type: 'mrkdwn', text: `Ready to post claim for *${message.repo}#${message.contributionId}*` }
         },
         { type: 'divider' }
       );
@@ -293,7 +293,7 @@ function buildSlackPayload(message: SlackMessage): Record<string, unknown> {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `Successfully claimed *${message.repo}#${message.bountyId}*\n<${message.url}|View on GitHub>`
+            text: `Successfully claimed *${message.repo}#${message.contributionId}*\n<${message.url}|View on GitHub>`
           }
         }
       );
@@ -330,7 +330,7 @@ function buildSlackPayload(message: SlackMessage): Record<string, unknown> {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `New activity detected on *${message.repo}#${message.bountyId}*\n${message.content}`
+            text: `New activity detected on *${message.repo}#${message.contributionId}*\n${message.content}`
           }
         }
       );
@@ -352,7 +352,7 @@ function buildSlackPayload(message: SlackMessage): Record<string, unknown> {
         {
           type: 'section',
           fields: [
-            { type: 'mrkdwn', text: `*Bounty:*\n${message.repo}#${message.bountyId}` },
+            { type: 'mrkdwn', text: `*Contribution:*\n${message.repo}#${message.contributionId}` },
             { type: 'mrkdwn', text: `*Amount:*\n${formatCurrency(message.paymentAmount, message.paymentCurrency)}` },
             { type: 'mrkdwn', text: `*Due Date:*\n${message.paymentDueDate || 'N/A'}` },
             { type: 'mrkdwn', text: `*Method:*\n${message.paymentMethod || 'TBD'}` }
@@ -377,7 +377,7 @@ function buildSlackPayload(message: SlackMessage): Record<string, unknown> {
         {
           type: 'section',
           fields: [
-            { type: 'mrkdwn', text: `*Bounty:*\n${message.repo}#${message.bountyId}` },
+            { type: 'mrkdwn', text: `*Contribution:*\n${message.repo}#${message.contributionId}` },
             { type: 'mrkdwn', text: `*Amount:*\n${formatCurrency(message.paymentAmount, message.paymentCurrency)}` },
             { type: 'mrkdwn', text: `*Title:*\n${truncate(message.title || '', 50)}` }
           ]
@@ -394,7 +394,7 @@ function buildSlackPayload(message: SlackMessage): Record<string, unknown> {
         {
           type: 'section',
           fields: [
-            { type: 'mrkdwn', text: `*Bounty:*\n${message.repo}#${message.bountyId}` },
+            { type: 'mrkdwn', text: `*Contribution:*\n${message.repo}#${message.contributionId}` },
             { type: 'mrkdwn', text: `*Amount:*\n${formatCurrency(message.paymentAmount, message.paymentCurrency)}` },
             { type: 'mrkdwn', text: `*Due Date:*\n${message.paymentDueDate || 'N/A'}` },
             { type: 'mrkdwn', text: `*Days Overdue:*\n${calculateDaysOverdue(message.paymentDueDate)}` }
@@ -419,7 +419,7 @@ function buildSlackPayload(message: SlackMessage): Record<string, unknown> {
         {
           type: 'section',
           fields: [
-            { type: 'mrkdwn', text: `*Bounty:*\n${message.repo}#${message.bountyId}` },
+            { type: 'mrkdwn', text: `*Contribution:*\n${message.repo}#${message.contributionId}` },
             { type: 'mrkdwn', text: `*Value:*\n$${message.value || 0}` },
             { type: 'mrkdwn', text: `*Title:*\n${truncate(message.title || '', 50)}` }
           ]
@@ -519,7 +519,7 @@ export async function notifyBountyQualified(
 }
 
 export async function notifyPlan(
-  bountyId: string,
+  contributionId: string,
   repo: string,
   title: string,
   plan: string,
@@ -527,7 +527,7 @@ export async function notifyPlan(
 ): Promise<SlackResponse> {
   return sendSlackNotification({
     type: 'bounty_plan',
-    bountyId,
+    contributionId,
     repo,
     title,
     plan,
@@ -536,14 +536,14 @@ export async function notifyPlan(
 }
 
 export async function notifyDraft(
-  bountyId: string,
+  contributionId: string,
   repo: string,
   draft: string,
   threadTs?: string
 ): Promise<SlackResponse> {
   return sendSlackNotification({
     type: 'bounty_draft',
-    bountyId,
+    contributionId,
     repo,
     draft,
     threadTs
@@ -551,14 +551,14 @@ export async function notifyDraft(
 }
 
 export async function notifySubmitted(
-  bountyId: string,
+  contributionId: string,
   repo: string,
   url: string,
   paymentInfo?: { method?: string; terms?: string }
 ): Promise<SlackResponse> {
   return sendSlackNotification({
     type: 'bounty_submitted',
-    bountyId,
+    contributionId,
     repo,
     url,
     paymentMethod: paymentInfo?.method,
@@ -567,14 +567,14 @@ export async function notifySubmitted(
 }
 
 export async function notifyCompetition(
-  bountyId: string,
+  contributionId: string,
   repo: string,
   content: string,
   url?: string
 ): Promise<SlackResponse> {
   return sendSlackNotification({
     type: 'competition_alert',
-    bountyId,
+    contributionId,
     repo,
     content,
     url
@@ -582,7 +582,7 @@ export async function notifyCompetition(
 }
 
 export async function notifyPaymentDue(
-  bountyId: string,
+  contributionId: string,
   repo: string,
   amount: number,
   dueDate: string,
@@ -591,7 +591,7 @@ export async function notifyPaymentDue(
 ): Promise<SlackResponse> {
   return sendSlackNotification({
     type: 'payment_due',
-    bountyId,
+    contributionId,
     repo,
     paymentAmount: amount,
     paymentDueDate: dueDate,
@@ -601,7 +601,7 @@ export async function notifyPaymentDue(
 }
 
 export async function notifyPaymentReceived(
-  bountyId: string,
+  contributionId: string,
   repo: string,
   title: string,
   amount: number,
@@ -609,7 +609,7 @@ export async function notifyPaymentReceived(
 ): Promise<SlackResponse> {
   return sendSlackNotification({
     type: 'payment_received',
-    bountyId,
+    contributionId,
     repo,
     title,
     paymentAmount: amount,
@@ -618,7 +618,7 @@ export async function notifyPaymentReceived(
 }
 
 export async function notifyPaymentOverdue(
-  bountyId: string,
+  contributionId: string,
   repo: string,
   amount: number,
   dueDate: string,
@@ -627,7 +627,7 @@ export async function notifyPaymentOverdue(
 ): Promise<SlackResponse> {
   return sendSlackNotification({
     type: 'payment_overdue',
-    bountyId,
+    contributionId,
     repo,
     paymentAmount: amount,
     paymentDueDate: dueDate,

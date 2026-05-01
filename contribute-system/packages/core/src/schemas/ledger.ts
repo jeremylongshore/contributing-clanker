@@ -29,7 +29,7 @@ export const LedgerStatus = z.enum([
 
 export const LedgerEntrySchema = z.object({
   id: z.string(),
-  bountyId: z.string().optional(),
+  contributionId: z.string().optional(),
   domainId: z.string().default('default'),
 
   type: LedgerEntryType,

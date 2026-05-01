@@ -4,7 +4,7 @@ import { getBounties } from '../lib/firestore';
 import { formatBountiesTable } from '../lib/format';
 
 export const listCommand = new Command('list')
-  .description('List all bounties')
+  .description('List all contributions')
   .option('-s, --status <status>', 'Filter by status (open, claimed, in_progress, completed, etc.)')
   .option('-d, --domain <domain>', 'Filter by domain')
   .option('-n, --limit <number>', 'Limit results', '50')

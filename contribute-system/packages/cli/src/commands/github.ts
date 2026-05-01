@@ -234,7 +234,7 @@ githubCommand
 
 githubCommand
   .command('sync <repo>')
-  .description('Sync existing labeled issues as bounties')
+  .description('Sync existing labeled issues as contributions')
   .option('--label <label>', 'Label to look for', 'bounty')
   .option('--dry-run', 'Preview without creating bounties')
   .action(async (repo, options) => {
@@ -288,17 +288,17 @@ githubCommand
           }
         }
 
-        const bountyId = `gh-${repo.replace('/', '-')}-${issue.number}`;
+        const contributionId = `gh-${repo.replace('/', '-')}-${issue.number}`;
 
         if (options.dryRun) {
           console.log(`  ${chalk.cyan(`#${issue.number}`)} ${issue.title}`);
-          console.log(`    ID: ${bountyId}`);
+          console.log(`    ID: ${contributionId}`);
           console.log(`    Value: $${value}`);
           console.log(`    Labels: ${labels.join(', ')}`);
           console.log('');
         } else {
           // Would create bounty in Firestore
-          console.log(`  ${chalk.green('✓')} Created: ${bountyId} - ${issue.title} ($${value})`);
+          console.log(`  ${chalk.green('✓')} Created: ${contributionId} - ${issue.title} ($${value})`);
         }
       }
 

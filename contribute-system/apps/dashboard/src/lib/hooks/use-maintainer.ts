@@ -38,7 +38,7 @@ export function useMaintainer(repo?: string) {
     setError(null);
 
     try {
-      const res = await fetch(`/api/bounty/maintainer?repo=${encodeURIComponent(repo)}`);
+      const res = await fetch(`/api/contribution/maintainer?repo=${encodeURIComponent(repo)}`);
       const data = await res.json();
 
       if (data.error) {

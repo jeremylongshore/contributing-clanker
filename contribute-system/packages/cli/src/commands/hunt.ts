@@ -1,5 +1,5 @@
 /**
- * Hunt Command - Intelligent Bounty Discovery
+ * Hunt Command - Intelligent Contribution Discovery
  *
  * Queries the local issues_index for bounty opportunities with:
  * - Freshness filtering (--max-age)
@@ -52,7 +52,7 @@ interface HuntResult {
 }
 
 export const huntCommand = new Command('hunt')
-  .description('Search for bounty opportunities with live validation')
+  .description('Search for contribution opportunities with live validation')
   .option('--paid', 'Only show paid bounties (has value)')
   .option('--rep', 'Only show reputation opportunities (no payout)')
   .option('-t, --tech <tech>', 'Filter by technology keyword in labels')
@@ -350,7 +350,7 @@ export const huntCommand = new Command('hunt')
  * Compute hunt score for an issue
  *
  * Score factors:
- * - Bounty value (30%)
+ * - Contribution value (30%)
  * - Maintainer/Seed score (20%)
  * - TTFTG penalty (15%)
  * - Age freshness (15%)

@@ -94,7 +94,7 @@ export const themes: Record<string, SiteTheme> = {
   // Default/localhost theme
   default: {
     id: 'default',
-    name: 'Bounty System',
+    name: 'Contribution System',
     domain: 'localhost',
     tagline: 'Track, Record, Prove',
     colors: {

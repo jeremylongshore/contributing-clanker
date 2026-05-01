@@ -16,7 +16,7 @@ import { execSync } from 'child_process';
 import { getConfig } from '../lib/config';
 import { getAlgoraBounties, getTrackedOrgs } from '../lib/algora';
 import { readCSVBounties, writeCSVBounties } from '../lib/firestore';
-import type { Bounty } from '@contribute/core';
+import type { Contribution } from '@contribute/core';
 
 // Try to get GitHub token from multiple sources
 function getGitHubToken(): string | null {
@@ -92,7 +92,7 @@ async function checkPRWithGhApi(repo: string, prNumber: number): Promise<{ state
 }
 
 export const syncCommand = new Command('sync')
-  .description('Sync bounties from all sources (Algora, GitHub, CSV)');
+  .description('Sync contributions from all sources (Algora, GitHub, CSV)');
 
 syncCommand
   .command('all')
@@ -113,7 +113,7 @@ syncCommand
       // Load existing CSV bounties
       spinner.text = 'Loading existing bounties...';
       const existingBounties = readCSVBounties();
-      const bountyMap = new Map<string, Bounty>();
+      const bountyMap = new Map<string, Contribution>();
 
       for (const b of existingBounties) {
         const key = `${b.repo}-${b.issue}`;
@@ -168,7 +168,7 @@ syncCommand
                   }
                 }
 
-                const bounty: Bounty = {
+                const bounty: Contribution = {
                   id: `gh-${owner}-${repo}-${issue.number}`,
                   title: issue.title,
                   description: issue.body?.substring(0, 500) || undefined,
@@ -312,7 +312,7 @@ syncCommand
     try {
       const octokit = new Octokit({ auth: token });
       const repos = repo ? [repo] : TRACKED_REPOS;
-      const bounties: Bounty[] = [];
+      const bounties: Contribution[] = [];
 
       for (const repoPath of repos) {
         const [owner, repoName] = repoPath.split('/');
@@ -463,8 +463,8 @@ syncCommand.action(async () => {
   await syncCommand.commands.find(c => c.name() === 'all')?.parseAsync(['node', 'bounty', 'sync', 'all']);
 });
 
-function mergeUnique(existing: Bounty[], newBounties: Bounty[]): Bounty[] {
-  const map = new Map<string, Bounty>();
+function mergeUnique(existing: Contribution[], newBounties: Contribution[]): Contribution[] {
+  const map = new Map<string, Contribution>();
 
   for (const b of existing) {
     const key = `${b.repo}-${b.issue}`;

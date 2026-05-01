@@ -16,11 +16,11 @@ import {
 } from '@contribute/vetting';
 
 export const vetCommand = new Command('vet')
-  .description('Run vetting pipeline on a bounty');
+  .description('Run vetting pipeline on a contribution');
 
 vetCommand
   .command('run <id>')
-  .description('Run full vetting pipeline on a bounty')
+  .description('Run full vetting pipeline on a contribution')
   .option('--skip <stages>', 'Comma-separated stages to skip')
   .option('--only <stages>', 'Comma-separated stages to run (skip others)')
   .option('-v, --verbose', 'Show detailed output')
@@ -30,12 +30,12 @@ vetCommand
     try {
       const bounty = await getBounty(id);
       if (!bounty) {
-        spinner.fail(`Bounty not found: ${id}`);
+        spinner.fail(`Contribution not found: ${id}`);
         process.exit(1);
       }
 
       if (!bounty.repo || !bounty.pr) {
-        spinner.fail('Bounty must have repo and PR linked');
+        spinner.fail('Contribution must have repo and PR linked');
         console.log(chalk.dim('Link a PR first with the GitHub integration'));
         process.exit(1);
       }
@@ -53,7 +53,7 @@ vetCommand
 
       // Run vetting
       const result = await runVetting({
-        bountyId: id,
+        contributionId: id,
         repo: bounty.repo,
         pr: bounty.pr,
         commitSha: bounty.commitSha || 'HEAD',
@@ -106,7 +106,7 @@ vetCommand
       if (result.status === 'passed' && result.proofBundle) {
         await createProof({
           id: result.proofBundle.id,
-          bountyId: id,
+          contributionId: id,
           sessions: [],
           recordings: [],
           screenshots: [],
@@ -140,14 +140,14 @@ vetCommand
 
 vetCommand
   .command('status <id>')
-  .description('Check vetting status for a bounty')
+  .description('Check vetting status for a contribution')
   .action(async (id) => {
     const spinner = ora('Loading bounty...').start();
 
     try {
       const bounty = await getBounty(id);
       if (!bounty) {
-        spinner.fail(`Bounty not found: ${id}`);
+        spinner.fail(`Contribution not found: ${id}`);
         process.exit(1);
       }
 

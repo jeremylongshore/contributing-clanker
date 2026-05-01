@@ -5,7 +5,7 @@ const ORCHESTRATOR_URL = process.env.BOUNTY_ORCHESTRATOR_URL || 'http://localhos
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, bountyId, issueUrl, repo } = body;
+    const { action, contributionId, issueUrl, repo } = body;
 
     let endpoint: string;
     let method = 'POST';
@@ -13,18 +13,18 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'start':
-        endpoint = '/api/bounty/start';
+        endpoint = '/api/contribution/start';
         payload = {
-          bounty_id: bountyId,
+          contribution_id: contributionId,
           issue_url: issueUrl,
           repo: repo,
         };
         break;
       case 'approve':
-        endpoint = `/api/bounty/${bountyId}/approve`;
+        endpoint = `/api/contribution/${contributionId}/approve`;
         break;
       case 'reject':
-        endpoint = `/api/bounty/${bountyId}/reject`;
+        endpoint = `/api/contribution/${contributionId}/reject`;
         break;
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -60,14 +60,14 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const bountyId = searchParams.get('bountyId');
+    const contributionId = searchParams.get('contributionId');
 
-    if (!bountyId) {
-      return NextResponse.json({ error: 'Missing bountyId' }, { status: 400 });
+    if (!contributionId) {
+      return NextResponse.json({ error: 'Missing contributionId' }, { status: 400 });
     }
 
     const response = await fetch(
-      `${ORCHESTRATOR_URL}/api/bounty/${bountyId}/status`,
+      `${ORCHESTRATOR_URL}/api/contribution/${contributionId}/status`,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     );
 
     if (!response.ok) {
-      // Bounty not started yet - return empty state
+      // Contribution not started yet - return empty state
       if (response.status === 404) {
         return NextResponse.json({
           current_node: null,

@@ -91,7 +91,7 @@ export async function runBundleStage(
     const manifest: ProofManifest = {
       version: '1.0.0',
       generatedAt: new Date().toISOString(),
-      bountyId: vettingResult.bountyId,
+      contributionId: vettingResult.contributionId,
       repo: config.repo,
       pr: config.pr,
       commitSha: config.commitSha,
@@ -108,7 +108,7 @@ export async function runBundleStage(
     // Create proof bundle
     const bundle: ProofBundle = {
       id: `proof_${Date.now().toString(36)}`,
-      bountyId: vettingResult.bountyId,
+      contributionId: vettingResult.contributionId,
       createdAt: new Date().toISOString(),
       checksum: bundleChecksum,
       files: changedFiles,

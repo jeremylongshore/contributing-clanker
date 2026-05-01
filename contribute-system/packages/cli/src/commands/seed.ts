@@ -1,5 +1,5 @@
 /**
- * Seed Command - GitHub-only Bounty Discovery & Baseline Preload
+ * Seed Command - GitHub-only Contribution Discovery & Baseline Preload
  *
  * Pre-populates the local libSQL DB with:
  * - repos that repeatedly show "bounty-like" issues
@@ -81,7 +81,7 @@ interface SeedRunStats {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const seedCommand = new Command('seed')
-  .description('GitHub-only bounty discovery and baseline preload');
+  .description('GitHub-only contribution discovery and baseline preload');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Subcommand: repos
@@ -89,7 +89,7 @@ export const seedCommand = new Command('seed')
 
 seedCommand
   .command('repos')
-  .description('Run query pack against GitHub to discover bounty repos')
+  .description('Run query pack against GitHub to discover contribution repos')
   .option('--top <n>', 'Stop after finding N unique repos', '500')
   .option('--per-query <n>', 'Results per query', '100')
   .option('--since-days <d>', 'Bias toward repos with activity in last D days', '90')
@@ -793,7 +793,7 @@ function detectPayout(text: string): { amount: number; currency: string } | null
 function computeSeedScore(repo: RepoAggregation): number {
   let score = 50; // Base
 
-  // Bounty issue density (+30 max)
+  // Contribution issue density (+30 max)
   if (repo.bountyIssueCount >= 10) score += 30;
   else if (repo.bountyIssueCount >= 5) score += 25;
   else if (repo.bountyIssueCount >= 3) score += 20;
@@ -903,7 +903,7 @@ function buildReport(
 
   const lines: string[] = [];
 
-  lines.push('# Bounty Seed Baseline Report');
+  lines.push('# Contribution Seed Baseline Report');
   lines.push('');
   lines.push(`Generated: ${new Date().toISOString()}`);
   lines.push(`Seed run: ${run.started_at}`);

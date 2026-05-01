@@ -1,5 +1,5 @@
 /**
- * Bounty Scoring Algorithm Tests
+ * Contribution Scoring Algorithm Tests
  */
 
 import { BountyScorer, scoreBounty } from './scorer';
@@ -186,7 +186,7 @@ if (require.main === module) {
   for (const bounty of testBounties) {
     const score = scorer.score(bounty);
     console.log(`\n${'='.repeat(60)}`);
-    console.log(`Bounty: ${bounty.title}`);
+    console.log(`Contribution: ${bounty.title}`);
     console.log(`Value: $${bounty.value}`);
     console.log(`${'='.repeat(60)}`);
     console.log(`Score: ${score.total}/100 (Grade: ${score.grade})`);

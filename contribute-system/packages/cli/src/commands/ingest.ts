@@ -1,5 +1,5 @@
 /**
- * Ingest Command - Phase 3 of Bounty Flywheel
+ * Ingest Command - Phase 3 of Contribution Flywheel
  *
  * Run incremental ingestion from configured sources.
  * Populates issues_index for local-first hunt queries.
@@ -26,7 +26,7 @@ interface Source {
 }
 
 export const ingestCommand = new Command('ingest')
-  .description('Run incremental ingestion from bounty sources')
+  .description('Run incremental ingestion from contribution sources')
   .option('-s, --source <name>', 'Run specific source by name or ID')
   .option('-d, --due', 'Only run sources that are due based on cadence')
   .option('-a, --all', 'Run all enabled sources (ignore cadence)')

@@ -58,8 +58,8 @@ function getGitStats(): GitStats {
 }
 
 export const submitCommand = new Command('submit')
-  .description('Submit a bounty for review')
-  .argument('<id>', 'Bounty ID')
+  .description('Submit a contribution for review')
+  .argument('<id>', 'Contribution ID')
   .option('-p, --pr <url>', 'Pull request URL')
   .option('-n, --notes <notes>', 'Submission notes')
   .option('--skip-vetting', 'Skip automated vetting (not recommended)')
@@ -69,7 +69,7 @@ export const submitCommand = new Command('submit')
     try {
       const bounty = await getBounty(id);
       if (!bounty) {
-        spinner.fail(`Bounty not found: ${id}`);
+        spinner.fail(`Contribution not found: ${id}`);
         process.exit(1);
       }
 
@@ -102,7 +102,7 @@ export const submitCommand = new Command('submit')
       // Create proof bundle
       await createProof({
         id: proofId,
-        bountyId: id,
+        contributionId: id,
         sessions: sessions.map(s => s.id),
         recordings: recordings.map(r => ({
           sessionId: r.sessionId,

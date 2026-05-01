@@ -1,5 +1,5 @@
 /**
- * Algora Bounty Discovery API Route
+ * Algora Contribution Discovery API Route
  *
  * Fetches bounties from Algora's public GraphQL API.
  * Algora is a bounty platform used by many open source projects.
@@ -12,7 +12,7 @@ const ALGORA_API = 'https://console.algora.io/api/graphql';
 
 // GraphQL query for fetching bounties
 const BOUNTIES_QUERY = `
-query GetBounties($first: Int!, $status: BountyStatus) {
+query GetBounties($first: Int!, $status: ContributionStatus) {
   bounties(first: $first, status: $status) {
     edges {
       node {

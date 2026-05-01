@@ -1,5 +1,5 @@
 /**
- * Bounty Scoring Algorithm
+ * Contribution Scoring Algorithm
  *
  * Evaluates bounty opportunities before claiming based on:
  * - Value: dollar amount and estimated hourly rate
@@ -389,7 +389,7 @@ export class BountyScorer {
       notes.push(`Premium bounty: $${value.raw}`);
     }
     if (competition.activity === 'stale') {
-      notes.push('Bounty has been open for a while - may be difficult or abandoned');
+      notes.push('Contribution has been open for a while - may be difficult or abandoned');
     }
     if (fit.repoFamiliarity === 'expert') {
       notes.push('You know this repo well - competitive advantage');

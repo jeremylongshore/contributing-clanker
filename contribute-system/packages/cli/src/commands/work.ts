@@ -15,7 +15,7 @@ import {
 } from '../lib/recorder';
 
 export const workCommand = new Command('work')
-  .description('Track work sessions on bounties');
+  .description('Track work sessions on contributions');
 
 workCommand
   .command('start <id>')
@@ -28,7 +28,7 @@ workCommand
     try {
       const bounty = await getBounty(id);
       if (!bounty) {
-        spinner.fail(`Bounty not found: ${id}`);
+        spinner.fail(`Contribution not found: ${id}`);
         process.exit(1);
       }
 
@@ -72,7 +72,7 @@ workCommand
       // Create new session in Firestore
       await saveSession({
         id: sessionId,
-        bountyId: id,
+        contributionId: id,
         startedAt: now,
         checkpoints: [],
         recordings: [],
@@ -198,9 +198,9 @@ workCommand
       await saveSession(session);
 
       // Update bounty timeline
-      const bounty = await getBounty(session.bountyId);
+      const bounty = await getBounty(session.contributionId);
       if (bounty) {
-        await updateBounty(session.bountyId, {
+        await updateBounty(session.contributionId, {
           timeline: [
             ...(bounty.timeline || []),
             {
@@ -230,8 +230,8 @@ workCommand
 
       if (bounty) {
         console.log(`\n${chalk.bold('Next steps:')}`);
-        console.log(`  ${chalk.cyan(`bounty work start ${session.bountyId}`)} - Start another session`);
-        console.log(`  ${chalk.cyan(`bounty submit ${session.bountyId}`)} - Submit for review`);
+        console.log(`  ${chalk.cyan(`bounty work start ${session.contributionId}`)} - Start another session`);
+        console.log(`  ${chalk.cyan(`bounty submit ${session.contributionId}`)} - Submit for review`);
       }
 
     } catch (error) {
@@ -253,11 +253,11 @@ workCommand
         return;
       }
 
-      const bounty = await getBounty(session.bountyId);
+      const bounty = await getBounty(session.contributionId);
       const now = nowISO();
 
       console.log(chalk.bold('\nActive Work Session\n'));
-      console.log(`  ${chalk.bold('Bounty:')}     ${bounty?.title || session.bountyId}`);
+      console.log(`  ${chalk.bold('Contribution:')}     ${bounty?.title || session.contributionId}`);
       console.log(`  ${chalk.bold('Session:')}    ${session.id}`);
       console.log(`  ${chalk.bold('Started:')}    ${new Date(session.startedAt).toLocaleString()}`);
       console.log(`  ${chalk.bold('Duration:')}   ${formatDuration(session.startedAt, now)}`);

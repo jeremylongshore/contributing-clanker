@@ -15,7 +15,7 @@ import { getDb, closeDb } from '../lib/db';
 // Blocklist reasons
 const BUNK_REASONS = {
   'never-pays': 'Never pays out bounties',
-  'abandoned': 'Bounty program abandoned',
+  'abandoned': 'Contribution program abandoned',
   'spam': 'Spam/scam repo',
   'low-quality': 'Low quality bounty program',
   'fake-bounties': 'Fake/misleading bounty claims',

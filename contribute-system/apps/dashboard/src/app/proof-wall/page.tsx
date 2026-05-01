@@ -326,7 +326,7 @@ export default function ProofWallPage() {
       {/* Footer */}
       <footer className="border-t border-gray-700 bg-gray-900/50 py-6">
         <div className="mx-auto max-w-6xl px-4 text-center text-sm text-gray-500">
-          Powered by Bounty System • All proofs cryptographically verified
+          Powered by Contribution System • All proofs cryptographically verified
         </div>
       </footer>
     </div>

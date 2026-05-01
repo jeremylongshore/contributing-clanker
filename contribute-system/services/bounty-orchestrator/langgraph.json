@@ -1,7 +1,0 @@
-{
-  "dependencies": ["./bounty_agent"],
-  "graphs": {
-    "bounty_workflow": "./bounty_agent/agent.py:graph"
-  },
-  "env": ".env"
-}

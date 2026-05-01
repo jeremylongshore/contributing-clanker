@@ -13,7 +13,7 @@ import { notifyDraft } from '../lib/slack';
 
 export const draftCommand = new Command('draft')
   .description('Generate claim comment for approval')
-  .argument('<id>', 'Bounty ID (e.g., owner/repo#123)')
+  .argument('<id>', 'Contribution ID (e.g., owner/repo#123)')
   .option('--no-slack', 'Skip Slack notification')
   .action(async (id, options) => {
     const spinner = ora('Loading bounty...').start();
@@ -22,16 +22,16 @@ export const draftCommand = new Command('draft')
       const db = getDb();
 
       // Normalize ID format
-      const bountyId = normalizeId(id);
+      const contributionId = normalizeId(id);
 
       // Load bounty
       const bountyResult = await db.execute({
         sql: 'SELECT * FROM bounties WHERE id = ?',
-        args: [bountyId]
+        args: [contributionId]
       });
 
       if (bountyResult.rows.length === 0) {
-        spinner.fail('Bounty not found');
+        spinner.fail('Contribution not found');
         console.log(chalk.dim('Run: bounty qualify <github-url> first'));
         process.exit(1);
       }
@@ -40,15 +40,15 @@ export const draftCommand = new Command('draft')
 
       // Check workflow state
       const workflowResult = await db.execute({
-        sql: 'SELECT * FROM workflow_state WHERE bounty_id = ?',
-        args: [bountyId]
+        sql: 'SELECT * FROM workflow_state WHERE contribution_id = ?',
+        args: [contributionId]
       });
 
       const workflow = workflowResult.rows[0];
 
       if (!workflow || (workflow.step !== 'plan' && workflow.step !== 'qualify')) {
         spinner.fail('Plan not approved yet');
-        console.log(chalk.dim(`Run: bounty plan ${bountyId} first`));
+        console.log(chalk.dim(`Run: bounty plan ${contributionId} first`));
         process.exit(1);
       }
 
@@ -74,7 +74,7 @@ export const draftCommand = new Command('draft')
         const threadTs = workflow?.slack_thread_ts as string | undefined;
 
         const slackResult = await notifyDraft(
-          bountyId,
+          contributionId,
           bounty.repo as string,
           draft,
           threadTs
@@ -88,8 +88,8 @@ export const draftCommand = new Command('draft')
           await db.execute({
             sql: `UPDATE workflow_state
                   SET step = 'draft', draft_content = ?, updated_at = ?
-                  WHERE bounty_id = ?`,
-            args: [draft, now, bountyId]
+                  WHERE contribution_id = ?`,
+            args: [draft, now, contributionId]
           });
 
           console.log(chalk.dim('\nReview draft in Slack'));
@@ -103,11 +103,11 @@ export const draftCommand = new Command('draft')
       // Update bounty status
       await db.execute({
         sql: 'UPDATE bounties SET status = ?, updated_at = ? WHERE id = ?',
-        args: ['drafting', new Date().toISOString(), bountyId]
+        args: ['drafting', new Date().toISOString(), contributionId]
       });
 
       console.log(chalk.bold('\nNext step:'));
-      console.log(chalk.cyan(`  bounty submit ${bountyId}`));
+      console.log(chalk.cyan(`  bounty submit ${contributionId}`));
       console.log(chalk.dim('  (after draft approval in Slack)'));
       console.log('');
 

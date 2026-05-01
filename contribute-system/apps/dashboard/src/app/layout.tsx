@@ -6,7 +6,7 @@ import { Providers } from '@/components/providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Bounty Dashboard',
+  title: 'Contribution Dashboard',
   description: 'Track, record, and prove your bounty work',
 };
 

@@ -1,5 +1,5 @@
 /**
- * Bounty Scoring Module
+ * Contribution Scoring Module
  *
  * Evaluates bounty opportunities before claiming.
  */

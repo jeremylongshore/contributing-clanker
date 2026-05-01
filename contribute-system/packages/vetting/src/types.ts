@@ -38,7 +38,7 @@ export interface VettingConfig {
 
 export interface VettingResult {
   id: string;
-  bountyId: string;
+  contributionId: string;
   config: VettingConfig;
   status: VettingStatus;
   stages: StageResult[];
@@ -68,7 +68,7 @@ export interface VettingSummary {
 
 export interface ProofBundle {
   id: string;
-  bountyId: string;
+  contributionId: string;
   createdAt: string;
   checksum: string;
   files: ProofFile[];
@@ -88,7 +88,7 @@ export interface ProofFile {
 export interface ProofManifest {
   version: string;
   generatedAt: string;
-  bountyId: string;
+  contributionId: string;
   repo: string;
   pr: number;
   commitSha: string;

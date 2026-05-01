@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from 'react';
-import { useBounties, Bounty } from './use-bounties';
+import { useContributions, Contribution } from './use-contributions';
 import { useProofs } from './use-proofs';
 
 export interface Stats {
@@ -25,7 +25,7 @@ export interface Stats {
 }
 
 export function useStats() {
-  const { bounties, loading: bountiesLoading } = useBounties();
+  const { bounties, loading: bountiesLoading } = useContributions();
   const { proofs, loading: proofsLoading } = useProofs();
 
   const stats = useMemo<Stats>(() => {

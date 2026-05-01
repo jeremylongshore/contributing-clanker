@@ -18,7 +18,7 @@ import { getFirebaseDb } from '../firebase';
 
 export interface Proof {
   id: string;
-  bountyId: string;
+  contributionId: string;
   sessions: string[];
   recordings: Array<{
     id: string;
@@ -40,7 +40,7 @@ export interface Proof {
   };
 }
 
-export function useProofs(bountyId?: string) {
+export function useProofs(contributionId?: string) {
   const [proofs, setProofs] = useState<Proof[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -49,10 +49,10 @@ export function useProofs(bountyId?: string) {
     const db = getFirebaseDb();
     let q = query(collection(db, 'proofs'), orderBy('createdAt', 'desc'));
 
-    if (bountyId) {
+    if (contributionId) {
       q = query(
         collection(db, 'proofs'),
-        where('bountyId', '==', bountyId),
+        where('contributionId', '==', contributionId),
         orderBy('createdAt', 'desc')
       );
     }
@@ -76,7 +76,7 @@ export function useProofs(bountyId?: string) {
     );
 
     return unsubscribe;
-  }, [bountyId]);
+  }, [contributionId]);
 
   return { proofs, loading, error };
 }

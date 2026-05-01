@@ -67,7 +67,7 @@ function extractBountyValue(labels: Array<{ name: string }>): number {
   return 0;
 }
 
-function generateBountyId(repo: string, issue: number): string {
+function generateContributionId(repo: string, issue: number): string {
   const repoSlug = repo.toLowerCase().replace(/[^a-z0-9]/g, '-');
   return `gh-${repoSlug}-${issue}`;
 }
@@ -75,29 +75,29 @@ function generateBountyId(repo: string, issue: number): string {
 export async function handleIssueEvent(db: Firestore, payload: IssuePayload): Promise<void> {
   const { action, issue, label, repository } = payload;
   const repo = repository.full_name;
-  const bountyId = generateBountyId(repo, issue.number);
+  const contributionId = generateContributionId(repo, issue.number);
 
   console.log(`Issue event: ${action} on ${repo}#${issue.number}`);
 
   switch (action) {
     case 'labeled':
-      await handleIssueLabeled(db, bountyId, issue, label, repo);
+      await handleIssueLabeled(db, contributionId, issue, label, repo);
       break;
 
     case 'unlabeled':
-      await handleIssueUnlabeled(db, bountyId, issue, label, repo);
+      await handleIssueUnlabeled(db, contributionId, issue, label, repo);
       break;
 
     case 'closed':
-      await handleIssueClosed(db, bountyId, issue, repo);
+      await handleIssueClosed(db, contributionId, issue, repo);
       break;
 
     case 'reopened':
-      await handleIssueReopened(db, bountyId, issue, repo);
+      await handleIssueReopened(db, contributionId, issue, repo);
       break;
 
     case 'edited':
-      await handleIssueEdited(db, bountyId, issue, repo);
+      await handleIssueEdited(db, contributionId, issue, repo);
       break;
 
     default:
@@ -107,7 +107,7 @@ export async function handleIssueEvent(db: Firestore, payload: IssuePayload): Pr
 
 async function handleIssueLabeled(
   db: Firestore,
-  bountyId: string,
+  contributionId: string,
   issue: IssuePayload['issue'],
   label: { name: string } | undefined,
   repo: string
@@ -122,7 +122,7 @@ async function handleIssueLabeled(
     return;
   }
 
-  const bountyRef = db.collection(COLLECTIONS.BOUNTIES).doc(bountyId);
+  const bountyRef = db.collection(COLLECTIONS.CONTRIBUTIONS).doc(contributionId);
   const existing = await bountyRef.get();
 
   if (existing.exists) {
@@ -139,7 +139,7 @@ async function handleIssueLabeled(
             type: 'value_change'
           })
         });
-        console.log(`Updated bounty value: ${bountyId} → $${value}`);
+        console.log(`Updated bounty value: ${contributionId} → $${value}`);
       }
     }
     return;
@@ -150,7 +150,7 @@ async function handleIssueLabeled(
   const value = extractBountyValue(issue.labels);
 
   const bounty = {
-    id: bountyId,
+    id: contributionId,
     title: issue.title,
     description: issue.body?.slice(0, 2000) || '',
     value,
@@ -165,7 +165,7 @@ async function handleIssueLabeled(
     technologies: [],
     timeline: [{
       timestamp: now,
-      message: 'Bounty created from GitHub label',
+      message: 'Contribution created from GitHub label',
       type: 'status_change'
     }],
     createdAt: now,
@@ -173,12 +173,12 @@ async function handleIssueLabeled(
   };
 
   await bountyRef.set(bounty);
-  console.log(`Created bounty: ${bountyId} ($${value})`);
+  console.log(`Created bounty: ${contributionId} ($${value})`);
 }
 
 async function handleIssueUnlabeled(
   db: Firestore,
-  bountyId: string,
+  contributionId: string,
   issue: IssuePayload['issue'],
   label: { name: string } | undefined,
   repo: string
@@ -198,7 +198,7 @@ async function handleIssueUnlabeled(
     return;
   }
 
-  const bountyRef = db.collection(COLLECTIONS.BOUNTIES).doc(bountyId);
+  const bountyRef = db.collection(COLLECTIONS.CONTRIBUTIONS).doc(contributionId);
   const existing = await bountyRef.get();
 
   if (!existing.exists) {
@@ -214,21 +214,21 @@ async function handleIssueUnlabeled(
       updatedAt: new Date().toISOString(),
       timeline: FieldValue.arrayUnion({
         timestamp: new Date().toISOString(),
-        message: 'Bounty cancelled - label removed',
+        message: 'Contribution cancelled - label removed',
         type: 'status_change'
       })
     });
-    console.log(`Cancelled bounty: ${bountyId}`);
+    console.log(`Cancelled bounty: ${contributionId}`);
   }
 }
 
 async function handleIssueClosed(
   db: Firestore,
-  bountyId: string,
+  contributionId: string,
   issue: IssuePayload['issue'],
   repo: string
 ): Promise<void> {
-  const bountyRef = db.collection(COLLECTIONS.BOUNTIES).doc(bountyId);
+  const bountyRef = db.collection(COLLECTIONS.CONTRIBUTIONS).doc(contributionId);
   const existing = await bountyRef.get();
 
   if (!existing.exists) {
@@ -249,17 +249,17 @@ async function handleIssueClosed(
         type: 'status_change'
       })
     });
-    console.log(`Completed bounty: ${bountyId}`);
+    console.log(`Completed bounty: ${contributionId}`);
   }
 }
 
 async function handleIssueReopened(
   db: Firestore,
-  bountyId: string,
+  contributionId: string,
   issue: IssuePayload['issue'],
   repo: string
 ): Promise<void> {
-  const bountyRef = db.collection(COLLECTIONS.BOUNTIES).doc(bountyId);
+  const bountyRef = db.collection(COLLECTIONS.CONTRIBUTIONS).doc(contributionId);
   const existing = await bountyRef.get();
 
   if (!existing.exists) {
@@ -279,17 +279,17 @@ async function handleIssueReopened(
         type: 'status_change'
       })
     });
-    console.log(`Restored bounty: ${bountyId}`);
+    console.log(`Restored bounty: ${contributionId}`);
   }
 }
 
 async function handleIssueEdited(
   db: Firestore,
-  bountyId: string,
+  contributionId: string,
   issue: IssuePayload['issue'],
   repo: string
 ): Promise<void> {
-  const bountyRef = db.collection(COLLECTIONS.BOUNTIES).doc(bountyId);
+  const bountyRef = db.collection(COLLECTIONS.CONTRIBUTIONS).doc(contributionId);
   const existing = await bountyRef.get();
 
   if (!existing.exists) {
@@ -303,5 +303,5 @@ async function handleIssueEdited(
     labels: issue.labels.map(l => l.name),
     updatedAt: new Date().toISOString()
   });
-  console.log(`Updated bounty: ${bountyId}`);
+  console.log(`Updated bounty: ${contributionId}`);
 }

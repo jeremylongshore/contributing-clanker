@@ -1,11 +1,18 @@
 /**
  * Algora API Integration
  *
- * Fetches bounties from Algora's public API.
+ * Fetches bounties from Algora's public API and maps them onto our internal
+ * Contribution type.
+ *
+ * Naming boundary: this file deliberately keeps the term "bounty" for anything
+ * that mirrors Algora's API contract — `AlgoraBounty` DTO, `bounties` response
+ * field, `getAlgoraBounties` / `searchAlgoraBounties` function names. Algora's
+ * external API uses "bounty"; our internal abstraction is `Contribution`.
+ *
  * API Docs: https://api.docs.algora.io/bounties
  */
 
-import type { Bounty } from '@contribute/core';
+import type { Contribution } from '@contribute/core';
 
 // Tracked organizations on Algora
 const TRACKED_ORGS = [
@@ -55,7 +62,7 @@ function mapAlgoraStatus(status: string): string {
   }
 }
 
-function mapAlgoraBountyToInternal(ab: AlgoraBounty): Bounty {
+function mapAlgoraBountyToInternal(ab: AlgoraBounty): Contribution {
   return {
     id: `algora-${ab.id}`,
     title: ab.title,
@@ -82,7 +89,7 @@ export async function getAlgoraBounties(options: {
   status?: 'open' | 'all';
   limit?: number;
   token?: string;
-} = {}): Promise<Bounty[]> {
+} = {}): Promise<Contribution[]> {
   const orgs = options.orgs || TRACKED_ORGS;
   const limit = options.limit || 100;
   const token = options.token || process.env.ALGORA_TOKEN;
@@ -95,7 +102,7 @@ export async function getAlgoraBounties(options: {
     return [];
   }
 
-  const allBounties: Bounty[] = [];
+  const allBounties: Contribution[] = [];
 
   try {
     const url = new URL('https://console.algora.io/api/bounties');
@@ -105,7 +112,7 @@ export async function getAlgoraBounties(options: {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
-        'User-Agent': 'bounty-system-cli/0.1.0',
+        'User-Agent': 'contribute-system-cli/0.2.0',
       },
     });
 
@@ -140,7 +147,7 @@ export async function searchAlgoraBounties(options: {
   maxReward?: number;
   skills?: string[];
   limit?: number;
-} = {}): Promise<Bounty[]> {
+} = {}): Promise<Contribution[]> {
   try {
     const url = new URL('https://console.algora.io/api/bounties/search');
 
@@ -161,7 +168,7 @@ export async function searchAlgoraBounties(options: {
     const response = await fetch(url.toString(), {
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'bounty-system-cli/0.1.0',
+        'User-Agent': 'contribute-system-cli/0.2.0',
       },
     });
 

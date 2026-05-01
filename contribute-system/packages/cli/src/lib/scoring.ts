@@ -1,5 +1,5 @@
 /**
- * EV Scoring System - Phase 4 of Bounty Flywheel
+ * EV Scoring System - Phase 4 of Contribution Flywheel
  *
  * Calculates Expected Value (EV) based on:
  * - Payout amount

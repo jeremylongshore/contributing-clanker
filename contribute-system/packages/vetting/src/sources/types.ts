@@ -1,5 +1,5 @@
 /**
- * Bounty Source Types
+ * Contribution Source Types
  *
  * Common types for fetching bounties from various sources.
  */
@@ -10,7 +10,7 @@ import type { BountyInput } from '../scoring/types';
  * Raw bounty data from a source before normalization
  */
 export interface RawBounty {
-  source: BountySource;
+  source: ContributionSource;
   sourceId: string;        // Unique ID from the source
   sourceUrl: string;       // URL to the bounty on the source
   title: string;
@@ -36,13 +36,13 @@ export interface RawBounty {
   raw?: unknown;
 }
 
-export type BountySource = 'github' | 'algora' | 'gitcoin' | 'manual' | 'csv';
+export type ContributionSource = 'github' | 'algora' | 'gitcoin' | 'manual' | 'csv';
 
 /**
  * Source client interface - all sources implement this
  */
 export interface BountySourceClient {
-  name: BountySource;
+  name: ContributionSource;
 
   /**
    * Search for bounties matching criteria

@@ -43,7 +43,7 @@ export interface Notification {
   type: 'new_bounty' | 'deadline' | 'pr_status' | 'completed' | 'high_value';
   title: string;
   message: string;
-  bountyId?: string;
+  contributionId?: string;
   bountyTitle?: string;
   bountyValue?: number;
   prUrl?: string;
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
       type,
       title,
       message,
-      bountyId,
+      contributionId,
       bountyTitle,
       bountyValue,
       prUrl,
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       type,
       title,
       message,
-      bountyId,
+      contributionId,
       bountyTitle,
       bountyValue,
       prUrl,

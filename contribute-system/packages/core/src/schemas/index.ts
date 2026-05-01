@@ -1,13 +1,13 @@
-// Bounty schemas
+// Contribution schemas
 export {
-  BountySchema,
-  BountyStatus,
-  BountySource,
-  BountyCategory,
-  BountyCheckpoint,
-  CreateBountyInput,
-  type Bounty
-} from './bounty';
+  ContributionSchema,
+  ContributionStatus,
+  ContributionSource,
+  ContributionCategory,
+  ContributionCheckpoint,
+  CreateContributionInput,
+  type Contribution
+} from './contribution';
 
 // Proof schemas
 export {

@@ -1,0 +1,42 @@
+[project]
+name = "contribute-orchestrator"
+version = "1.0.0"
+description = "LangGraph-based bounty workflow orchestrator for Intentional Bounty"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    {name = "Jeremy Longshore", email = "jeremy@intentsolutions.io"}
+]
+keywords = ["langgraph", "bounty", "orchestrator", "ai", "automation"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=24.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.6.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = []
+
+[tool.ruff.isort]
+known-first-party = ["contribute_agent"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

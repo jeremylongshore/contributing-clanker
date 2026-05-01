@@ -1,6 +1,6 @@
 import { Firestore } from '@google-cloud/firestore';
 import { COLLECTIONS } from '@contribute/core';
-import type { Bounty, Domain, LedgerEntry, Proof } from '@contribute/core';
+import type { Contribution, Domain, LedgerEntry, Proof } from '@contribute/core';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -68,7 +68,7 @@ function mapCSVStatusToBountyStatus(csvStatus: string): string {
   }
 }
 
-export function readCSVBounties(): Bounty[] {
+export function readCSVBounties(): Contribution[] {
   if (!fs.existsSync(CSV_PATH)) {
     console.warn(`CSV file not found: ${CSV_PATH}`);
     return [];
@@ -80,7 +80,7 @@ export function readCSVBounties(): Bounty[] {
   if (lines.length < 2) return [];
 
   const headers = parseCSVLine(lines[0]);
-  const bounties: Bounty[] = [];
+  const bounties: Contribution[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i]);
@@ -107,7 +107,7 @@ export function readCSVBounties(): Bounty[] {
     const value = parseBountyValue(row.bounty);
     const status = mapCSVStatusToBountyStatus(row.status);
 
-    const bounty: Bounty = {
+    const bounty: Contribution = {
       id,
       title: row.task || `${row.repo} #${row.issue}`,
       description: row.notes || undefined,
@@ -135,7 +135,7 @@ export function readCSVBounties(): Bounty[] {
   return bounties;
 }
 
-export function writeCSVBounties(bounties: Bounty[]): void {
+export function writeCSVBounties(bounties: Contribution[]): void {
   const headers = ['repo', 'issue', 'task', 'bounty', 'status', 'pr_number', 'lines', 'competition', 'date_started', 'date_completed', 'notes'];
 
   const lines = [headers.join(',')];
@@ -180,9 +180,9 @@ export async function getBounties(options: {
   status?: string;
   domainId?: string;
   limit?: number;
-} = {}): Promise<Bounty[]> {
+} = {}): Promise<Contribution[]> {
   const db = getFirestore();
-  let query = db.collection(COLLECTIONS.BOUNTIES)
+  let query = db.collection(COLLECTIONS.CONTRIBUTIONS)
     .orderBy('createdAt', 'desc');
 
   if (options.status) {
@@ -196,7 +196,7 @@ export async function getBounties(options: {
   }
 
   const snapshot = await query.get();
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bounty));
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contribution));
 }
 
 // Fallback function that tries Firestore first, then CSV
@@ -204,7 +204,7 @@ export async function getBountiesWithFallback(options: {
   status?: string;
   domainId?: string;
   limit?: number;
-} = {}): Promise<Bounty[]> {
+} = {}): Promise<Contribution[]> {
   try {
     const bounties = await getBounties(options);
     return bounties;
@@ -227,24 +227,24 @@ export async function getBountiesWithFallback(options: {
   }
 }
 
-export async function getBounty(id: string): Promise<Bounty | null> {
+export async function getBounty(id: string): Promise<Contribution | null> {
   const db = getFirestore();
-  const doc = await db.collection(COLLECTIONS.BOUNTIES).doc(id).get();
+  const doc = await db.collection(COLLECTIONS.CONTRIBUTIONS).doc(id).get();
   if (!doc.exists) return null;
-  return { id: doc.id, ...doc.data() } as Bounty;
+  return { id: doc.id, ...doc.data() } as Contribution;
 }
 
-export async function createBounty(data: Omit<Bounty, 'id'>): Promise<Bounty> {
+export async function createBounty(data: Omit<Contribution, 'id'>): Promise<Contribution> {
   const db = getFirestore();
-  const ref = db.collection(COLLECTIONS.BOUNTIES).doc();
+  const ref = db.collection(COLLECTIONS.CONTRIBUTIONS).doc();
   const bounty = { id: ref.id, ...data };
   await ref.set(bounty);
   return bounty;
 }
 
-export async function updateBounty(id: string, data: Partial<Bounty>): Promise<void> {
+export async function updateBounty(id: string, data: Partial<Contribution>): Promise<void> {
   const db = getFirestore();
-  await db.collection(COLLECTIONS.BOUNTIES).doc(id).update({
+  await db.collection(COLLECTIONS.CONTRIBUTIONS).doc(id).update({
     ...data,
     updatedAt: new Date().toISOString()
   });
@@ -302,10 +302,10 @@ export async function getLedgerEntries(options: {
 }
 
 // Proofs
-export async function getProof(bountyId: string): Promise<Proof | null> {
+export async function getProof(contributionId: string): Promise<Proof | null> {
   const db = getFirestore();
   const snapshot = await db.collection(COLLECTIONS.PROOFS)
-    .where('bountyId', '==', bountyId)
+    .where('contributionId', '==', contributionId)
     .limit(1)
     .get();
 
@@ -323,7 +323,7 @@ export async function createProof(data: Proof): Promise<Proof> {
 // Sessions
 export interface WorkSession {
   id: string;
-  bountyId: string;
+  contributionId: string;
   startedAt: string;
   endedAt?: string;
   status: 'active' | 'completed' | 'cancelled';
@@ -340,13 +340,13 @@ export interface WorkSession {
   }>;
 }
 
-export async function getActiveSession(bountyId?: string): Promise<WorkSession | null> {
+export async function getActiveSession(contributionId?: string): Promise<WorkSession | null> {
   const db = getFirestore();
   let query = db.collection(COLLECTIONS.SESSIONS)
     .where('status', '==', 'active');
 
-  if (bountyId) {
-    query = query.where('bountyId', '==', bountyId);
+  if (contributionId) {
+    query = query.where('contributionId', '==', contributionId);
   }
 
   const snapshot = await query.limit(1).get();
@@ -356,10 +356,10 @@ export async function getActiveSession(bountyId?: string): Promise<WorkSession |
   return { id: first.id, ...first.data() } as WorkSession;
 }
 
-export async function getSessions(bountyId: string): Promise<WorkSession[]> {
+export async function getSessions(contributionId: string): Promise<WorkSession[]> {
   const db = getFirestore();
   const snapshot = await db.collection(COLLECTIONS.SESSIONS)
-    .where('bountyId', '==', bountyId)
+    .where('contributionId', '==', contributionId)
     .orderBy('startedAt', 'desc')
     .get();
 

@@ -22,14 +22,14 @@ export interface UseWorkflowReturn {
   refreshStatus: () => Promise<void>;
 }
 
-export function useWorkflow(bountyId: string): UseWorkflowReturn {
+export function useWorkflow(contributionId: string): UseWorkflowReturn {
   const [status, setStatus] = useState<WorkflowState | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refreshStatus = useCallback(async () => {
     try {
-      const response = await fetch(`/api/orchestrator?bountyId=${bountyId}`);
+      const response = await fetch(`/api/orchestrator?contributionId=${contributionId}`);
       const data = await response.json();
 
       if (data.error) {
@@ -56,7 +56,7 @@ export function useWorkflow(bountyId: string): UseWorkflowReturn {
       // Orchestrator not available - don't show error
       setStatus(null);
     }
-  }, [bountyId]);
+  }, [contributionId]);
 
   useEffect(() => {
     refreshStatus();
@@ -81,7 +81,7 @@ export function useWorkflow(bountyId: string): UseWorkflowReturn {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'start',
-            bountyId,
+            contributionId,
             issueUrl,
             repo,
           }),
@@ -102,7 +102,7 @@ export function useWorkflow(bountyId: string): UseWorkflowReturn {
         setLoading(false);
       }
     },
-    [bountyId, refreshStatus]
+    [contributionId, refreshStatus]
   );
 
   const approveExecution = useCallback(async () => {
@@ -115,7 +115,7 @@ export function useWorkflow(bountyId: string): UseWorkflowReturn {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'approve',
-          bountyId,
+          contributionId,
         }),
       });
 
@@ -132,7 +132,7 @@ export function useWorkflow(bountyId: string): UseWorkflowReturn {
     } finally {
       setLoading(false);
     }
-  }, [bountyId, refreshStatus]);
+  }, [contributionId, refreshStatus]);
 
   const rejectExecution = useCallback(async () => {
     setLoading(true);
@@ -144,7 +144,7 @@ export function useWorkflow(bountyId: string): UseWorkflowReturn {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'reject',
-          bountyId,
+          contributionId,
         }),
       });
 
@@ -161,7 +161,7 @@ export function useWorkflow(bountyId: string): UseWorkflowReturn {
     } finally {
       setLoading(false);
     }
-  }, [bountyId, refreshStatus]);
+  }, [contributionId, refreshStatus]);
 
   return {
     status,

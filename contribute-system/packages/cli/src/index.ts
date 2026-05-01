@@ -62,8 +62,8 @@ import { bunkCommand } from './commands/bunk';
 const program = new Command();
 
 program
-  .name('bounty')
-  .description('Bounty hunting CLI - track, record, and prove your work')
+  .name('contribute')
+  .description('OSS contributions CLI - track, record, and prove your work')
   .version('0.2.0');
 
 // Core commands
@@ -151,14 +151,14 @@ program.addCommand(bunkCommand);
 // Quick aliases
 program
   .command('open')
-  .description('List open bounties (alias for list -s open)')
+  .description('List open contributions (alias for list -s open)')
   .action(async () => {
     await listCommand.parseAsync(['node', 'bounty', 'list', '-s', 'open']);
   });
 
 program
   .command('mine')
-  .description('List my claimed/in-progress bounties')
+  .description('List my claimed/in-progress contributions')
   .action(async () => {
     await listCommand.parseAsync(['node', 'bounty', 'list', '-s', 'claimed']);
   });

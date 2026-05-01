@@ -13,7 +13,7 @@ interface Alert {
   type: AlertType;
   title: string;
   message: string;
-  bountyId?: string;
+  contributionId?: string;
   timestamp: Date;
   read: boolean;
 }
@@ -58,7 +58,7 @@ function toAlert(notification: Notification): Alert {
     type: notification.type as AlertType,
     title: notification.title,
     message: notification.message,
-    bountyId: notification.bountyId,
+    contributionId: notification.contributionId,
     timestamp: new Date(notification.createdAt),
     read: notification.read,
   };
