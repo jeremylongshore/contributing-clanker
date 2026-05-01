@@ -42,3 +42,7 @@ valiant-ai-engineer-cover-letter.pdf
 vertex-ai-samples/
 zio-blocks/
 claude-cookbooks/
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db

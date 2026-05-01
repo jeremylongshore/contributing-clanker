@@ -4,16 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is a bounty hunting workspace containing clones of open source projects with active bounty programs. Each subdirectory is a separate project with its own stack and contribution guidelines.
+This is a bounty hunting workspace (`git@github.com:intent-solutions-io/bounties.git`) containing clones of open source projects with active bounty programs **plus** the internal `bounty-system/` CLI that orchestrates discovery, EV scoring, competition monitoring, and submission tracking. Each external subdirectory is a separate project with its own stack and contribution guidelines.
+
+See `AGENTS.md` for **non-interactive shell rules** (always use `cp -f`, `rm -f`, `mv -f`, `apt-get -y`, etc. — interactive prompts hang the agent).
 
 ## Task Tracking with Beads
 
 ```bash
-bd sync                           # Sync with git
-bd list --status in_progress      # What was I working on?
 bd ready                          # Available bounties
+bd list --status in_progress      # What was I working on?
 bd update <id> --status in_progress  # Before starting work
 bd close <id> --reason "PR #123"     # After completing
+bd dolt push && git push          # Persist beads + code at session end
 ```
 
 ## Project Directory
@@ -31,8 +33,11 @@ bd close <id> --reason "PR #123"     # After completing
 | `feishin/` | React + Electron + pnpm | Contrib | Self-hosted music player |
 | `filament/` | PHP/Laravel + Livewire | Varies | Has own CLAUDE.md |
 | `shadcn-ui/` | TypeScript/React | Varies | Has own CLAUDE.md |
-| `bounty-system/` | TypeScript/pnpm | Internal | Custom CLI for tracking + recordings |
+| `bounty-system/` | TS turbo monorepo | Internal | EV scoring, competition monitoring, dashboard |
 | `claude-cookbooks/` | Various | Contrib | Has own CLAUDE.md |
+| `cal-com/`, `calcom/` | TypeScript/Next.js | $20-500 | Two clones; prefer `calcom/` (newer) |
+| `zio/`, `zio-blocks/` | Scala 3 + sbt | $2-4K | `zio-blocks/` is the active Schema library |
+| `projectdiscovery/` | YAML | $100 | CVE/nuclei templates |
 
 ## Tracking
 
@@ -157,18 +162,27 @@ pnpm run lint:fix                  # Auto-fix
 
 **Style**: React + Electron, uses pnpm. ESLint + Stylelint for code/CSS.
 
-### Bounty-System (Custom CLI)
+### Bounty-System (Internal CLI + Dashboard)
 
-The `bounty-system/` directory contains a custom bounty tracking CLI with work session recording.
+The `bounty-system/` directory is the **primary internal project** — a turbo + pnpm monorepo for bounty discovery, EV scoring, competition monitoring, and submission tracking.
 
 ```bash
 cd bounty-system
-pnpm install && pnpm build
+pnpm install
+pnpm build         # turbo run build (respects ^build deps)
+pnpm typecheck     # turbo run typecheck across all workspaces
+pnpm lint
+pnpm test
+pnpm dev           # turbo run dev (persistent, no cache)
 
-# Core commands
+# Single workspace
+pnpm --filter=@bounty-system/cli build
+pnpm --filter=@bounty-system/cli test -- <test-name-pattern>
+
+# Core CLI commands
 bounty list                      # List all bounties
-bounty list -s open              # List open bounties
-bounty show <id>                 # Show bounty details
+bounty hunt                      # Discover new bounties (Algora + GitHub)
+bounty show <id>                 # Show bounty details (with EV score)
 bounty claim <id>                # Claim a bounty
 
 # Work session recording (uses asciinema)
@@ -176,11 +190,24 @@ bounty work start <id>           # Start recording session
 bounty work checkpoint "message" # Add progress checkpoint
 bounty work stop                 # End session + upload to GCS
 
-# GitHub integration
+# GitHub + competition
 bounty github sync owner/repo    # Sync labeled issues
+bounty competition check         # Detect competing PRs on claimed work
 ```
 
-**Architecture**: pnpm monorepo with `packages/core` (Zod schemas), `packages/cli`, `apps/dashboard`, and `services/` (Cloud Functions for webhooks).
+**Workspace layout** (`pnpm-workspace.yaml` + `turbo.json`):
+
+| Path | Role |
+|------|------|
+| `packages/core/` | Zod schemas v10 (single source of truth for bounty/session shapes) |
+| `packages/cli/` | The `bounty` CLI binary, commands in `packages/cli/src/commands/` |
+| `packages/ui/` | Shared UI components |
+| `packages/vetting/` | Bounty quality / EV-scoring rules |
+| `apps/dashboard/` | Firebase-hosted dashboard (`apphosting.yaml`, `firebase.json`) |
+| `services/` | Cloud Functions for webhooks |
+| `infra/`, `firestore/` | IaC + firestore rules |
+
+**Versioning**: currently `0.2.0`. Schema changes are breaking — bump and document in `bounty-system/CHANGELOG.md`. Recent work consolidated to schema v10 with EV fix and competition monitoring (see commits `d5f3b49`, `920c616`).
 
 ### Claude Cookbooks
 

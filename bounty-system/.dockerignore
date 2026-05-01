@@ -1,0 +1,15 @@
+.git
+.gitignore
+*.md
+.env*
+!.env.example
+.eslintrc*
+.prettierrc*
+.dockerignore
+**/node_modules
+**/.next
+**/.turbo
+**/coverage
+**/dist
+**/.vercel
+services/
