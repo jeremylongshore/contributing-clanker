@@ -1,4 +1,4 @@
-# Bounty Hunting Fundamentals & The AI Reality
+# OSS Contribution Fundamentals & The AI Reality
 
 **For: Ope Ariyo**
 **Created: January 2026**
@@ -207,7 +207,7 @@ You write code → System records work → Jeremy reviews → External submissio
 
 **Document everything:**
 
-1. **Start recording** - `bounty work start <id>`
+1. **Start recording** - `contribute work start <id>`
 2. **Add checkpoints** - Every significant step
 3. **Commit frequently** - Small, logical commits
 4. **Test thoroughly** - Run ALL project tests
@@ -237,7 +237,7 @@ You write code → System records work → Jeremy reviews → External submissio
 ```
 1. YOU: Complete work, create PR draft
          ↓
-2. YOU: Run `bounty submit <id> --pr <url>`
+2. YOU: Run `contribute submit <id> --pr <url>`
          ↓
 3. SYSTEM: Creates proof bundle (recordings, stats)
          ↓

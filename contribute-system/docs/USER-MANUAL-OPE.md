@@ -1,10 +1,10 @@
-# Bounty Hunter User Manual
+# Contributor User Manual
 
 **For: Ope Ariyo**
 **Created: January 2026**
 **Version: 1.0**
 
-Welcome to the Bounty System! This manual serves as both a learning guide and a testing checklist. Work through each section systematically to learn the system while helping us identify bugs.
+Welcome to the Contribute System! This manual serves as both a learning guide and a testing checklist. Work through each section systematically to learn the system while helping us identify bugs.
 
 ---
 
@@ -29,15 +29,15 @@ Before you begin, ensure you have:
 - [ ] Node.js 20+ installed (`node --version`)
 - [ ] pnpm installed (`pnpm --version`)
 - [ ] Git configured with your GitHub account
-- [ ] Access to the bounty-system repository
+- [ ] Access to the contribute-system repository
 - [ ] Firebase CLI installed (`npm install -g firebase-tools`)
 
 ### 1.2 Environment Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/intent-solutions/bounty-system.git
-cd bounty-system
+git clone https://github.com/intent-solutions/contribute-system.git
+cd contribute-system
 
 # Install dependencies
 pnpm install
@@ -61,7 +61,7 @@ cp .env.example .env
 **Test Case 1.4.1: CLI Installation**
 ```bash
 # Run the CLI
-pnpm --filter @bounty-system/cli start --help
+pnpm --filter @contribute-system/cli start --help
 ```
 
 **Expected Result:**
@@ -71,7 +71,7 @@ pnpm --filter @bounty-system/cli start --help
 **Test Case 1.4.2: Dashboard Startup**
 ```bash
 # Start the dashboard
-pnpm --filter @bounty-system/dashboard dev
+pnpm --filter @contribute-system/dashboard dev
 ```
 
 **Expected Result:**
@@ -188,36 +188,36 @@ This creates a proof bundle with:
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `bounty list` | List all bounties | `bounty list --status open` |
-| `bounty show <id>` | Show bounty details | `bounty show bty-123` |
-| `bounty create` | Create new bounty | `bounty create --interactive` |
-| `bounty claim <id>` | Claim a bounty | `bounty claim bty-123` |
-| `bounty unclaim <id>` | Release a claim | `bounty unclaim bty-123 -r "Too complex"` |
+| `contribute list` | List all bounties | `contribute list --status open` |
+| `contribute show <id>` | Show bounty details | `contribute show bty-123` |
+| `contribute create` | Create new bounty | `contribute create --interactive` |
+| `contribute claim <id>` | Claim a bounty | `contribute claim bty-123` |
+| `contribute unclaim <id>` | Release a claim | `contribute unclaim bty-123 -r "Too complex"` |
 
 ### 3.2 Work Session Management
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `bounty work start <id>` | Start work session | `bounty work start bty-123` |
-| `bounty work checkpoint` | Add progress checkpoint | `bounty work checkpoint "Fixed auth bug"` |
-| `bounty work status` | Check session status | `bounty work status` |
-| `bounty work stop` | End work session | `bounty work stop -m "Done for today"` |
-| `bounty work recordings` | List local recordings | `bounty work recordings` |
+| `contribute work start <id>` | Start work session | `contribute work start bty-123` |
+| `contribute work checkpoint` | Add progress checkpoint | `contribute work checkpoint "Fixed auth bug"` |
+| `contribute work status` | Check session status | `contribute work status` |
+| `contribute work stop` | End work session | `contribute work stop -m "Done for today"` |
+| `contribute work recordings` | List local recordings | `contribute work recordings` |
 
 ### 3.3 Submission & Vetting
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `bounty submit <id>` | Submit for review | `bounty submit bty-123 --pr https://...` |
-| `bounty vet <id>` | Run vetting checks | `bounty vet bty-123` |
-| `bounty score <id>` | AI-powered scoring | `bounty score bty-123` |
+| `contribute submit <id>` | Submit for review | `contribute submit bty-123 --pr https://...` |
+| `contribute vet <id>` | Run vetting checks | `contribute vet bty-123` |
+| `contribute score <id>` | AI-powered scoring | `contribute score bty-123` |
 
 ### 3.4 Configuration
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `bounty config` | Show/set config | `bounty config set github.token xyz` |
-| `bounty github auth` | GitHub authentication | `bounty github auth` |
+| `contribute config` | Show/set config | `contribute config set github.token xyz` |
+| `contribute github auth` | GitHub authentication | `contribute github auth` |
 
 ---
 
@@ -274,20 +274,20 @@ Complete each test and mark the result.
 
 | Test ID | Test Description | Steps | Expected Result | Actual | Pass? |
 |---------|-----------------|-------|-----------------|--------|-------|
-| CLI-001 | List open bounties | `bounty list --status open` | Shows table of open bounties | | |
-| CLI-002 | Filter by domain | `bounty list -d frontend` | Only frontend bounties shown | | |
-| CLI-003 | Show bounty details | `bounty show <id>` | Full bounty info displayed | | |
-| CLI-004 | Claim bounty | `bounty claim <id>` | Pre-flight checklist shown, bounty claimed | | |
-| CLI-005 | Claim already claimed | `bounty claim <claimed-id>` | Error: bounty not open | | |
-| CLI-006 | Start work session | `bounty work start <id>` | Session created, recording starts | | |
-| CLI-007 | Double session start | `bounty work start <id>` again | Error: session already active | | |
-| CLI-008 | Add checkpoint | `bounty work checkpoint "test"` | Checkpoint added | | |
-| CLI-009 | Check work status | `bounty work status` | Shows current session info | | |
-| CLI-010 | Stop work session | `bounty work stop` | Session ended, summary shown | | |
-| CLI-011 | Submit bounty | `bounty submit <id> --pr <url>` | Proof bundle created | | |
-| CLI-012 | Submit wrong status | `bounty submit <open-bounty>` | Error: cannot submit | | |
-| CLI-013 | Unclaim bounty | `bounty unclaim <id>` | Bounty returned to open | | |
-| CLI-014 | List recordings | `bounty work recordings` | Local recordings listed | | |
+| CLI-001 | List open bounties | `contribute list --status open` | Shows table of open bounties | | |
+| CLI-002 | Filter by domain | `contribute list -d frontend` | Only frontend bounties shown | | |
+| CLI-003 | Show bounty details | `contribute show <id>` | Full bounty info displayed | | |
+| CLI-004 | Claim bounty | `contribute claim <id>` | Pre-flight checklist shown, bounty claimed | | |
+| CLI-005 | Claim already claimed | `contribute claim <claimed-id>` | Error: bounty not open | | |
+| CLI-006 | Start work session | `contribute work start <id>` | Session created, recording starts | | |
+| CLI-007 | Double session start | `contribute work start <id>` again | Error: session already active | | |
+| CLI-008 | Add checkpoint | `contribute work checkpoint "test"` | Checkpoint added | | |
+| CLI-009 | Check work status | `contribute work status` | Shows current session info | | |
+| CLI-010 | Stop work session | `contribute work stop` | Session ended, summary shown | | |
+| CLI-011 | Submit bounty | `contribute submit <id> --pr <url>` | Proof bundle created | | |
+| CLI-012 | Submit wrong status | `contribute submit <open-bounty>` | Error: cannot submit | | |
+| CLI-013 | Unclaim bounty | `contribute unclaim <id>` | Bounty returned to open | | |
+| CLI-014 | List recordings | `contribute work recordings` | Local recordings listed | | |
 
 ### 5.2 Dashboard Tests
 
@@ -342,7 +342,7 @@ When you encounter bugs or issues, create a GitHub issue with this template:
 [Actual behavior - include error messages if any]
 
 ### Environment
-- CLI version: [run `bounty --version`]
+- CLI version: [run `contribute --version`]
 - Node version: [run `node --version`]
 - OS: [your operating system]
 - Browser (if dashboard): [browser name and version]
@@ -374,9 +374,9 @@ When you encounter bugs or issues, create a GitHub issue with this template:
 **Type:** Bug
 
 ### What I Was Doing
-1. Ran `bounty work start bty-abc123`
+1. Ran `contribute work start bty-abc123`
 2. Session started successfully
-3. Ran `bounty work start bty-abc123` again
+3. Ran `contribute work start bty-abc123` again
 
 ### What I Expected
 Error message saying session already active
@@ -439,7 +439,7 @@ Contact maintainer              YES - Wait for approval
    - Complete your work
    - Commit to your branch
    - Create PR draft locally
-   - Run `bounty submit <id> --pr <draft-url>`
+   - Run `contribute submit <id> --pr <draft-url>`
 
 2. **System does:**
    - Creates proof bundle

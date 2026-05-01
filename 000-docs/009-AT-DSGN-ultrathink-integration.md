@@ -1,7 +1,7 @@
-# Ultrathink: Autonomous AI Bounty Economy with On-Chain Accountability
+# Ultrathink: Autonomous AI Contribution Economy with On-Chain Accountability
 
 **Design Document**: Multi-System Integration Architecture
-**Systems**: Bounty System + Bob's Brain + Git With Intent + IRSB Ethereum
+**Systems**: Contribute System + Bob's Brain + Git With Intent + IRSB Ethereum
 **Innovation**: First trustless AI-as-a-Service marketplace with cryptographic proofs
 
 ---
@@ -12,7 +12,7 @@
 
 Today's AI can write code, but there's no trustless way to verify it did the work correctly. By combining four systems, we create something that doesn't exist anywhere:
 
-1. **Bounty System** sources and vets opportunities
+1. **Contribute System** sources and vets opportunities
 2. **Bob's Brain** or **Git With Intent** executes the work
 3. **IRSB Ethereum** provides cryptographic accountability
 
@@ -73,7 +73,7 @@ The result: **A decentralized AI bounty marketplace where agents stake bonds, ex
 ### How It Works
 
 ```
-1. Bounty System discovers GitHub issue with bounty label
+1. Contribute System discovers GitHub issue with bounty label
 2. System creates Bounty record in Firestore
 3. System posts Intent to IRSB:
 
@@ -90,7 +90,7 @@ The result: **A decentralized AI bounty marketplace where agents stake bonds, ex
 4. Agent claims bounty → deposits bond
 5. Agent executes work → generates evidence
 6. Agent posts completion → receipt finalizes
-7. Bounty System verifies → releases payment
+7. Contribute System verifies → releases payment
 
 Failure at any step → automatic slashing
 ```
@@ -168,7 +168,7 @@ struct AgentWorkProof {
 
 ## Innovation 3: Multi-Solver Routing
 
-**Concept**: Bounty System intelligently routes work to the best solver based on task characteristics.
+**Concept**: Contribute System intelligently routes work to the best solver based on task characteristics.
 
 ### Routing Logic
 
@@ -230,7 +230,7 @@ function routeBounty(bounty: Bounty, solvers: Solver[]): Solver {
 │                    REPUTATION GRAPH                              │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  Bounty System                                                   │
+│  Contribute System                                                   │
 │  ├── bounties_completed: 47                                      │
 │  ├── success_rate: 94%                                           │
 │  ├── avg_completion_time: 2.3 days                               │
@@ -280,7 +280,7 @@ interface IReputationOracle {
 
 // Used by:
 // - IRSB for bond requirements (low score = higher bond)
-// - Bounty System for routing decisions
+// - Contribute System for routing decisions
 // - Clients for solver selection
 ```
 
@@ -338,7 +338,7 @@ const accountability = new YourProtocolAdapter({
   contract: '0x...'
 });
 
-// Register the Bounty System with your protocol
+// Register the Contribute System with your protocol
 const bountySystem = new BountySystemClient({
   accountabilityAdapter: accountability,
   solverAdapter: new BobsBrainAdapter(),
@@ -352,11 +352,11 @@ await bountySystem.sourceBounty({ repo: 'owner/repo', issue: 123 });
 
 ## Use Cases
 
-### Use Case 1: Fully Autonomous Bounty Hunting
+### Use Case 1: Fully Autonomous OSS Contribution
 
 ```
 1. GitHub issue labeled "bounty: $500"
-2. Bounty System detects, creates intent, posts to IRSB
+2. Contribute System detects, creates intent, posts to IRSB
 3. Bob's Brain claims (stakes 1000 USDC bond)
 4. Bob's Brain executes:
    - Clones repo
@@ -365,7 +365,7 @@ await bountySystem.sourceBounty({ repo: 'owner/repo', issue: 123 });
    - Runs tests
    - Creates PR
 5. Bob's Brain posts evidence bundle (IPFS)
-6. Bounty System vets: build passes, tests pass, lint clean
+6. Contribute System vets: build passes, tests pass, lint clean
 7. Human approves PR merge
 8. IRSB finalizes receipt
 9. Bob's Brain receives $500 + bond returned
@@ -380,7 +380,7 @@ Multiple solver agents competing for bounties:
 - Agent B (GWI instance): 92 reputation, 5 ETH bond
 - Agent C (Another team's system): 85 reputation, 3 ETH bond
 
-Bounty System routes based on:
+Contribute System routes based on:
 - Complexity match (some agents better at certain tasks)
 - Bond coverage (high-value bounties need more bond)
 - Reputation requirements (security tasks need 95+ score)
@@ -411,12 +411,12 @@ Any phase failure → partial slashing
 
 ### Phase 1: Core Integration (4 weeks)
 
-1. **Bounty System → Bob's Brain Connector**
+1. **Contribute System → Bob's Brain Connector**
    - A2A protocol task submission
    - Status polling and result retrieval
    - Evidence bundle format standardization
 
-2. **Bounty System → GWI Connector**
+2. **Contribute System → GWI Connector**
    - CLI invocation wrapper
    - Run status integration
    - Approval flow synchronization
@@ -463,7 +463,7 @@ Any phase failure → partial slashing
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
-| **Bounties Completed Autonomously** | 50%+ | Bounty System analytics |
+| **Bounties Completed Autonomously** | 50%+ | Contribute System analytics |
 | **Slashing Events** | <2% | IRSB contract events |
 | **Average Completion Time** | -40% vs manual | Historical comparison |
 | **Solver Onboarding** | 10+ external solvers | Registry count |
@@ -475,7 +475,7 @@ Any phase failure → partial slashing
 
 By integrating these four systems, we create the first **trustless AI bounty marketplace**:
 
-- **Bounty System** provides the work (discovery + vetting)
+- **Contribute System** provides the work (discovery + vetting)
 - **Bob's Brain / GWI** provides the labor (AI execution)
 - **IRSB** provides the trust (on-chain accountability)
 

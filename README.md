@@ -1,6 +1,6 @@
-# Bounty Hunting HQ
+# OSS Contributions HQ
 
-Tracking open source bounties and contributions.
+Tracking open source contributions across upstream projects with paid contribution programs.
 
 ## Quick Stats
 
@@ -13,27 +13,27 @@ Tracking open source bounties and contributions.
 
 ## Active Work
 
-| Repo | Task | Bounty | Status | PR |
+| Repo | Task | Reward | Status | PR |
 |------|------|--------|--------|-----|
 | gumroad | _legacy.scss | $1,500 | PR Submitted | [#2573](https://github.com/antiwork/gumroad/pull/2573) |
 
 ## Tracking
 
-Full tracking in [bounty-tracker.csv](./bounty-tracker.csv)
+Full tracking in [contribution-tracker.csv](./000-docs/002-PM-BKLG-contribution-tracker.csv).
 
 ## Repos
 
-| Repo | Bounties | Stack | Notes |
-|------|----------|-------|-------|
+| Repo | Reward | Stack | Notes |
+|------|--------|-------|-------|
 | [gumroad/](./gumroad/) | $1.5K/file | CSS/Tailwind | Tailwind migration - ACTIVE |
-| [screenpipe](https://algora.io/mediar-ai/bounties/community) | $25-500 | TypeScript/AI | $4,910 pool - 27 bounties |
+| [screenpipe](https://algora.io/mediar-ai/bounties/community) | $25-500 | TypeScript/AI | $4,910 pool - 27 contributions |
 | [tscircuit](https://algora.io/tscircuit/bounties/community) | $25-150 | React/TS | $5,502 pool - PCB design |
-| [golemcloud](https://algora.io/golemcloud/bounties/community) | $3.5K | Rust/WASM | MCP/TTS bounties |
-| [zio/](./zio/) | $2-4K | Scala | Schema/Patch bounties |
+| [golemcloud](https://algora.io/golemcloud/bounties/community) | $3.5K | Rust/WASM | MCP/TTS contributions |
+| [zio/](./zio/) | $2-4K | Scala | Schema/Patch contributions |
 | [projectdiscovery/](./projectdiscovery/) | $100 | YAML | CVE templates |
 | [cal-com/](./cal-com/) | $20-500 | TypeScript | Low value, many claimed |
 
-## Recommended Next Bounties
+## Recommended Next Contributions
 
 ### Best ROI (Your Skills)
 1. **screenpipe** - TypeScript/AI - $25-500 each - Active program
@@ -58,7 +58,8 @@ Full tracking in [bounty-tracker.csv](./bounty-tracker.csv)
 3. Payment via Stripe (bank, PayPal, crypto)
 
 ### Algora
-1. Claim via `/bounty` comment
+Algora's platform calls them "bounties" externally; we treat them as contributions internally.
+1. Claim via `/bounty` comment on the upstream issue (Algora's command — not our `/contribute` skill)
 2. Submit PR
 3. Platform handles payment (120+ countries)
 

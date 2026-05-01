@@ -1,4 +1,4 @@
-# Bounty System: Operator-Grade System Analysis
+# Contribute System: Operator-Grade System Analysis
 
 *For: DevOps Engineer / New Team Member*
 *Generated: 2026-01-29*
@@ -10,7 +10,7 @@
 
 ### Business Purpose
 
-The Bounty System is an **autonomous bounty domination engine** designed to track, execute, and prove work on open-source bounties. It serves bounty hunters who participate in paid contributions to projects like PostHog, Screenpipe, Cal.com, and others.
+The Contribute System is an **autonomous OSS contribution engine** designed to track, execute, and prove work on open-source bounties. It serves contributors who participate in paid contributions to projects like PostHog, Screenpipe, Cal.com, and others.
 
 **Core Capabilities:**
 - **Bounty Tracking**: Full lifecycle management from discovery → claim → work → submission → payment
@@ -106,7 +106,7 @@ The Bounty System is an **autonomous bounty domination engine** designed to trac
 │   ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐      │
 │   │ Next.js API     │     │ Cloud Functions │     │ FastAPI         │      │
 │   │ Routes          │     │ (Webhooks)      │     │ (Orchestrator)  │      │
-│   │ /api/bounty/*   │     │ github-webhook  │     │ /api/bounty/*   │      │
+│   │ /api/contribution/*   │     │ github-webhook  │     │ /api/contribution/*   │      │
 │   └────────┬────────┘     └────────┬────────┘     └────────┬────────┘      │
 │            │                       │                       │                │
 └────────────┼───────────────────────┼───────────────────────┼────────────────┘
@@ -158,7 +158,7 @@ The Bounty System is an **autonomous bounty domination engine** designed to trac
 ### Project Structure
 
 ```
-bounty-system/
+contribute-system/
 ├── apps/
 │   └── dashboard/              # Next.js 15 web portal
 │       ├── src/
@@ -266,7 +266,7 @@ bounty-system/
 - `BountyStatus`: open → claimed → in_progress → submitted → vetting → completed → paid
 - `BountySource`: github, algora, gitcoin, replit, internal, rss, webhook
 
-**services/bounty-orchestrator/**
+**services/contribute-orchestrator/**
 - Python LangGraph workflow engine
 - A2A communication with Bob's Brain (Vertex AI agent)
 - PostgreSQL for checkpointing (NOT in-memory MemorySaver)
@@ -291,7 +291,7 @@ bounty-system/
 ```bash
 # Clone and install
 git clone <repo>
-cd bounty-system
+cd contribute-system
 pnpm install
 
 # Build all packages
@@ -307,7 +307,7 @@ pnpm dev
 # → http://localhost:3000
 
 # Run orchestrator (development)
-cd services/bounty-orchestrator
+cd services/contribute-orchestrator
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8080
 ```
@@ -318,7 +318,7 @@ uvicorn main:app --reload --port 8080
 node packages/cli/dist/index.js list
 
 # Test dashboard
-curl http://localhost:3000/api/bounty/competition?repo=posthog/posthog&issue=123
+curl http://localhost:3000/api/contribution/competition?repo=posthog/posthog&issue=123
 
 # Test orchestrator
 curl http://localhost:8080/health
@@ -347,13 +347,13 @@ npm run deploy  # Uses firebase deploy --only functions
 ```bash
 cd infra/terraform
 terraform init
-terraform plan -var="project_id=bounty-system-prod"
+terraform plan -var="project_id=contribute-system-prod"
 terraform apply
 ```
 
 **Orchestrator (Vertex AI Agent Engine):**
 ```bash
-cd services/bounty-orchestrator
+cd services/contribute-orchestrator
 python deploy.py  # Deploys to Vertex AI
 ```
 
@@ -447,9 +447,9 @@ Note: Orchestrator deployment to Vertex AI will add cost (~$50-100/month dependi
 ### Performance Baseline
 
 **CLI Operations:**
-- `bounty list`: < 2s
-- `bounty claim`: < 1s
-- `bounty work start`: < 500ms
+- `contribute list`: < 2s
+- `contribute claim`: < 1s
+- `contribute work start`: < 500ms
 - Recording upload: Depends on file size
 
 **Dashboard:**
@@ -512,24 +512,24 @@ Note: Orchestrator deployment to Vertex AI will add cost (~$50-100/month dependi
 
 | Capability | Command | Notes |
 |------------|---------|-------|
-| List bounties | `bounty list [-s status]` | Filter by status |
-| Show bounty | `bounty show <id>` | Full details |
-| Create bounty | `bounty create -t "Title" -v 100` | Manual creation |
-| Claim bounty | `bounty claim <id>` | Mark as yours |
-| Start work | `bounty work start <id>` | Begins recording |
-| Add checkpoint | `bounty work checkpoint "msg"` | Progress marker |
-| Stop work | `bounty work stop` | Ends recording, uploads |
-| Submit | `bounty submit <id> --pr <url>` | For review |
-| Run vetting | `bounty vet run <id>` | Automated tests |
-| Configure | `bounty config set <key> <val>` | Set options |
-| GitHub setup | `bounty github setup owner/repo` | Webhook config |
-| GitHub sync | `bounty github sync owner/repo` | Import issues |
+| List bounties | `contribute list [-s status]` | Filter by status |
+| Show bounty | `contribute show <id>` | Full details |
+| Create bounty | `contribute create -t "Title" -v 100` | Manual creation |
+| Claim bounty | `contribute claim <id>` | Mark as yours |
+| Start work | `contribute work start <id>` | Begins recording |
+| Add checkpoint | `contribute work checkpoint "msg"` | Progress marker |
+| Stop work | `contribute work stop` | Ends recording, uploads |
+| Submit | `contribute submit <id> --pr <url>` | For review |
+| Run vetting | `contribute vet run <id>` | Automated tests |
+| Configure | `contribute config set <key> <val>` | Set options |
+| GitHub setup | `contribute github setup owner/repo` | Webhook config |
+| GitHub sync | `contribute github sync owner/repo` | Import issues |
 
 ### Configuration Keys
 
 | Key | Purpose | Example |
 |-----|---------|---------|
-| `projectId` | GCP project | `bounty-system-prod` |
+| `projectId` | GCP project | `contribute-system-prod` |
 | `proofBucket` | GCS bucket | `gs://bounty-proofs` |
 | `githubToken` | GitHub API token | `ghp_xxxxx` |
 
@@ -540,7 +540,7 @@ Note: Orchestrator deployment to Vertex AI will add cost (~$50-100/month dependi
 | Production Dashboard | (Not yet deployed) |
 | Firebase Console | https://console.firebase.google.com/project/intentional-bounty |
 | GCP Console | https://console.cloud.google.com/home/dashboard?project=intentional-bounty |
-| GitHub Repo | https://github.com/intent-solutions-io/bounties |
+| GitHub Repo | https://github.com/intent-solutions-io/contributions |
 
 ### First-Week Checklist
 
@@ -548,11 +548,11 @@ Note: Orchestrator deployment to Vertex AI will add cost (~$50-100/month dependi
 - [ ] GitHub repo access granted
 - [ ] Service account key downloaded
 - [ ] Local environment running (`pnpm install && pnpm build`)
-- [ ] CLI configured and tested (`bounty list`)
+- [ ] CLI configured and tested (`contribute list`)
 - [ ] Dashboard running locally (`pnpm dev`)
 - [ ] Reviewed Firestore rules
 - [ ] Understand bounty status flow
-- [ ] Tested recording system (`bounty work start/stop`)
+- [ ] Tested recording system (`contribute work start/stop`)
 
 ---
 
@@ -644,7 +644,7 @@ open → claimed → in_progress → submitted → vetting → completed → pai
 1. Check GCS bucket permissions
 2. Verify `proofBucket` config is set
 3. Check network connectivity
-4. Retry with: `bounty work upload <session-id>`
+4. Retry with: `contribute work upload <session-id>`
 
 ### E. Open Questions
 

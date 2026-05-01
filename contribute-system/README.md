@@ -1,10 +1,10 @@
-# bounty-system
+# contribute-system
 
-CLI for systematic bounty hunting with quality gates.
+CLI for systematic OSS contribution with quality gates.
 
 ## The Problem
 
-Open source bounty hunting is broken:
+Open source OSS contribution is broken:
 
 1. **AI slop contributions** - Maintainers are drowning in low-quality AI-generated PRs. Your well-researched fix gets lost in a pile of ChatGPT copy-paste jobs.
 
@@ -38,7 +38,7 @@ flowchart LR
 
 ```bash
 # Clone and install
-cd bounty-system
+cd contribute-system
 pnpm install
 pnpm build
 
@@ -117,7 +117,7 @@ flowchart LR
 
 ### Competition Detection
 
-Before you start work, `bounty hunt` checks GitHub for:
+Before you start work, `contribute hunt` checks GitHub for:
 - Existing PRs referencing the issue
 - Other claimants who commented
 - Issue state (still open?)
@@ -203,62 +203,62 @@ Bundle contains:
 
 | Command | Description |
 |---------|-------------|
-| `bounty hunt` | Search indexed issues for opportunities |
-| `bounty hunt --paid` | Only paid bounties |
-| `bounty hunt --rep` | Only reputation opportunities |
-| `bounty hunt --max-age 30` | Issues updated in last 30 days |
-| `bounty seed repos` | Add repos to track |
-| `bounty source add` | Add custom data source |
-| `bounty ingest --all` | Refresh all sources |
+| `contribute hunt` | Search indexed issues for opportunities |
+| `contribute hunt --paid` | Only paid bounties |
+| `contribute hunt --rep` | Only reputation opportunities |
+| `contribute hunt --max-age 30` | Issues updated in last 30 days |
+| `contribute seed repos` | Add repos to track |
+| `contribute source add` | Add custom data source |
+| `contribute ingest --all` | Refresh all sources |
 
 ### Evaluation
 
 | Command | Description |
 |---------|-------------|
-| `bounty qualify <url>` | Full qualification of an issue |
-| `bounty score url <url>` | Quick EV score |
-| `bounty score discover` | Batch score multiple issues |
-| `bounty competition check <url>` | Detailed competition analysis |
-| `bounty maintainer show <repo>` | Maintainer responsiveness stats |
+| `contribute qualify <url>` | Full qualification of an issue |
+| `contribute score url <url>` | Quick EV score |
+| `contribute score discover` | Batch score multiple issues |
+| `contribute competition check <url>` | Detailed competition analysis |
+| `contribute maintainer show <repo>` | Maintainer responsiveness stats |
 
 ### Workflow
 
 | Command | Description |
 |---------|-------------|
-| `bounty claim <id>` | Mark as claimed |
-| `bounty plan <id>` | Create work plan |
-| `bounty work start <id>` | Begin recorded session |
-| `bounty work checkpoint` | Mark progress |
-| `bounty work stop` | End session |
-| `bounty draft <id>` | Draft PR content |
-| `bounty submit <id>` | Submit after gates pass |
-| `bounty abort <id>` | Abandon with reason |
+| `contribute claim <id>` | Mark as claimed |
+| `contribute plan <id>` | Create work plan |
+| `contribute work start <id>` | Begin recorded session |
+| `contribute work checkpoint` | Mark progress |
+| `contribute work stop` | End session |
+| `contribute draft <id>` | Draft PR content |
+| `contribute submit <id>` | Submit after gates pass |
+| `contribute abort <id>` | Abandon with reason |
 
 ### Quality Gates
 
 | Command | Description |
 |---------|-------------|
-| `bounty rules fetch <repo>` | Fetch CONTRIBUTING.md |
-| `bounty rules acknowledge <repo>` | Mark rules as read |
-| `bounty style fetch <repo>` | Analyze project style |
-| `bounty test run <id>` | Run and record tests |
-| `bounty evidence build <id>` | Create evidence bundle |
-| `bounty judge run <id>` | Evaluate all gates |
-| `bounty text lint <text>` | Check for AI patterns |
-| `bounty cla complete <repo>` | Mark CLA signed |
-| `bounty dco enable` | Enable DCO sign-off |
+| `contribute rules fetch <repo>` | Fetch CONTRIBUTING.md |
+| `contribute rules acknowledge <repo>` | Mark rules as read |
+| `contribute style fetch <repo>` | Analyze project style |
+| `contribute test run <id>` | Run and record tests |
+| `contribute evidence build <id>` | Create evidence bundle |
+| `contribute judge run <id>` | Evaluate all gates |
+| `contribute text lint <text>` | Check for AI patterns |
+| `contribute cla complete <repo>` | Mark CLA signed |
+| `contribute dco enable` | Enable DCO sign-off |
 
 ### Database & Config
 
 | Command | Description |
 |---------|-------------|
-| `bounty db init` | Initialize database |
-| `bounty db migrate` | Run migrations |
-| `bounty db backup` | Create backup |
-| `bounty config set <key> <val>` | Set config value |
-| `bounty config get <key>` | Get config value |
-| `bounty bunk add <repo>` | Blocklist a repo |
-| `bounty metrics show` | View your stats |
+| `contribute db init` | Initialize database |
+| `contribute db migrate` | Run migrations |
+| `contribute db backup` | Create backup |
+| `contribute config set <key> <val>` | Set config value |
+| `contribute config get <key>` | Get config value |
+| `contribute bunk add <repo>` | Blocklist a repo |
+| `contribute metrics show` | View your stats |
 
 ## Database Schema
 
@@ -302,7 +302,7 @@ erDiagram
     }
 ```
 
-Data stored in `~/.bounty-system/bounty.db` (libSQL/SQLite)
+Data stored in `~/.contribute-system/bounty.db` (libSQL/SQLite)
 
 ## Configuration
 
@@ -322,7 +322,7 @@ bounty score config --add-repo owner/familiar-repo
 
 ## Why This Exists
 
-This tool exists because bounty hunting should be systematic, not random:
+This tool exists because OSS contribution should be systematic, not random:
 
 - **Before**: Scroll GitHub, pick random issue, waste hours, get scooped
 - **After**: Query local index, score by EV, validate competition, record work, pass gates, submit with evidence

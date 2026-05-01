@@ -1,8 +1,8 @@
-# Master Bounty Dev Plan (Multi-Site, Portal, Proof-of-Work) — Enhanced
+# Master Contribution Dev Plan (Multi-Site, Portal, Proof-of-Work) — Enhanced
 
 ## 1) Outcome
 
-You will have one scalable "Bounty + Rewards + Proof-of-Work" system that:
+You will have one scalable "Contribution + Rewards + Proof-of-Work" system that:
 - Runs a private portal/dashboard you can log into
 - Publishes polished, public progress (what's been done) using bounty rewards as the narrative + metrics
 - Integrates cleanly into three existing websites:
@@ -106,7 +106,7 @@ Store roles in Firestore + enforce via:
 ## 6) Backend Architecture (GCP-native, scalable)
 
 ### APIs
-- Cloud Run service: `bounty-api`
+- Cloud Run service: `contribute-api`
   - CRUD for bounties, claims, submissions, rewards
   - Role-based access enforcement
   - Generates "Proof" feeds and widgets JSON

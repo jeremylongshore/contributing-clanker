@@ -1,12 +1,12 @@
 # Contribute Orchestrator
 
-LangGraph-based workflow orchestrator for the Intentional Bounty system. This service manages the bounty hunting workflow and coordinates with Bob's Brain via A2A protocol.
+LangGraph-based workflow orchestrator for the contribute-system (deployed under GCP project `intentional-bounty`). This service manages the OSS contribution workflow and coordinates with Bob's Brain via A2A protocol.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    BOUNTY ORCHESTRATOR (LangGraph)                   │
+│                CONTRIBUTE ORCHESTRATOR (LangGraph)                   │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
 │  Dashboard UI  ────►  FastAPI  ────►  LangGraph Workflow             │
@@ -30,7 +30,7 @@ LangGraph-based workflow orchestrator for the Intentional Bounty system. This se
 
 ## Workflow Phases
 
-The bounty workflow follows a 6-phase "Perfect PR Process":
+The contribution workflow follows a 6-phase "Perfect PR Process":
 
 | Phase | Name | Description | Gate |
 |-------|------|-------------|------|
@@ -97,20 +97,20 @@ Server runs at http://localhost:8080
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/health` | GET | Health check |
-| `/api/bounty/start` | POST | Start bounty workflow |
-| `/api/bounty/{id}/status` | GET | Get workflow status |
-| `/api/bounty/{id}/approve` | POST | Approve and resume workflow |
+| `/api/contribution/start` | POST | Start contribution workflow |
+| `/api/contribution/{id}/status` | GET | Get workflow status |
+| `/api/contribution/{id}/approve` | POST | Approve and resume workflow |
 | `/api/repos` | GET | List tracked repositories |
-| `/api/bounties` | GET | List all bounties |
+| `/api/contributions` | GET | List all contributions |
 | `/api/learnings` | GET | Search past learnings |
 
-### Start a Bounty Workflow
+### Start a Contribute Workflow
 
 ```bash
-curl -X POST http://localhost:8080/api/bounty/start \
+curl -X POST http://localhost:8080/api/contribution/start \
   -H "Content-Type: application/json" \
   -d '{
-    "bounty_id": "issue-123",
+    "contribution_id": "issue-123",
     "issue_url": "https://github.com/owner/repo/issues/123",
     "repo": "owner/repo"
   }'
@@ -119,13 +119,13 @@ curl -X POST http://localhost:8080/api/bounty/start \
 ### Check Status
 
 ```bash
-curl http://localhost:8080/api/bounty/issue-123/status
+curl http://localhost:8080/api/contribution/issue-123/status
 ```
 
 ### Approve Execution
 
 ```bash
-curl -X POST http://localhost:8080/api/bounty/issue-123/approve
+curl -X POST http://localhost:8080/api/contribution/issue-123/approve
 ```
 
 ## Project Structure
@@ -137,7 +137,7 @@ contribute-orchestrator/
 │   ├── agent.py            # LangGraph workflow (exports "graph")
 │   ├── api.py              # FastAPI endpoints
 │   ├── bobs_brain_client.py # A2A client
-│   ├── state.py            # BountyState TypedDict
+│   ├── state.py            # ContributionState TypedDict
 │   ├── nodes/              # Graph node implementations
 │   │   ├── analyze.py
 │   │   ├── competition.py

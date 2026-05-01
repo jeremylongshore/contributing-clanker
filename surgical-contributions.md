@@ -1,4 +1,4 @@
-# Surgical PR Bounty Tracker
+# Surgical PR Contribution Tracker
 
 Generated: 2026-01-10
 

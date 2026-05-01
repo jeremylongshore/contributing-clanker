@@ -227,11 +227,11 @@ gh api repos/{owner}/{repo} --jq '.stargazers_count,.forks_count,.language'
 Label-based queries (`lbl-*`) returned 0 results because GitHub's search API requires
 exact label matches and most bounty labels are custom (e.g., "💰 bounty", "bounty $100").
 To improve:
-1. Run `bounty seed hydrate` to fetch actual label taxonomies
+1. Run `contribute seed hydrate` to fetch actual label taxonomies
 2. Build repo-specific label mappings
 
 Meta queries for Dockerfile/docker-compose also returned 0 due to code search limitations.
-Use `bounty seed env-probe` for accurate environment detection via API checks.
+Use `contribute seed env-probe` for accurate environment detection via API checks.
 
 ## Recommended Baseline Hunt Filters
 
@@ -250,6 +250,6 @@ bounty hunt --paid --min-score 60 --tech typescript
 
 ## Next Steps
 
-1. `bounty seed hydrate --top 50` - Enrich top repos with rules/style
-2. `bounty seed env-probe --top 50` - Check environment requirements
-3. `bounty hunt --paid` - Start hunting from seeded data
+1. `contribute seed hydrate --top 50` - Enrich top repos with rules/style
+2. `contribute seed env-probe --top 50` - Check environment requirements
+3. `contribute hunt --paid` - Start hunting from seeded data

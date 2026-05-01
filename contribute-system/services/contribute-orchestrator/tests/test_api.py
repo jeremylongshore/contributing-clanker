@@ -144,7 +144,7 @@ class TestBountiesEndpoint:
 
     def test_list_bounties_returns_empty_initially(self, client):
         """Test that bounties endpoint returns empty list initially."""
-        response = client.get("/api/bounties")
+        response = client.get("/api/contributions")
 
         assert response.status_code == 200
         data = response.json()

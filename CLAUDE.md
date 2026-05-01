@@ -4,14 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is a bounty hunting workspace (`git@github.com:intent-solutions-io/bounties.git`) containing clones of open source projects with active bounty programs **plus** the internal `bounty-system/` CLI that orchestrates discovery, EV scoring, competition monitoring, and submission tracking. Each external subdirectory is a separate project with its own stack and contribution guidelines.
+This is an OSS contributions workspace (`git@github.com:intent-solutions-io/contributions.git`) containing clones of open source projects with active paid-contribution programs **plus** the internal `contribute-system/` CLI that orchestrates discovery, EV scoring, competition monitoring, and submission tracking. Each external subdirectory is a separate project with its own stack and contribution guidelines.
+
+External platforms like Algora call paid issues "bounties" — we treat them as `Contribution` records internally. The Algora integration in `contribute-system/packages/cli/src/lib/algora.ts` keeps "bounty" terminology where it mirrors Algora's API contract; everywhere else, the internal abstraction is `Contribution`.
 
 See `AGENTS.md` for **non-interactive shell rules** (always use `cp -f`, `rm -f`, `mv -f`, `apt-get -y`, etc. — interactive prompts hang the agent).
 
 ## Task Tracking with Beads
 
 ```bash
-bd ready                          # Available bounties
+bd ready                          # Available contributions
 bd list --status in_progress      # What was I working on?
 bd update <id> --status in_progress  # Before starting work
 bd close <id> --reason "PR #123"     # After completing
@@ -20,8 +22,8 @@ bd dolt push && git push          # Persist beads + code at session end
 
 ## Project Directory
 
-| Directory | Stack | Bounties | Notes |
-|-----------|-------|----------|-------|
+| Directory | Stack | Reward range | Notes |
+|-----------|-------|--------------|-------|
 | `cortex/` | Python 3.10+ | $50-200 | AI-native OS - CLA required |
 | `screenpipe/` | Rust + Tauri + TS/Bun | $25-500 | AI/screen recording via Algora |
 | `posthog/` | Python/Django + React/TS | Varies | Analytics - uses flox environment |
@@ -33,7 +35,7 @@ bd dolt push && git push          # Persist beads + code at session end
 | `feishin/` | React + Electron + pnpm | Contrib | Self-hosted music player |
 | `filament/` | PHP/Laravel + Livewire | Varies | Has own CLAUDE.md |
 | `shadcn-ui/` | TypeScript/React | Varies | Has own CLAUDE.md |
-| `bounty-system/` | TS turbo monorepo | Internal | EV scoring, competition monitoring, dashboard |
+| `contribute-system/` | TS turbo monorepo | Internal | EV scoring, competition monitoring, dashboard |
 | `claude-cookbooks/` | Various | Contrib | Has own CLAUDE.md |
 | `cal-com/`, `calcom/` | TypeScript/Next.js | $20-500 | Two clones; prefer `calcom/` (newer) |
 | `zio/`, `zio-blocks/` | Scala 3 + sbt | $2-4K | `zio-blocks/` is the active Schema library |
@@ -41,15 +43,15 @@ bd dolt push && git push          # Persist beads + code at session end
 
 ## Tracking
 
-- `000-docs/002-PM-BKLG-bounty-tracker.csv` - Master spreadsheet with status
+- `000-docs/002-PM-BKLG-contribution-tracker.csv` - Master spreadsheet with status
 - `000-docs/001-BL-TRCK-payment-tracker.md` - Payment tracking
-- `surgical-bounties.md` - Curated list of small (<100 LOC) template-based bounties
-- **CRITICAL**: Always check GitHub for competing PRs before starting work - many bounties get superseded
+- `surgical-contributions.md` - Curated list of small (<100 LOC) template-based contributions
+- **CRITICAL**: Always check GitHub for competing PRs before starting work - many contributions get superseded
 - Use `gh pr list --repo <owner>/<repo> --search "<issue#>"` to find competing PRs
 
 ## Project-Specific Quick Reference
 
-### Screenpipe ($25-500 bounties via Algora)
+### Screenpipe ($25-500 contributions via Algora)
 
 ```bash
 cd screenpipe
@@ -67,7 +69,7 @@ cd screenpipe-app-tauri && bun install && bun run dev  # Tauri app
 - Keep `@ts-ignore` comments unless explicitly asked to remove
 - Escape HTML properly in React (use `&apos;` etc. when inside quotes)
 
-### Cortex ($50-200 bounties)
+### Cortex ($50-200 contributions)
 
 **CLA Required**: Must sign before first PR - see [CLA.md](cortex/CLA.md)
 
@@ -139,7 +141,7 @@ docker run -v ${PWD}:/setup/app gcr.io/cloud-devrel-public-resources/notebook_li
 
 **Style**: One notebook per PR, follow Google notebook standards.
 
-### ZIO Blocks ($2-4K bounties)
+### ZIO Blocks ($2-4K contributions)
 
 ```bash
 cd zio-blocks
@@ -162,12 +164,12 @@ pnpm run lint:fix                  # Auto-fix
 
 **Style**: React + Electron, uses pnpm. ESLint + Stylelint for code/CSS.
 
-### Bounty-System (Internal CLI + Dashboard)
+### Contribute-System (Internal CLI + Dashboard)
 
-The `bounty-system/` directory is the **primary internal project** — a turbo + pnpm monorepo for bounty discovery, EV scoring, competition monitoring, and submission tracking.
+The `contribute-system/` directory is the **primary internal project** — a turbo + pnpm monorepo for contribution discovery, EV scoring, competition monitoring, and submission tracking.
 
 ```bash
-cd bounty-system
+cd contribute-system
 pnpm install
 pnpm build         # turbo run build (respects ^build deps)
 pnpm typecheck     # turbo run typecheck across all workspaces
@@ -176,38 +178,39 @@ pnpm test
 pnpm dev           # turbo run dev (persistent, no cache)
 
 # Single workspace
-pnpm --filter=@bounty-system/cli build
-pnpm --filter=@bounty-system/cli test -- <test-name-pattern>
+pnpm --filter=@contribute/cli build
+pnpm --filter=@contribute/cli test -- <test-name-pattern>
 
 # Core CLI commands
-bounty list                      # List all bounties
-bounty hunt                      # Discover new bounties (Algora + GitHub)
-bounty show <id>                 # Show bounty details (with EV score)
-bounty claim <id>                # Claim a bounty
+contribute list                      # List all contributions
+contribute hunt                      # Discover new contributions (Algora + GitHub)
+contribute show <id>                 # Show contribution details (with EV score)
+contribute claim <id>                # Claim a contribution
 
 # Work session recording (uses asciinema)
-bounty work start <id>           # Start recording session
-bounty work checkpoint "message" # Add progress checkpoint
-bounty work stop                 # End session + upload to GCS
+contribute work start <id>           # Start recording session
+contribute work checkpoint "message" # Add progress checkpoint
+contribute work stop                 # End session + upload to GCS
 
 # GitHub + competition
-bounty github sync owner/repo    # Sync labeled issues
-bounty competition check         # Detect competing PRs on claimed work
+contribute github sync owner/repo    # Sync labeled issues
+contribute competition check         # Detect competing PRs on claimed work
 ```
 
 **Workspace layout** (`pnpm-workspace.yaml` + `turbo.json`):
 
 | Path | Role |
 |------|------|
-| `packages/core/` | Zod schemas v10 (single source of truth for bounty/session shapes) |
-| `packages/cli/` | The `bounty` CLI binary, commands in `packages/cli/src/commands/` |
+| `packages/core/` | Zod schemas v10 (single source of truth for `Contribution` / session shapes) |
+| `packages/cli/` | The `contribute` CLI binary, commands in `packages/cli/src/commands/` |
 | `packages/ui/` | Shared UI components |
-| `packages/vetting/` | Bounty quality / EV-scoring rules |
+| `packages/vetting/` | Contribution quality / EV-scoring rules |
 | `apps/dashboard/` | Firebase-hosted dashboard (`apphosting.yaml`, `firebase.json`) |
-| `services/` | Cloud Functions for webhooks |
+| `services/contribute-orchestrator/` | LangGraph workflow service (Python/FastAPI) |
+| `services/functions/` | Cloud Functions for webhooks |
 | `infra/`, `firestore/` | IaC + firestore rules |
 
-**Versioning**: currently `0.2.0`. Schema changes are breaking — bump and document in `bounty-system/CHANGELOG.md`. Recent work consolidated to schema v10 with EV fix and competition monitoring (see commits `d5f3b49`, `920c616`).
+**Versioning**: currently `0.2.0`. Schema changes are breaking — bump and document in `contribute-system/CHANGELOG.md`. Recent work consolidated to schema v10 with EV fix and competition monitoring (see commits `d5f3b49`, `920c616`).
 
 ### Claude Cookbooks
 
@@ -225,7 +228,7 @@ Both have their own `CLAUDE.md` files with detailed instructions. Read those bef
 **ALWAYS use the cloud VM for development and testing** - do not run heavy tests locally.
 
 ```bash
-# SSH into bounty-dev VM
+# SSH into bounty-dev VM (legacy name; GCP project ID intentional-bounty also unchanged)
 gcloud compute ssh bounty-dev --zone=us-central1-a
 
 # Run command on VM without interactive shell
@@ -236,12 +239,12 @@ gcloud compute ssh bounty-dev --zone=us-central1-a --command="cd vertex-ai-sampl
 ```
 
 **VM Details:**
-- Name: `bounty-dev`
+- Name: `bounty-dev` (kept as-is — VM rename not worth the migration cost)
 - Zone: `us-central1-a`
 - Type: `e2-standard-4`
 - Use for: Running tests, linting, notebook validation, heavy builds
 
-## Bounty Hunting Workflow
+## Contribution Workflow
 
 ### Philosophy: Design Issues First, Not PRs
 
@@ -263,9 +266,9 @@ This respects maintainer time and avoids wasted effort on rejected approaches.
 
 ### Workflow Steps
 
-1. **Research**: Check `000-docs/002-PM-BKLG-bounty-tracker.csv` for open bounties
+1. **Research**: Check `000-docs/002-PM-BKLG-contribution-tracker.csv` for open contributions
 2. **Verify**: Check GitHub for competing PRs on the target issue
-3. **Claim**: Comment on issue or use `/bounty` on Algora
+3. **Claim**: Comment on issue or use `/bounty` on Algora (Algora's command — separate from our `/contribute` skill)
 4. **Track**: `bd update <id> --status in_progress`
 5. **Develop**: Follow project-specific guidelines above
 6. **Test**: Run full test suite on cloud VM - ALL TESTS MUST PASS
@@ -302,13 +305,13 @@ This respects maintainer time and avoids wasted effort on rejected approaches.
 
 ## Tools
 
-`tools/` contains utilities for bounty management:
+`tools/` contains utilities for contribution management:
 
 ```bash
 cd tools
 npm install
 node generate-pdf.js               # Generate PDFs from markdown
-python sync-airtable.py            # Sync bounty tracker to Airtable (needs AIRTABLE_API_KEY in .env)
+python sync-airtable.py            # Sync contribution tracker to Airtable (needs AIRTABLE_API_KEY in .env)
 ```
 
 ## Payment

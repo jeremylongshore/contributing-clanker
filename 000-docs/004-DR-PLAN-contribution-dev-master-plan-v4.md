@@ -1,4 +1,4 @@
-# BOUNTY DEV MASTER PLAN
+# CONTRIBUTION DEV MASTER PLAN
 
 ## Intent Solutions IO — Market Domination Engine
 
@@ -99,7 +99,7 @@
 
 ## 1.1 What This System Is
 
-This is an **autonomous bounty domination engine** — a complete system for discovering, claiming, executing, proving, and monetizing software bounties at scale.
+This is an **autonomous OSS contribution engine** — a complete system for discovering, claiming, executing, proving, and monetizing software bounties at scale.
 
 ### The Core Value Proposition
 

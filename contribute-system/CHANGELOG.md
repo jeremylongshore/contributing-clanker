@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the bounty-system will be documented in this file.
+All notable changes to the contribute-system will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -18,14 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **competition command**: Monitor competing PRs with risk scoring
-  - `bounty competition check <id>` - Check competition on engagement
-  - `bounty competition watch <id>` - Start monitoring for changes
-  - `bounty competition list` - List all monitored engagements
+  - `contribute competition check <id>` - Check competition on engagement
+  - `contribute competition watch <id>` - Start monitoring for changes
+  - `contribute competition list` - List all monitored engagements
   - Risk thresholds: LOW (0-20), MODERATE (21-40), HIGH (41-60), CRITICAL (61+)
 
 - **text command**: AI pattern detection and style matching
-  - `bounty text lint --repo <repo> --in <file>` - Check for AI-ish patterns
-  - `bounty text rewrite --repo <repo> --in <file>` - Rewrite to match repo style
+  - `contribute text lint --repo <repo> --in <file>` - Check for AI-ish patterns
+  - `contribute text rewrite --repo <repo> --in <file>` - Rewrite to match repo style
 
 - **Hunt validation persistence**: Validation results now saved to database
   - Tracks `validated_at`, `live_state`, `competing_prs`, `days_since_activity`

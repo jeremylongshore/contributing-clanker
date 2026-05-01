@@ -250,7 +250,7 @@ async def sync_repo(repo_url: str, background_tasks: BackgroundTasks):
     return {"status": "syncing", "repo_url": repo_url}
 
 
-@app.get("/api/bounties")
+@app.get("/api/contributions")
 async def list_bounties():
     """List all bounties with current phase."""
     store = get_store()
@@ -274,7 +274,7 @@ async def list_bounties():
         return []
 
 
-@app.get("/api/bounties/{contribution_id}")
+@app.get("/api/contributions/{contribution_id}")
 async def get_bounty_detail(contribution_id: str):
     """Get full bounty state."""
     memory = _get_memory()
@@ -290,7 +290,7 @@ async def get_bounty_detail(contribution_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/bounties/{contribution_id}/outcome")
+@app.post("/api/contributions/{contribution_id}/outcome")
 async def record_outcome(contribution_id: str, request: RecordOutcomeRequest):
     """Record the outcome of a bounty submission.
 

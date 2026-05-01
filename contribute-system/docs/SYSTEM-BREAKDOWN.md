@@ -1,4 +1,4 @@
-# Bounty System Overview
+# Contribute System Overview
 
 **For: Ope Ariyo**
 **Created: January 2026**
@@ -7,7 +7,7 @@
 
 ## What Is This?
 
-The Bounty System is a platform for finding, tracking, and completing open source bounties. Companies and projects post bounties (cash rewards) for specific issues they want solved. We find these bounties, work on them, and earn money when our PRs get merged.
+The Contribute System is a platform for finding, tracking, and completing open source bounties. Companies and projects post bounties (cash rewards) for specific issues they want solved. We find these bounties, work on them, and earn money when our PRs get merged.
 
 **The Goal:** Earn extra income by solving real-world software problems for open source projects.
 
@@ -84,7 +84,7 @@ URL: http://localhost:3000 (development)
 
 ### 2. CLI (Command Line Tool)
 
-The primary tool for bounty hunters. Used to:
+The primary tool for contributors. Used to:
 - List and search bounties
 - Claim bounties for work
 - Track work sessions with recordings
@@ -109,7 +109,7 @@ Cloud database storing:
 
 ## Your Role
 
-As a bounty hunter, you will:
+As a contributor, you will:
 
 1. **Find Bounties**
    - Use the Dashboard or CLI to discover opportunities
@@ -169,33 +169,33 @@ This is critical for several reasons:
 
 ```
 1. DISCOVER
-   └── Find bounty on Dashboard or via `bounty list`
+   └── Find bounty on Dashboard or via `contribute list`
    └── Check: Value, difficulty, competition, maintainer activity
 
 2. EVALUATE
-   └── Run `bounty vet <id>` for automated checks
-   └── Run `bounty score <id>` for AI recommendation
+   └── Run `contribute vet <id>` for automated checks
+   └── Run `contribute score <id>` for AI recommendation
    └── Read the actual issue/requirements
 
 3. CLAIM
-   └── Run `bounty claim <id>`
+   └── Run `contribute claim <id>`
    └── Review pre-flight checklist
    └── Status: open → claimed
 
 4. WORK
-   └── Run `bounty work start <id>`
+   └── Run `contribute work start <id>`
    └── Terminal recording begins
-   └── Add checkpoints: `bounty work checkpoint "message"`
+   └── Add checkpoints: `contribute work checkpoint "message"`
    └── Write code, commit to branch
    └── Status: claimed → in_progress
 
 5. COMPLETE
-   └── Run `bounty work stop`
+   └── Run `contribute work stop`
    └── Recording saved and uploaded
    └── Create PR in target repo (draft)
 
 6. SUBMIT
-   └── Run `bounty submit <id> --pr <url>`
+   └── Run `contribute submit <id> --pr <url>`
    └── Proof bundle created with recordings, stats
    └── Status: in_progress → submitted
    └── Notification sent to Jeremy
@@ -285,7 +285,7 @@ Each bounty target may require different tools:
 ## File Structure
 
 ```
-bounty-system/
+contribute-system/
 ├── apps/
 │   └── dashboard/          # Next.js web app
 │       ├── src/
@@ -307,7 +307,7 @@ bounty-system/
 │       └── package.json
 │
 ├── services/
-│   └── bounty-orchestrator/ # Python backend (future)
+│   └── contribute-orchestrator/ # Python backend (future)
 │
 ├── docs/                  # Documentation (you are here)
 ├── 000-docs/              # DevOps documentation

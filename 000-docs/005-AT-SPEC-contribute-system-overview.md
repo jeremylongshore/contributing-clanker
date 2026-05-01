@@ -1,14 +1,14 @@
-# Bounty System Overview
+# Contribute System Overview
 
-**System**: Autonomous Bounty Domination Engine
-**Location**: `/home/jeremy/000-projects/bounties/bounty-system/`
+**System**: Autonomous OSS Contribution Engine
+**Location**: `/home/jeremy/000-projects/contributions/contribute-system/`
 **Status**: Phases 1-6 Complete | Active Development
 
 ---
 
 ## What It Is
 
-The Bounty System is an autonomous bounty tracking and proof-of-work platform that:
+The Contribute System is an autonomous bounty tracking and proof-of-work platform that:
 
 1. **Sources bounties** from GitHub issues, Algora, and direct entries
 2. **Vets opportunities** through automated quality pipelines
@@ -102,7 +102,7 @@ Each stage produces verifiable artifacts with checksums.
 ### 4. Recording System (`packages/recording`)
 
 Captures terminal work with asciinema:
-- Starts recording on `bounty work start`
+- Starts recording on `contribute work start`
 - Creates checkpoints with messages
 - Uploads to Cloud Storage on stop
 - Generates proof manifest with hashes
@@ -197,7 +197,7 @@ export function middleware(request: NextRequest) {
 
 ### Setup
 ```bash
-cd /home/jeremy/000-projects/bounties/bounty-system
+cd /home/jeremy/000-projects/contributions/contribute-system
 
 # Install dependencies
 pnpm install
