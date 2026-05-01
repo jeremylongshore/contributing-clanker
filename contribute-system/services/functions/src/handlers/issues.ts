@@ -139,7 +139,7 @@ async function handleIssueLabeled(
             type: 'value_change'
           })
         });
-        console.log(`Updated bounty value: ${contributionId} → $${value}`);
+        console.log(`Updated contribution value: ${contributionId} → $${value}`);
       }
     }
     return;
@@ -173,7 +173,7 @@ async function handleIssueLabeled(
   };
 
   await bountyRef.set(bounty);
-  console.log(`Created bounty: ${contributionId} ($${value})`);
+  console.log(`Created contribution: ${contributionId} ($${value})`);
 }
 
 async function handleIssueUnlabeled(
@@ -218,7 +218,7 @@ async function handleIssueUnlabeled(
         type: 'status_change'
       })
     });
-    console.log(`Cancelled bounty: ${contributionId}`);
+    console.log(`Cancelled contribution: ${contributionId}`);
   }
 }
 
@@ -249,7 +249,7 @@ async function handleIssueClosed(
         type: 'status_change'
       })
     });
-    console.log(`Completed bounty: ${contributionId}`);
+    console.log(`Completed contribution: ${contributionId}`);
   }
 }
 
@@ -279,7 +279,7 @@ async function handleIssueReopened(
         type: 'status_change'
       })
     });
-    console.log(`Restored bounty: ${contributionId}`);
+    console.log(`Restored contribution: ${contributionId}`);
   }
 }
 
@@ -303,5 +303,5 @@ async function handleIssueEdited(
     labels: issue.labels.map(l => l.name),
     updatedAt: new Date().toISOString()
   });
-  console.log(`Updated bounty: ${contributionId}`);
+  console.log(`Updated contribution: ${contributionId}`);
 }

@@ -116,7 +116,7 @@ async function handlePROpened(
     const existing = await bountyRef.get();
 
     if (!existing.exists) {
-      console.log(`No bounty found for issue #${issueNum}`);
+      console.log(`No contribution found for issue #${issueNum}`);
       continue;
     }
 

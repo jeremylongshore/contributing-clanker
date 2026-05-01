@@ -44,7 +44,7 @@ export const createCommand = new Command('create')
         updatedAt: now
       });
 
-      spinner.succeed(`Created bounty: ${chalk.bold(bounty.id)}`);
+      spinner.succeed(`Created contribution: ${chalk.bold(bounty.id)}`);
       console.log(`  Title: ${bounty.title}`);
       console.log(`  Value: $${bounty.value}`);
       console.log(`  Status: ${bounty.status}`);

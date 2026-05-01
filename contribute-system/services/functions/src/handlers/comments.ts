@@ -119,7 +119,7 @@ async function handleClaimCommand(
   const existing = await bountyRef.get();
 
   if (!existing.exists) {
-    console.log(`No bounty found for issue - cannot claim`);
+    console.log(`No contribution found for issue - cannot claim`);
     return;
   }
 
@@ -156,7 +156,7 @@ async function handleUnclaimCommand(
   const existing = await bountyRef.get();
 
   if (!existing.exists) {
-    console.log(`No bounty found - cannot unclaim`);
+    console.log(`No contribution found - cannot unclaim`);
     return;
   }
 
@@ -169,7 +169,7 @@ async function handleUnclaimCommand(
 
   // Only allow the claimer or maintainers to unclaim
   if (bounty?.claimedBy !== user) {
-    console.log(`Only ${bounty?.claimedBy} can unclaim this bounty`);
+    console.log(`Only ${bounty?.claimedBy} can unclaim this contribution`);
     return;
   }
 
@@ -198,7 +198,7 @@ async function handleStatusCommand(
   const existing = await bountyRef.get();
 
   if (!existing.exists) {
-    console.log(`No bounty found for this issue`);
+    console.log(`No contribution found for this issue`);
     return;
   }
 
@@ -227,7 +227,7 @@ async function handleValueCommand(
   const existing = await bountyRef.get();
 
   if (!existing.exists) {
-    console.log(`No bounty found - cannot set value`);
+    console.log(`No contribution found - cannot set value`);
     return;
   }
 
