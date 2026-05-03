@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is an OSS contributions workspace (`git@github.com:intent-solutions-io/contributions.git`) — clones of upstream projects with paid-contribution programs **plus** a tracker. The workflow lives in the **`/contribute` Claude Code skill** at `~/.claude/skills/contribute/`, not in this repo.
+This is an OSS contributions workspace (`https://github.com/jeremylongshore/contributing-clanker.git`) — clones of upstream projects with paid-contribution programs **plus** a tracker. The workflow lives in the **`/contribute` Claude Code skill** at `~/.claude/skills/contribute/`, not in this repo.
 
 Algora calls them "bounties" externally; we treat them as `Contribution` records internally. When inside an Algora-related code path, retain "bounty" terminology (matches their API contract). Everywhere else: contribution.
 

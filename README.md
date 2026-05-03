@@ -1,55 +1,71 @@
-# OSS Contributions HQ
+# The Contributing Clanker
 
-Workspace for tracking open source contributions. Contains clones of upstream projects with paid-contribution programs (Algora, Gumroad, Cortex, etc.) plus the contribution tracker.
+A personal OSS-contribution workspace + the runtime state that the `/contribute` Claude Code skill operates against.
 
-The actual workflow lives in the **[`/contribute` Claude Code skill](https://github.com/jeremylongshore/dotfiles)** at `~/.claude/skills/contribute/`. Run `/contribute` in any Claude Code session to discover, qualify, and submit contributions. The skill auto-refreshes state from `gh` + the local SQLite tracker on invoke.
+**What "clanker" means here**: an AI-assisted contribution system that fights AI slop in OSS by running deterministic gates before any external action. The workflow itself is in the skill, not in this repo.
 
-## Tracking
+## Where things live
 
-- **[contribution-tracker.csv](./000-docs/002-PM-BKLG-contribution-tracker.csv)** — canonical contribution backlog
-- **[payment-tracker.md](./000-docs/001-BL-TRCK-payment-tracker.md)** — payment status across programs
-- **`~/.contribute-system/contribute.db`** — local SQLite (28 contributions). Source of truth, derived from CSV + GitHub state.
-- **[surgical-contributions.md](./surgical-contributions.md)** — curated <100 LOC template-based opportunities
+| Concern | Location |
+|---|---|
+| Workflow / lifecycle orchestration | `/contribute` skill at `~/.claude/skills/contribute/` |
+| Discovery subagent | `~/.claude/agents/scout.md` (`@scout`) |
+| Research subagent (in flight) | `~/.claude/agents/researcher.md` (`@researcher`) |
+| Runtime state (dossiers, candidates, gates, log) | `~/.contribute-system/` |
+| Upstream clones (this repo) | `~/000-projects/contributing-clanker/<repo>/` |
 
-## Active Work
+This repo is the workspace dir. The skill is the binary surface. Don't conflate them.
 
-| Repo | Task | Reward | Status | PR |
-|------|------|--------|--------|-----|
-| gumroad | _legacy.scss | $1,500 | PR Submitted | [#2573](https://github.com/antiwork/gumroad/pull/2573) |
+## Repo layout
 
-## Repos in this Workspace
+```
+contributing-clanker/
+├── 000-docs/                    Doc filing (per Doc-Filing v4.3)
+├── 99-archived-system-docs/     Legacy planning from the deprecated monorepo
+├── <upstream-repo>/             One subdirectory per upstream clone
+├── scripts/, tools/             Utility scripts
+├── AGENTS.md                    Non-interactive shell rules
+├── CLAUDE.md                    Project conventions for Claude Code
+└── README.md                    You are here
+```
 
-| Repo | Stack | Reward | Notes |
-|------|-------|--------|-------|
-| [gumroad/](./gumroad/) | CSS/Tailwind | $1.5K/file | Tailwind migration |
-| [screenpipe](https://algora.io/mediar-ai/bounties/community) | TypeScript/AI | $25-500 | $4,910 pool |
-| [tscircuit](https://algora.io/tscircuit/bounties/community) | React/TS | $25-150 | PCB design |
-| [golemcloud](https://algora.io/golemcloud/bounties/community) | Rust/WASM | $3.5K | MCP/TTS |
-| [zio/](./zio/), [zio-blocks/](./zio-blocks/) | Scala 3 | $2-4K | Schema/Patch |
-| [cal-com/](./cal-com/), [calcom/](./calcom/) | TS/Next.js | $20-500 | |
-| [posthog/](./posthog/) | Python/Django + React | Varies | |
-| [cortex/](./cortex/) | Python | $50-200 | CLA required |
-| [feishin/](./feishin/) | React + Electron | Contrib | |
-| [tldraw/](./tldraw/) | TS/React | Varies | |
-| [appsmith/](./appsmith/) | Java + React/TS | Varies | |
-| [vertex-ai-samples/](./vertex-ai-samples/) | Python notebooks | Contrib | CLA required |
-| [filament/](./filament/) | PHP/Laravel | Varies | own CLAUDE.md |
-| [shadcn-ui/](./shadcn-ui/) | TS/React | Varies | own CLAUDE.md |
-| [projectdiscovery/](./projectdiscovery/) | YAML | $100 | CVE templates |
+Each upstream clone has its own `CLAUDE.md` with stack-specific commands and conventions. Read it before working in that clone.
 
-## Payment Process
+## The architecture (3 layers)
 
-| Program | Process |
-|---------|---------|
-| Algora | Platform handles payment automatically (120+ countries) |
-| Gumroad | Email `bounties@antiwork.com` with PR link + payment email; Stripe payout |
-| Cortex | Bitcoin (preferred), USDC, or PayPal within 48h |
+**Layer 1 — Per-repo dossiers** (`~/.contribute-system/research/<owner>__<repo>.md`).
+What this specific repo expects of contributors: branch convention, CLA/DCO, AI policy, PR template requirements, draft-first preference, review bots, etiquette comment requirements, etc. Built by `@researcher` from CONTRIBUTING.md + linked policy docs + bot detection + merge-velocity metrics. Cached, refreshable.
 
-## Sources
+**Layer 2 — Deterministic gates** (`~/.contribute-system/gates/`).
+One small script per failure mode. Each gate takes (candidate, dossier, intended action) and returns `PASS / WARN / BLOCK / INFORM` + a one-line reason. The orchestrator runs the right subset per lifecycle transition. Gates are read-only and pluggable — drop a script in the directory, the runner discovers it.
 
-- [Algora](https://algora.io/bounties/) · [IssueHunt](https://issuehunt.io/) · [BountyHub](https://www.bountyhub.dev/)
-- [Gumroad #1055](https://github.com/antiwork/gumroad/issues/1055)
+**Layer 3 — Lifecycle workflow** (the `/contribute` skill).
+Walks each candidate through `open → shortlist → claimed → working → submitted → merged`. At each transition runs the appropriate gate set. BLOCK gates refuse the transition; WARN gates surface in the briefing.
+
+## Status
+
+| Date | Slice | What landed |
+|---|---|---|
+| 2026-04-30 | Reset | Deprecated previous SQLite + monorepo system; pivoted to skill-only architecture |
+| 2026-05-02 | Slice 1 | `@scout` subagent + memory bank shipped; 7 strategic candidates shortlisted |
+| 2026-05-03 | Slice 2 | Researcher subagent + dossier system + 62-gate inventory in flight |
+
+Future: Phase 2 packages this as a Claude Code plugin under `claude-code-plugins-plus-skills/plugins/contributing-clanker/` for distribution.
+
+## Working on this
+
+This is a public repo but the system is single-user. The workflow assumes you have the `/contribute` skill installed, your own GitHub auth via `gh`, and your own upstream clones. There's nothing to deploy and no service to run.
+
+To use the system: `/contribute` in any Claude Code session.
+To change the system: edit `~/.claude/skills/contribute/SKILL.md`, the agents at `~/.claude/agents/`, or the gate scripts at `~/.contribute-system/gates/`.
+
+## Conventions
+
+- Branch naming: `feat/<short>` or `fix/<short>`
+- Commits: Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`)
+- See `CLAUDE.md` for project-specific rules and per-clone test commands
+- See `AGENTS.md` for non-interactive shell rules (always `cp -f`, `rm -f`, `mv -f`, `apt-get -y` — interactive prompts hang the agent)
 
 ## What was deprecated 2026-04-30
 
-A previous version of this repo had an internal `contribute-system/` monorepo (Next.js dashboard, TS CLI, Cloud Functions, Vertex AI orchestrator). It was never used in practice. On 2026-04-30 it was deleted; the GCP project `intentional-bounty` was scheduled for deletion; the workflow collapsed into the `/contribute` skill. Historical planning docs are in [`99-archived-system-docs/`](./99-archived-system-docs/). Code lives in git history.
+A previous version of this repo had an internal `contribute-system/` monorepo (Next.js dashboard, TS CLI, Cloud Functions, Vertex AI orchestrator) plus a SQLite tracker at `~/.contribute-system/contribute.db`. Both were never used in practice. They were ripped out; the workflow collapsed into the `/contribute` skill. Historical planning docs are in [`99-archived-system-docs/`](./99-archived-system-docs/). Code lives in git history.

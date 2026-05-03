@@ -1,23 +1,13 @@
-# Contributions Documentation Index
+# Documentation Index
 
-**Repository**: intent-solutions-io/contributions
-**System**: Doc-Filing v4.2
+**Repository**: jeremylongshore/contributing-clanker
+**System**: Doc-Filing v4.3
 
 ---
 
 ## Active Documents
 
-### BL — Business & Legal
-| # | File | Description |
-|---|------|-------------|
-| 001 | [001-BL-TRCK-payment-tracker.md](001-BL-TRCK-payment-tracker.md) | Payment tracking across paid-contribution programs |
-
-### PM — Project Management
-| # | File | Description |
-|---|------|-------------|
-| 002 | [002-PM-BKLG-contribution-tracker.csv](002-PM-BKLG-contribution-tracker.csv) | Master contribution backlog. Single source of truth. Mirrored into `~/.contribute-system/contribute.db`. |
-
-### Reports
+### RA — Reports & Analysis
 | File | Description |
 |------|-------------|
 | [pr-status-report.md](pr-status-report.md) | PR status snapshot |
@@ -26,7 +16,7 @@
 
 ## Archived
 
-Historical planning + spec docs that described the now-deleted `contribute-system` monorepo are in [`99-archived-system-docs/`](../99-archived-system-docs/).
+Historical planning + spec docs that described the now-deleted `contribute-system` monorepo are in [`../99-archived-system-docs/`](../99-archived-system-docs/).
 
 ---
 
@@ -35,8 +25,8 @@ Historical planning + spec docs that described the now-deleted `contribute-syste
 ### Category Codes
 - **BL** — Business & Legal
 - **PM** — Project Management
-- **AT** — Architecture (none active)
-- **DR** — Documentation & Reference (none active)
+- **AT** — Architecture
+- **DR** — Documentation & Reference
 - **RA** — Reports & Analysis
 
 ### Type Codes
@@ -50,3 +40,4 @@ Historical planning + spec docs that described the now-deleted `contribute-syste
 ---
 
 **2026-04-30 reset**: The previous internal `contribute-system` monorepo was deleted; the workflow now lives entirely in the `/contribute` Claude Code skill. See repo `README.md` for context.
+**2026-05-03 rename**: Repo renamed from `contributions` → `contributing-clanker` and transferred to `jeremylongshore`. Money-flavored tracker docs (payment-tracker.md, contribution-tracker.csv, surgical-contributions.md) retired in the same change.
