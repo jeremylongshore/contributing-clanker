@@ -324,6 +324,19 @@ bd close <id>         # Complete work
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
+### Off-machine recovery
+
+`.beads/issues.jsonl` is git-tracked (whitelisted through `.gitignore`) so beads state survives machine death. The embedded Dolt DB (`.beads/embeddeddolt/`) is NOT tracked — it's a local cache.
+
+On a fresh clone:
+
+```bash
+bd init                          # creates new embedded Dolt DB
+bd import .beads/issues.jsonl    # restores all beads from the JSONL snapshot
+```
+
+bd auto-exports to JSONL every 15 min, so committing `.beads/issues.jsonl` is part of normal flow. If you forget, `bd export` flushes on demand.
+
 ## Session Completion
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.

@@ -20,7 +20,13 @@ __pycache__/
 
 # Claude
 .claude/
-.beads/
+
+# Beads — track issues.jsonl + config for off-machine recovery; exclude
+# the embedded Dolt DB (binary) and runtime state. The JSONL is the
+# durable source of truth; on a fresh clone, bd reads it directly.
+.beads/*
+!.beads/issues.jsonl
+!.beads/config.yaml
 
 # Environment files with secrets
 .env
