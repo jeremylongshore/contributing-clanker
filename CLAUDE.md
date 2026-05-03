@@ -89,21 +89,25 @@ None of those live in this repo — they live globally with your Claude Code con
 These bypass the `/contribute` skill and call the runtime scripts directly — useful for debugging gates, building dossiers, or running the regression suite.
 
 ```bash
+# Scripts live at ${CLAUDE_SKILL_DIR}/scripts/ (per skill-creator spec — distributable)
+# Direct path: ~/.claude/skills/contribute/scripts/
+SKILL_SCRIPTS=~/.claude/skills/contribute/scripts
+
 # Build or refresh a per-repo dossier
-~/.contribute-system/bin/researcher-build.sh <owner>/<repo>             # full build with link follows
-~/.contribute-system/bin/researcher-build.sh <owner>/<repo> --no-link-follow  # fast, no curl
+$SKILL_SCRIPTS/researcher-build.sh <owner>/<repo>             # full build with link follows
+$SKILL_SCRIPTS/researcher-build.sh <owner>/<repo> --no-link-follow  # fast, no curl
 
 # Run gate-checked transition on a candidate (dry-run shows verdicts without mutating)
-~/.contribute-system/bin/transition.sh "shortlist→claimed" \
+$SKILL_SCRIPTS/transition.sh "shortlist→claimed" \
   ~/.contribute-system/candidates/<owner>__<repo>__issue<N>.md --dry-run
 
 # Override a blocking gate (reason logged to log.jsonl)
-~/.contribute-system/bin/transition.sh "shortlist→claimed" <candidate> \
+$SKILL_SCRIPTS/transition.sh "shortlist→claimed" <candidate> \
   --override-gate A05 "issue re-opened by maintainer"
 
 # Regression test — validates 4 known real-world traps
-~/.contribute-system/bin/test-known-traps.sh
-~/.contribute-system/bin/test-known-traps.sh --verbose    # show full gate output
+$SKILL_SCRIPTS/test-known-traps.sh
+$SKILL_SCRIPTS/test-known-traps.sh --verbose    # show full gate output
 
 # Query the event log
 jq -c "select(.ts | startswith(\"$(date -u +%Y-%m-%d)\"))" ~/.contribute-system/log.jsonl
