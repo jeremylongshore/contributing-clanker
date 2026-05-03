@@ -84,6 +84,50 @@ When you want to find an issue worth working on, draft a claim, run tests, or op
 
 None of those live in this repo — they live globally with your Claude Code config + a personal state directory. This repo is just the workspace where the upstream clones sit.
 
+## System commands (direct invocation)
+
+These bypass the `/contribute` skill and call the runtime scripts directly — useful for debugging gates, building dossiers, or running the regression suite.
+
+```bash
+# Build or refresh a per-repo dossier
+~/.contribute-system/bin/researcher-build.sh <owner>/<repo>             # full build with link follows
+~/.contribute-system/bin/researcher-build.sh <owner>/<repo> --no-link-follow  # fast, no curl
+
+# Run gate-checked transition on a candidate (dry-run shows verdicts without mutating)
+~/.contribute-system/bin/transition.sh "shortlist→claimed" \
+  ~/.contribute-system/candidates/<owner>__<repo>__issue<N>.md --dry-run
+
+# Override a blocking gate (reason logged to log.jsonl)
+~/.contribute-system/bin/transition.sh "shortlist→claimed" <candidate> \
+  --override-gate A05 "issue re-opened by maintainer"
+
+# Regression test — validates 4 known real-world traps
+~/.contribute-system/bin/test-known-traps.sh
+~/.contribute-system/bin/test-known-traps.sh --verbose    # show full gate output
+
+# Query the event log
+jq -c "select(.ts | startswith(\"$(date -u +%Y-%m-%d)\"))" ~/.contribute-system/log.jsonl
+jq -c "select(.event == \"gate_run\" and .details.severity == \"BLOCK\")" ~/.contribute-system/log.jsonl
+
+# List candidates by status
+awk '/^status:/{print FILENAME, $2}' ~/.contribute-system/candidates/*.md | sort -k2
+
+# Generate PDFs from markdown (tools/)
+cd tools && npm install && npm run pdf
+```
+
+Gate phases run per action:
+
+| Action | Phases run |
+|---|---|
+| `open→shortlist` | A |
+| `shortlist→claimed` | A, E |
+| `claimed→working` | A, B |
+| `working→submitted` | B, C, E, F, G |
+| `open-pr` | C, E |
+| `flip-to-ready` | C |
+| `post-comment` | D |
+
 ## Per-clone quick reference
 
 ### Screenpipe

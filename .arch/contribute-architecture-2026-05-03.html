@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OSSBot (/contribute) Architecture · v0.2-slice2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #0f1117; --bg-surface: #161b22; --bg-raised: #1c2128;
+      --bg-raised-hover: #22272e; --border-subtle: #30363d; --border-accent: #58a6ff;
+      --text-primary: #e6edf3; --text-secondary: #8b949e; --text-muted: #6e7681;
+      --accent-blue: #58a6ff; --accent-green: #3fb950; --accent-orange: #f78166;
+      --accent-purple: #bc8cff; --accent-teal: #39c5cf;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { min-width: 1024px; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+    }
+    body {
+      font-family: 'Inter', -apple-system, system-ui, sans-serif; background: var(--bg-page);
+      color: var(--text-primary); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+      font-feature-settings: 'ss01', 'cv11'; padding: 40px 48px; line-height: 1.5;
+    }
+    .layout {
+      display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 40px;
+      max-width: 1400px; margin: 0 auto; align-items: start;
+    }
+    /* Sidebar */
+    .sidebar { position: sticky; top: 40px; display: flex; flex-direction: column; gap: 32px; }
+    .version-badge {
+      display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px;
+      border: 1px solid var(--accent-blue); border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: var(--accent-blue); background: rgba(88, 166, 255, 0.06); align-self: flex-start;
+    }
+    .version-badge::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent-green); box-shadow: 0 0 0 2px rgba(63, 185, 80, 0.18);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .tagline { font-size: 13px; color: var(--text-muted); line-height: 1.55; margin-top: 4px; }
+    .sidebar section { display: flex; flex-direction: column; gap: 12px; }
+    .label { font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+    .nav-list { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+    .nav-list a {
+      display: block; padding: 6px 10px; font-size: 13px; color: var(--text-secondary);
+      text-decoration: none; border-radius: 6px; border-left: 2px solid transparent;
+      margin-left: -12px; padding-left: 12px; transition: color .15s, border-color .15s;
+    }
+    .nav-list a:hover { color: var(--text-primary); border-left-color: var(--accent-blue); }
+    .invariants { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .invariants li {
+      font-size: 14px; color: var(--text-secondary);
+      padding-left: 12px; border-left: 3px solid var(--accent-green); line-height: 1.45;
+    }
+    .invariants li strong { color: var(--text-primary); font-weight: 600; }
+    .legend { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .legend li { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-secondary); }
+    .chip { width: 14px; height: 10px; border-radius: 3px; border: 1px solid; flex-shrink: 0; }
+    .chip.cli     { border-color: var(--accent-blue);   background: rgba(88, 166, 255, 0.15); }
+    .chip.service { border-color: var(--accent-green);  background: rgba(63, 185, 80, 0.15); }
+    .chip.store   { border-color: var(--accent-purple); background: rgba(188, 140, 255, 0.15); }
+    .chip.api     { border-color: var(--accent-orange); background: rgba(247, 129, 102, 0.15); }
+    .chip.shared  { border-color: var(--text-muted);    background: rgba(110, 118, 129, 0.15); }
+    /* Main */
+    .main { display: flex; flex-direction: column; gap: 48px; min-width: 0; }
+    .main-header { display: flex; flex-direction: column; gap: 8px; }
+    .main-header h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.015em; }
+    .main-header .lede { color: var(--text-secondary); font-size: 15px; max-width: 780px; }
+    .diagram-card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 32px; }
+    .diagram-card header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 24px; gap: 16px; }
+    .diagram-card h2 { font-size: 20px; font-weight: 600; }
+    .diagram-card .hint { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); letter-spacing: 0.02em; }
+    .diagram-scroll { overflow-x: auto; overflow-y: hidden; margin: 0 -32px; padding: 0 32px; }
+    .diagram-stage { position: relative; width: 1060px; height: 770px; min-width: 1060px; }
+    .arrows-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+    /* Nodes */
+    .node {
+      position: absolute; background: var(--bg-raised); border: 1px solid; border-radius: 8px;
+      padding: 14px 16px; transition: background .15s, border-color .15s;
+    }
+    .node:hover { background: var(--bg-raised-hover); }
+    .node-title { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+    .node-sub { margin-top: 2px; font-size: 11px; color: var(--text-muted); letter-spacing: 0.02em; }
+    .node-list { list-style: none; margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+    .node-list li { font-size: 12px; color: var(--text-secondary); padding-left: 10px; position: relative; line-height: 1.35; }
+    .node-list li::before { content: '—'; position: absolute; left: 0; color: var(--text-muted); }
+    .node-group-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
+      margin-top: 12px; margin-bottom: 4px;
+    }
+    .n-cli     { border-color: rgba(88, 166, 255, 0.4); }
+    .n-cli:hover { border-color: var(--accent-blue); }
+    .n-cli .node-title { color: var(--accent-blue); }
+    .n-service { border-color: rgba(63, 185, 80, 0.4); }
+    .n-service:hover { border-color: var(--accent-green); }
+    .n-service .node-title { color: var(--accent-green); }
+    .n-store   { border-color: rgba(188, 140, 255, 0.4); }
+    .n-store:hover { border-color: var(--accent-purple); }
+    .n-store .node-title { color: var(--accent-purple); }
+    .n-api     { border-color: rgba(247, 129, 102, 0.4); }
+    .n-api:hover { border-color: var(--accent-orange); }
+    .n-api .node-title { color: var(--accent-orange); }
+    /* Plane */
+    .plane { position: absolute; border: 1px dashed; border-radius: 10px; }
+    .plane::before {
+      content: attr(data-label); position: absolute; top: -9px; left: 16px;
+      padding: 0 8px; font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; font-weight: 500; letter-spacing: 0.04em; background: var(--bg-surface);
+    }
+    .plane-a { border-color: rgba(247, 129, 102, 0.6); }
+    .plane-a::before { color: var(--accent-orange); }
+    .plane-b { border-color: rgba(63, 185, 80, 0.6); }
+    .plane-b::before { color: var(--accent-green); }
+    /* Sub-grid for gates */
+    .sub-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 10px; }
+    .subblock { background: rgba(22, 27, 34, 0.6); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 6px 8px; text-align: center; }
+    .subblock-head { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: var(--accent-green); }
+    .subblock-count { font-family: 'JetBrains Mono', monospace; font-size: 18px; color: var(--text-primary); margin-top: 2px; line-height: 1; }
+    .subblock-sub { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+    /* Detail grid */
+    .details h2 { font-size: 20px; font-weight: 600; margin-bottom: 20px; }
+    .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+    .detail-card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 24px; }
+    .detail-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .detail-card h3::before { content: ''; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .detail-card.c-blue   h3::before { background: var(--accent-blue); }
+    .detail-card.c-green  h3::before { background: var(--accent-green); }
+    .detail-card.c-purple h3::before { background: var(--accent-purple); }
+    .detail-card.c-orange h3::before { background: var(--accent-orange); }
+    .detail-card ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .detail-card li { font-size: 13px; color: var(--text-secondary); padding-left: 16px; position: relative; line-height: 1.45; }
+    .detail-card li::before { content: '—'; position: absolute; left: 0; color: var(--text-muted); }
+    .detail-card code { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent-blue); background: rgba(88, 166, 255, 0.08); padding: 1px 4px; border-radius: 3px; }
+    .footer { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); padding-top: 24px; border-top: 1px solid var(--border-subtle); letter-spacing: 0.02em; }
+    .footer a { color: var(--accent-blue); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main class="layout">
+    <aside class="sidebar">
+      <div>
+        <span class="version-badge">v0.2-slice2</span>
+        <p class="tagline">Anti-slop safety architecture for OSS contribution automation.</p>
+      </div>
+      <section>
+        <h2 class="label">On this page</h2>
+        <ul class="nav-list">
+          <li><a href="#diagram">Architecture diagram</a></li>
+          <li><a href="#details">Component details</a></li>
+          <li><a href="#invariants">Invariants</a></li>
+        </ul>
+      </section>
+      <section id="invariants">
+        <h2 class="label">Architectural invariants</h2>
+        <ul class="invariants">
+          <li><strong>Gates are deterministic and read-only.</strong> No gate writes state; failures BLOCK transitions.</li>
+          <li><strong>Dossier is the single source of truth for repo rules.</strong> Researcher writes; gates read.</li>
+          <li><strong>Markdown is the cache.</strong> Every byte is grep-able; no DB. Phase 3 MCP is index, not replacement.</li>
+          <li><strong>Active and state planes are separate.</strong> Active layer can be rebuilt from scratch; state is canonical.</li>
+          <li><strong>Lazy clone, lazy fork.</strong> External effects only at user-initiated transitions.</li>
+        </ul>
+      </section>
+      <section>
+        <h2 class="label">Legend</h2>
+        <ul class="legend">
+          <li><span class="chip cli"></span>Orchestrator / entry</li>
+          <li><span class="chip service"></span>Subagent / runner</li>
+          <li><span class="chip store"></span>State (markdown)</li>
+          <li><span class="chip api"></span>External (gh / GitHub)</li>
+          <li><span class="chip shared"></span>Shared schema</li>
+        </ul>
+      </section>
+    </aside>
+
+    <section class="main">
+      <header class="main-header">
+        <h1>OSSBot (/contribute) — Slice 2 Architecture</h1>
+        <p class="lede">Three-layer safety system: <strong>orchestrator</strong> walks the candidate lifecycle, <strong>subagents</strong> handle discovery + research, and <strong>62 deterministic gates</strong> verify every external action against repo-specific rules captured in per-repo dossiers. Designed to make AI-assisted OSS contribution mechanically reliable — and to make "AI slop" structurally impossible to ship.</p>
+      </header>
+
+      <section class="diagram-card" id="diagram">
+        <header>
+          <h2>System topology</h2>
+          <span class="hint">grounded in plan: ~/.claude/plans/fizzy-sprouting-quokka.md · gates spec · 62 failure modes</span>
+        </header>
+        <div class="diagram-scroll">
+          <div class="diagram-stage">
+
+            <div class="plane plane-a" data-label="ACTIVE LAYER · orchestrators, subagents, gates" style="left: 10px; top: 20px; width: 1040px; height: 410px;"></div>
+            <div class="plane plane-b" data-label="STATE LAYER · markdown · append-only · grep-able" style="left: 10px; top: 460px; width: 1040px; height: 200px;"></div>
+
+            <!-- Row 1: orchestrator + subagents -->
+            <div class="node n-cli" style="left: 40px; top: 50px; width: 230px;">
+              <div class="node-title">/contribute</div>
+              <div class="node-sub">SKILL.md · lifecycle orchestrator</div>
+              <ul class="node-list">
+                <li>walks open → shortlist → claimed</li>
+                <li>→ working → submitted → merged</li>
+                <li>delegates to subagents</li>
+                <li>runs gates per transition</li>
+              </ul>
+            </div>
+            <div class="node n-service" style="left: 305px; top: 50px; width: 230px;">
+              <div class="node-title">@scout</div>
+              <div class="node-sub">discovery subagent · own context</div>
+              <ul class="node-list">
+                <li>scout-discover.sh · gh wrapper</li>
+                <li>scout-score.py · weighted rank</li>
+                <li>scout-write.py · writes candidates</li>
+                <li>scout-refresh.py · re-evaluates</li>
+              </ul>
+            </div>
+            <div class="node n-service" style="left: 570px; top: 50px; width: 230px;">
+              <div class="node-title">@researcher</div>
+              <div class="node-sub">dossier subagent · own context</div>
+              <ul class="node-list">
+                <li>researcher-build.sh</li>
+                <li>fetches CONTRIBUTING + depth-1 links</li>
+                <li>extracts conventions + bots + CLA</li>
+                <li>writes/refreshes per-repo dossier</li>
+              </ul>
+            </div>
+
+            <!-- Row 2: runner + 62 gates -->
+            <div class="node n-service" style="left: 40px; top: 220px; width: 230px;">
+              <div class="node-title">transition.sh</div>
+              <div class="node-sub">+ gate-runner.sh</div>
+              <ul class="node-list">
+                <li>called on every state transition</li>
+                <li>loads dossier + candidate context</li>
+                <li>discovers gates via glob</li>
+                <li>aggregates PASS/WARN/BLOCK</li>
+                <li>logs to log.jsonl</li>
+              </ul>
+            </div>
+            <div class="node n-service" style="left: 305px; top: 220px; width: 705px;">
+              <div class="node-title">62 gates · deterministic safety net</div>
+              <div class="node-sub">~/.contribute-system/gates/ · plug-in scripts · 7 lifecycle phases</div>
+              <div class="sub-grid">
+                <div class="subblock"><div class="subblock-head">A</div><div class="subblock-count">12</div><div class="subblock-sub">claim</div></div>
+                <div class="subblock"><div class="subblock-head">B</div><div class="subblock-count">15</div><div class="subblock-sub">pre-PR</div></div>
+                <div class="subblock"><div class="subblock-head">C</div><div class="subblock-count">16</div><div class="subblock-sub">submit</div></div>
+                <div class="subblock"><div class="subblock-head">D</div><div class="subblock-count">8</div><div class="subblock-sub">comms</div></div>
+                <div class="subblock"><div class="subblock-head">E</div><div class="subblock-count">4</div><div class="subblock-sub">identity</div></div>
+                <div class="subblock"><div class="subblock-head">F</div><div class="subblock-count">3</div><div class="subblock-sub">legal</div></div>
+                <div class="subblock"><div class="subblock-head">G</div><div class="subblock-count">4</div><div class="subblock-sub">infra</div></div>
+              </div>
+              <ul class="node-list" style="margin-top: 14px;">
+                <li>each gate ≤ 30 lines · stdin JSON → stdout JSON</li>
+                <li>--override-gate=&lt;id&gt; "&lt;reason&gt;" audit trail</li>
+                <li>per-repo opt-out via dossier disabled_gates: []</li>
+              </ul>
+            </div>
+
+            <!-- Row 3: state -->
+            <div class="node n-store" style="left: 40px; top: 480px; width: 230px;">
+              <div class="node-title">memory bank</div>
+              <div class="node-sub">~/.contribute-system/</div>
+              <ul class="node-list">
+                <li>profile.md · langs · target tiers</li>
+                <li>briefing.md · today's state (regen'd)</li>
+                <li>portfolio.md · merged PR ladder</li>
+                <li>log.jsonl · append-only events</li>
+              </ul>
+            </div>
+            <div class="node n-store" style="left: 305px; top: 480px; width: 230px;">
+              <div class="node-title">candidates/</div>
+              <div class="node-sub">tracker · one .md per issue</div>
+              <ul class="node-list">
+                <li>frontmatter: status, scout_score</li>
+                <li>research_path: → dossier</li>
+                <li>local_clone_path · branch · ETA</li>
+                <li>survives refresh; user notes preserved</li>
+              </ul>
+            </div>
+            <div class="node n-store" style="left: 570px; top: 480px; width: 230px;">
+              <div class="node-title">research/</div>
+              <div class="node-sub">per-repo dossier · refreshable</div>
+              <ul class="node-list">
+                <li>~30 frontmatter fields</li>
+                <li>etiquette · CLA · DCO · AI policy</li>
+                <li>review_bots · branch_convention</li>
+                <li>pet peeves · failure log</li>
+              </ul>
+            </div>
+            <div class="node n-store" style="left: 835px; top: 480px; width: 175px;">
+              <div class="node-title">check-runs/</div>
+              <div class="node-sub">test evidence</div>
+              <ul class="node-list">
+                <li>per (repo, branch)</li>
+                <li>cargo/pytest/make output</li>
+                <li>required by gate B14</li>
+              </ul>
+            </div>
+
+            <!-- External -->
+            <div class="node n-api" style="left: 430px; top: 690px; width: 200px;">
+              <div class="node-title">gh CLI · GitHub API</div>
+              <div class="node-sub">only external dependency</div>
+            </div>
+
+            <!-- Arrows -->
+            <svg class="arrows-overlay" viewBox="0 0 1060 770" preserveAspectRatio="none"
+                 role="img" aria-labelledby="arrows-title arrows-desc">
+              <title id="arrows-title">OSSBot architecture connection overlay</title>
+              <desc id="arrows-desc">Directional edges: orchestrator delegates to subagents and runner (blue); subagents call gh API (orange); gates read state (green dashed); state is written by subagents (muted solid).</desc>
+              <defs>
+                <marker id="a-blue"   markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#58a6ff"/></marker>
+                <marker id="a-green"  markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#3fb950"/></marker>
+                <marker id="a-orange" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#f78166"/></marker>
+                <marker id="a-muted"  markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6e7681"/></marker>
+              </defs>
+
+              <!-- SKILL → @scout (delegate, blue, top route) -->
+              <line x1="270" y1="80" x2="305" y2="80" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#a-blue)"/>
+              <text x="287" y="74" fill="#58a6ff" font-family="JetBrains Mono" font-size="9" text-anchor="middle">delegate</text>
+
+              <!-- SKILL → @researcher (delegate, blue, routed above row) -->
+              <path d="M 155 50 L 155 35 L 685 35 L 685 50" fill="none" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#a-blue)" stroke-dasharray="0"/>
+              <text x="420" y="29" fill="#58a6ff" font-family="JetBrains Mono" font-size="9" text-anchor="middle">delegate</text>
+
+              <!-- SKILL → transition.sh (delegate, blue, vertical down) -->
+              <line x1="155" y1="180" x2="155" y2="220" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#a-blue)"/>
+              <text x="160" y="205" fill="#58a6ff" font-family="JetBrains Mono" font-size="9" text-anchor="start">runs gates</text>
+
+              <!-- transition → 62 gates (exec, muted, horizontal) -->
+              <line x1="270" y1="305" x2="305" y2="305" stroke="#6e7681" stroke-width="1.2" marker-end="url(#a-muted)"/>
+              <text x="287" y="299" fill="#6e7681" font-family="JetBrains Mono" font-size="9" text-anchor="middle">exec</text>
+
+              <!-- @scout writes → candidates/ (muted vertical, in narrow channel between row 2 nodes) -->
+              <line x1="290" y1="180" x2="290" y2="475" stroke="#6e7681" stroke-width="1.2" stroke-dasharray="0" marker-end="url(#a-muted)"/>
+              <text x="295" y="445" fill="#6e7681" font-family="JetBrains Mono" font-size="9" text-anchor="start">writes</text>
+
+              <!-- @researcher writes → research/ (muted vertical, in channel between gates and right edge) -->
+              <line x1="685" y1="180" x2="685" y2="475" stroke="#6e7681" stroke-width="1.2" marker-end="url(#a-muted)"/>
+              <text x="690" y="445" fill="#6e7681" font-family="JetBrains Mono" font-size="9" text-anchor="start">writes</text>
+
+              <!-- 62 gates → research/ (READ, green dashed, vertical) -->
+              <line x1="650" y1="395" x2="650" y2="475" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-green)"/>
+              <text x="655" y="445" fill="#3fb950" font-family="JetBrains Mono" font-size="9" text-anchor="start">reads</text>
+
+              <!-- 62 gates → candidates/ (READ, green dashed, vertical) -->
+              <line x1="380" y1="395" x2="380" y2="475" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-green)"/>
+              <text x="385" y="445" fill="#3fb950" font-family="JetBrains Mono" font-size="9" text-anchor="start">reads</text>
+
+              <!-- 62 gates → check-runs/ (READ, green dashed, B14 evidence) -->
+              <line x1="920" y1="395" x2="920" y2="475" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-green)"/>
+              <text x="925" y="445" fill="#3fb950" font-family="JetBrains Mono" font-size="9" text-anchor="start">B14 reads</text>
+
+              <!-- @researcher → gh CLI (orange, multi-segment route around state nodes via right channel) -->
+              <path d="M 800 90 L 1030 90 L 1030 700 L 635 700" fill="none" stroke="#f78166" stroke-width="1.5" marker-end="url(#a-orange)"/>
+              <text x="1035" y="400" fill="#f78166" font-family="JetBrains Mono" font-size="9" text-anchor="start">gh api</text>
+            </svg>
+
+          </div>
+        </div>
+      </section>
+
+      <section class="details" id="details">
+        <h2>Component details</h2>
+        <div class="detail-grid">
+          <div class="detail-card c-blue">
+            <h3>Orchestrator: /contribute SKILL.md</h3>
+            <ul>
+              <li>Walks the candidate lifecycle: <code>open</code> → <code>shortlist</code> → <code>claimed</code> → <code>working</code> → <code>submitted</code> → <code>merged</code> (or <code>dropped</code>).</li>
+              <li>Every state transition calls <code>transition.sh</code> with the candidate + intended action; runner aggregates gate verdicts; BLOCK halts the transition.</li>
+              <li>Auto-invokes <code>@researcher refresh</code> when the dossier for the touched repo is missing or older than 14 days.</li>
+              <li>Hard-stop on AI policy strikes (gate E2): mandatory <code>--override-gate=E2 "&lt;reason&gt;"</code> for the second submission to a repo that previously closed under AI policy.</li>
+            </ul>
+          </div>
+          <div class="detail-card c-green">
+            <h3>Subagents: @scout and @researcher</h3>
+            <ul>
+              <li>User-scope subagents (<code>~/.claude/agents/</code>); invokable as <code>@scout</code> / <code>@researcher</code> from any session.</li>
+              <li>Own context windows so verbose <code>gh</code> output never bloats the orchestrator session.</li>
+              <li>Persistent memory at <code>~/.claude/agent-memory/&lt;name&gt;/MEMORY.md</code> captures cross-repo patterns; per-repo specifics live in dossiers.</li>
+              <li>Both are thin LLM orchestrators on top of bundled scripts (heavy lifting in deterministic bash/Python).</li>
+            </ul>
+          </div>
+          <div class="detail-card c-green">
+            <h3>62 gates · the safety net</h3>
+            <ul>
+              <li>One script per gate at <code>~/.contribute-system/gates/</code>. Plug-in: drop a script, gate-runner discovers it via glob.</li>
+              <li>Severity: <code>BLOCK</code> halts the transition; <code>WARN</code> surfaces in briefing; <code>INFORM</code> logs only.</li>
+              <li>Catches the trap categories we already hit in the wild: <strong>A1</strong> assignee check (Tracer-Cloud opensre #1129), <strong>A2</strong> already-shipped check (PostHog #55412), plus 60 more.</li>
+              <li>Override mechanism: <code>--override-gate=&lt;id&gt; "&lt;reason&gt;"</code>. Logged to <code>log.jsonl</code> with timestamp + user; reviewer audit trail.</li>
+            </ul>
+          </div>
+          <div class="detail-card c-purple">
+            <h3>State layer · markdown + JSONL</h3>
+            <ul>
+              <li><code>research/&lt;owner&gt;__&lt;repo&gt;.md</code> — per-repo dossier; ~30 frontmatter fields (CLA, DCO, branch convention, review bots, pet peeves) plus a manually curated failure log that grows from past closures.</li>
+              <li><code>candidates/&lt;owner&gt;__&lt;repo&gt;__issue&lt;N&gt;.md</code> — tracker; one file per issue. Frontmatter survives refresh; user-edited <code>## Notes</code> section preserved.</li>
+              <li><code>memory bank</code> — profile (langs/tiers), briefing (regenerated), portfolio (merged PR ladder by tier), log.jsonl (append-only audit).</li>
+              <li><code>check-runs/</code> — test evidence per (repo, branch); gate B14 refuses PR submission if no fresh green run exists.</li>
+            </ul>
+          </div>
+          <div class="detail-card c-orange">
+            <h3>External surface · gh CLI only</h3>
+            <ul>
+              <li>Single external dependency. No webhooks, no daemons, no MCP server in Phase 1 — the dev box has 24 prod containers + active OOM cascades; we add nothing new.</li>
+              <li>Read-mostly: <code>gh issue list</code>, <code>gh search prs</code>, <code>gh api repos/X</code>. Writes only at user-initiated transitions (<code>gh issue comment</code>, <code>gh pr create --draft --fork</code>).</li>
+              <li>Phase 2 (≥30 days post-Phase-1, if validated): repackage as a Claude Code plugin distributable via tonsofskills marketplace.</li>
+              <li>Phase 3 (only on multi-user demand): containerized MCP service on the new VPS — dossier cache + scheduled scout + GitHub webhook receiver. Personal skill stays working without it.</li>
+            </ul>
+          </div>
+          <div class="detail-card c-blue">
+            <h3>The "first time = full audit, every time after = flush context" guarantee</h3>
+            <ul>
+              <li>First time we touch a repo, <code>@researcher</code> runs <code>researcher-build.sh</code>: pulls CONTRIBUTING.md + depth-1 link follows + policy file inventory + bot detection + merge metrics.</li>
+              <li>Result is the dossier. Every subsequent session reads it directly — no re-scrambling.</li>
+              <li>14-day staleness threshold; SKILL.md refreshes automatically when expired.</li>
+              <li>Each candidate's <code>research_path:</code> points to the dossier — context loads structurally, not by re-asking the LLM what the rules are.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <p class="footer">Generated 2026-05-03 · plan: <a href="file:///home/jeremy/.claude/plans/fizzy-sprouting-quokka.md">~/.claude/plans/fizzy-sprouting-quokka.md</a> · 62 failure modes · 62 gates · 4 review-agent passes pending</p>
+    </section>
+  </main>
+</body>
+</html>
