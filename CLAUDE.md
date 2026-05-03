@@ -10,14 +10,45 @@ The contributing-clanker is a **tool for contributing to other people's open sou
 
 See `AGENTS.md` for **non-interactive shell rules** (always use `cp -f`, `rm -f`, `mv -f`, `apt-get -y`, etc. — interactive prompts hang the agent).
 
+## Project structure: 10 epics → 10 docs → individual beads
+
+This product is being built out as a **10-epic beads implementation** following the [intent-blueprint-docs](https://github.com/intent-solutions-io/intent-blueprint-docs) vibe-prd standard. Each epic has a corresponding spec doc in `000-docs/` and individual sub-beads tracking concrete work items, each annotated with description / notes / design context.
+
+| # | Epic (bead ID) | Doc | What it covers |
+|---|---|---|---|
+| 1 | Vision & Roadmap (`9a3`) | [001-PP-VISN](000-docs/001-PP-VISN-product-vision-and-roadmap.md) | 3-phase escalation: filesystem-only → plugin → MCP service |
+| 2 | System Architecture (`9dr`) | [002-AT-ARCH](000-docs/002-AT-ARCH-system-architecture.md) | The 3-layer model + invariants |
+| 3 | Discovery (@scout) (`bzq`) | [003-AT-SPEC](000-docs/003-AT-SPEC-discovery-system-scout.md) | Star-tier scoring + candidate generation |
+| 4 | Research (@researcher) (`drq`) | [004-AT-SPEC](000-docs/004-AT-SPEC-research-system-dossiers.md) | Per-repo dossier system |
+| 5 | Gate Inventory (`lhg`) | [005-AT-SPEC](000-docs/005-AT-SPEC-gate-inventory.md) | 62 deterministic safety gates |
+| 6 | Lifecycle Workflow (`15b`) | [006-AT-SPEC](000-docs/006-AT-SPEC-lifecycle-workflow.md) | `/contribute` SKILL.md + transition.sh |
+| 7 | Failure-Mode Catalog (`p5q`) | [007-DR-CATG](000-docs/007-DR-CATG-failure-mode-catalog.md) | 62 enumerated AI-slop patterns |
+| 8 | Testing & Verification (`ql2`) | [008-TQ-TEST](000-docs/008-TQ-TEST-testing-and-verification.md) | Regression suite + smoke tests |
+| 9 | Plugin Distribution (`25c`) | [009-OD-PLAN](000-docs/009-OD-PLAN-plugin-distribution-phase-2.md) | Phase 2 packaging plan |
+| 10 | Operations & Risk (`i4y`) | [010-OD-RISK](000-docs/010-OD-RISK-operations-and-risk.md) | Risk register + rollback strategy |
+
+**Index**: [`000-docs/000-INDEX.md`](000-docs/000-INDEX.md). **Source plan**: `~/.claude/plans/fizzy-sprouting-quokka.md`.
+
 ## Task Tracking with Beads
+
+Use `bd` for ALL task tracking. Bead IDs are the cross-reference to docs (each doc's frontmatter has an `epic:` field pointing at the matching bead).
 
 ```bash
 bd ready                             # Available work
-bd list --status in_progress         # What was I working on?
-bd update <id> --status in_progress  # Before starting
-bd close <id> --reason "PR #123"     # After completing
+bd list --status=in_progress         # What was I working on?
+bd dep tree contributing-clanker-9a3 # See an epic + its sub-beads
+bd update <id> --status=in_progress  # Before starting
+bd close <id> --reason "evidence"    # After completing — include test output / PR # / verification notes
 bd dolt push && git push             # Persist beads + code at session end
+```
+
+When creating a new bead, link it to its epic:
+
+```bash
+bd create --type=task --priority=2 \
+  --title="..." --description="..." \
+  --notes="..." --design="..." \
+  --parent=contributing-clanker-<epic-id>
 ```
 
 ## Project directory
