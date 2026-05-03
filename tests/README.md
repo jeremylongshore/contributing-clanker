@@ -37,9 +37,28 @@ bats tests/unit/gates/a01-already-assigned.bats
 # Verbose
 bats --verbose-run tests/unit/gates/
 
-# The L4 integration regression suite (separate from bats)
-~/.claude/skills/contribute/scripts/test-known-traps.sh
+# The L4 integration regression suites (4 scripts, separate from bats)
+~/.claude/skills/contribute/scripts/test-known-traps.sh           # 4 known-trap cases
+~/.claude/skills/contribute/scripts/test-override-audit.sh        # override audit trail
+~/.claude/skills/contribute/scripts/test-plug-in.sh               # gate plug-in discovery
+~/.claude/skills/contribute/scripts/test-stale-dossier-refresh.sh # dossier freshness
+
+# Static analysis on all bash scripts
+scripts/lint-bash.sh
+
+# Pre-commit hook framework — manual run (see "pre-commit + beads" below)
+pre-commit run --all-files
 ```
+
+## Pre-commit + beads coexistence
+
+`pre-commit install` refuses to overwrite `core.hooksPath`, which beads uses for its own hooks (`.beads/hooks/`). Until a coexistence wrapper lands, the pre-commit hooks **do not auto-fire on `git commit`** in this repo. Run them manually before committing:
+
+```bash
+pre-commit run --all-files
+```
+
+The `.pre-commit-config.yaml` is still useful for anyone forking the repo who isn't using beads — they can `pre-commit install` normally.
 
 ## Pattern for new gate tests
 
