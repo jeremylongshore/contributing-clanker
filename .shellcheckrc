@@ -1,0 +1,18 @@
+# shellcheck config for contributing-clanker
+# Applies to bash scripts at ~/.claude/skills/contribute/scripts/ when linted from this repo
+
+# SC1091: source path not followed — false positive for our runtime-resolved
+# paths via $(dirname "$0") / ${BASH_SOURCE[0]}. The preamble exists at
+# scripts/gates/lib/preamble.sh; shellcheck just can't follow dynamic paths.
+disable=SC1091
+
+# SC2317: unreachable code — false positive on lines after gate_pass / gate_warn /
+# gate_block / gate_skip / gate_inform helpers, which all exit. shellcheck doesn't
+# know these helpers exit; it sees the trailing exit-after-helper as unreachable.
+disable=SC2317
+
+# Use external-sources where we explicitly want to follow includes
+external-sources=true
+
+# Default severity floor (everything ≥ info)
+severity=info

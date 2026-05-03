@@ -1,0 +1,32 @@
+# pre-commit config — runs on every commit
+# Install once: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  - repo: local
+    hooks:
+      - id: shellcheck
+        name: shellcheck (skill bash scripts)
+        entry: scripts/lint-bash.sh
+        language: system
+        pass_filenames: false
+        # Always run — scripts live outside this repo (~/.claude/skills/contribute/)
+        # so we can't filter by staged files. Cheap to run.
+        always_run: true
+
+      - id: test-known-traps
+        name: regression suite (4 known traps)
+        entry: bash -c 'if [ -f ~/.claude/skills/contribute/scripts/test-known-traps.sh ]; then ~/.claude/skills/contribute/scripts/test-known-traps.sh; else echo "skipped: skill not installed"; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
