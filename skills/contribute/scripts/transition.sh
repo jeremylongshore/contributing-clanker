@@ -67,31 +67,109 @@ if [[ -z "$DOSSIER" ]]; then
   fi
 fi
 
-# Pre-record any overrides into the candidate file (atomic temp+rename)
+# Pre-record any overrides into the candidate file (atomic temp+rename).
+#
+# Earlier implementation used `awk -v RS='---'` to insert `overrides: []`
+# before the closing frontmatter delimiter, then `sed -i "/^overrides:/a"`
+# to append each entry. That path corrupted YAML: the awk RS=--- handling
+# mangled the opening delimiter to "------" (6 dashes) and the sed
+# append landed entries OUTSIDE the array as sibling list items rather
+# than children of `overrides`.
+#
+# Replace with a Python yaml round-trip — parse frontmatter, append to
+# the overrides list as proper YAML mapping entries, re-serialize. The
+# body (everything after the second `---`) passes through unchanged.
 if [[ "${#OVERRIDES_NEW[@]}" -gt 0 ]]; then
   if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "(dry-run) would record ${#OVERRIDES_NEW[@]} overrides; skipping write" >&2
   else
     TMP="${CANDIDATE}.tmp.$$"
-    /usr/bin/cp "$CANDIDATE" "$TMP"
-    # Append to overrides: array in frontmatter (creates if missing)
-    if ! /usr/bin/grep -q '^overrides:' "$TMP"; then
-      # Insert before the closing --- of frontmatter
-      /usr/bin/awk -v RS='---' 'NR==2{ printf("---%s\noverrides: []\n---", $0); next } {printf("%s", $0); if(NR<3) printf("---")}' "$TMP" > "${TMP}.2" && /usr/bin/mv "${TMP}.2" "$TMP"
+    # Build a flat list of "gate=reason" pairs for the Python helper.
+    # Use NUL as field separator to handle reasons containing any char.
+    PAIRS_FILE="${CANDIDATE}.pairs.$$"
+    : > "$PAIRS_FILE"
+    i=0
+    while [[ $i -lt ${#OVERRIDES_NEW[@]} ]]; do
+      /usr/bin/printf '%s\0%s\0' "${OVERRIDES_NEW[$i]}" "${OVERRIDES_NEW[$((i+1))]}" >> "$PAIRS_FILE"
+      i=$((i+2))
+    done
+
+    /usr/bin/python3 - "$CANDIDATE" "$NOW" "$PAIRS_FILE" "$TMP" <<'PYEOF'
+import sys, yaml
+
+cand_path, now_iso, pairs_path, out_path = sys.argv[1:5]
+
+with open(cand_path) as f:
+    text = f.read()
+
+# Split frontmatter from body (markdown convention: --- on its own line)
+lines = text.split('\n')
+if not lines or lines[0].strip() != '---':
+    sys.stderr.write("transition: candidate has no opening frontmatter delimiter\n")
+    sys.exit(2)
+try:
+    end = lines.index('---', 1)
+except ValueError:
+    sys.stderr.write("transition: candidate has no closing frontmatter delimiter\n")
+    sys.exit(2)
+
+fm_text = '\n'.join(lines[1:end])
+body_text = '\n'.join(lines[end+1:])
+
+fm = yaml.safe_load(fm_text) or {}
+if not isinstance(fm, dict):
+    sys.stderr.write("transition: frontmatter is not a mapping\n")
+    sys.exit(2)
+
+if 'overrides' not in fm or fm['overrides'] is None:
+    fm['overrides'] = []
+if not isinstance(fm['overrides'], list):
+    sys.stderr.write("transition: existing overrides field is not a list\n")
+    sys.exit(2)
+
+# Read NUL-separated pairs from pairs_path: gate, reason, gate, reason, ...
+with open(pairs_path, 'rb') as f:
+    raw = f.read()
+parts = raw.split(b'\x00')
+# Trailing NUL produces an empty final element — drop it.
+if parts and parts[-1] == b'':
+    parts.pop()
+if len(parts) % 2 != 0:
+    sys.stderr.write("transition: malformed override pairs (odd count)\n")
+    sys.exit(2)
+
+for i in range(0, len(parts), 2):
+    gate = parts[i].decode('utf-8')
+    reason = parts[i+1].decode('utf-8')
+    fm['overrides'].append({'gate': gate, 'reason': reason, 'at': now_iso})
+
+# Re-serialize. default_flow_style=False keeps blocks readable.
+new_fm = yaml.safe_dump(fm, default_flow_style=False, sort_keys=False, allow_unicode=True).rstrip('\n')
+new_text = '---\n' + new_fm + '\n---\n' + body_text
+
+with open(out_path, 'w') as f:
+    f.write(new_text)
+PYEOF
+
+    PY_EXIT=$?
+    /usr/bin/rm -f "$PAIRS_FILE"
+    if [[ "$PY_EXIT" -ne 0 ]]; then
+      /usr/bin/rm -f "$TMP"
+      echo "transition: yaml round-trip failed (exit $PY_EXIT) — candidate not modified" >&2
+      exit 65
     fi
-    # Append each override
+
+    /usr/bin/mv "$TMP" "$CANDIDATE"  # atomic rename
+
+    # Log each override
     i=0
     while [[ $i -lt ${#OVERRIDES_NEW[@]} ]]; do
       OG="${OVERRIDES_NEW[$i]}"
       OR="${OVERRIDES_NEW[$((i+1))]}"
       i=$((i+2))
-      ENTRY="  - { gate: $OG, reason: \"$OR\", at: \"$NOW\" }"
-      /usr/bin/sed -i "/^overrides:/a $ENTRY" "$TMP"
-      # Log
       jq -nc --arg ts "$NOW" --arg gate "$OG" --arg reason "$OR" --arg cand "$CANDIDATE" \
         '{ts: $ts, event: "gate_override", details: {gate: $gate, reason: $reason, candidate: $cand}}' >> "$LOG"
     done
-    /usr/bin/mv "$TMP" "$CANDIDATE"  # atomic rename
   fi
 fi
 
