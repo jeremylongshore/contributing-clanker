@@ -10,9 +10,11 @@ The contributing-clanker is a **tool for contributing to other people's open sou
 
 See `AGENTS.md` for **non-interactive shell rules** (always use `cp -f`, `rm -f`, `mv -f`, `apt-get -y`, etc. — interactive prompts hang the agent).
 
-## Project structure: 10 epics → 10 docs → individual beads
+## Project structure: 10 epics → 11 docs → individual beads
 
-This product is being built out as a **10-epic beads implementation** following the [intent-blueprint-docs](https://github.com/intent-solutions-io/intent-blueprint-docs) vibe-prd standard. Each epic has a corresponding spec doc in `000-docs/` and individual sub-beads tracking concrete work items, each annotated with description / notes / design context.
+The product follows a **10-epic beads implementation** per the [intent-blueprint-docs](https://github.com/intent-solutions-io/intent-blueprint-docs) vibe-prd standard. Each epic has a corresponding spec doc in `000-docs/` and individual sub-beads tracking concrete work items, each annotated with description / notes / design context.
+
+**Phase 1 status**: as of 2026-05-04 all 9 epics + Slice 2 umbrella closed (59/59 beads). The system is in a 30-day soak window — see Epic 1 success criteria. Phase 2 (plugin packaging, epic 25c) is deferred until the soak completes cleanly. Re-open future-work beads as empirical signal arrives. Live count: `bd stats`.
 
 | # | Epic (bead ID) | Doc | What it covers |
 |---|---|---|---|
@@ -39,7 +41,7 @@ bd list --status=in_progress         # What was I working on?
 bd dep tree contributing-clanker-9a3 # See an epic + its sub-beads
 bd update <id> --status=in_progress  # Before starting
 bd close <id> --reason "evidence"    # After completing — include test output / PR # / verification notes
-bd dolt push && git push             # Persist beads + code at session end
+git push                             # `.beads/issues.jsonl` rides on git; bd's prepare-commit-msg hook auto-exports
 ```
 
 When creating a new bead, link it to its epic:
@@ -105,9 +107,17 @@ $SKILL_SCRIPTS/transition.sh "shortlist→claimed" \
 $SKILL_SCRIPTS/transition.sh "shortlist→claimed" <candidate> \
   --override-gate A05 "issue re-opened by maintainer"
 
-# Regression test — validates 4 known real-world traps
-$SKILL_SCRIPTS/test-known-traps.sh
-$SKILL_SCRIPTS/test-known-traps.sh --verbose    # show full gate output
+# Regression suites (5 total; each exits 0 on success)
+$SKILL_SCRIPTS/test-known-traps.sh           # 4 known real-world traps (PostHog #55412 etc.)
+$SKILL_SCRIPTS/test-override-audit.sh        # --override-gate audit trail (6 assertions)
+$SKILL_SCRIPTS/test-plug-in.sh               # gate auto-discovery (4 assertions)
+$SKILL_SCRIPTS/test-stale-dossier-refresh.sh # 14d staleness auto-refresh (8 assertions)
+$SKILL_SCRIPTS/test-scout-refresh.sh         # scout-refresh body preservation (10 assertions)
+
+# Reporters (read-only, surface signal from log.jsonl)
+$SKILL_SCRIPTS/audit-overrides.sh                    # per-gate override frequency
+$SKILL_SCRIPTS/audit-overrides.sh --since=30 --json  # filter + machine-readable
+$SKILL_SCRIPTS/catalog-coverage.sh                   # 000-docs/007 catalog → gate coverage
 
 # Query the event log
 jq -c "select(.ts | startswith(\"$(date -u +%Y-%m-%d)\"))" ~/.contribute-system/log.jsonl
@@ -119,6 +129,34 @@ awk '/^status:/{print FILENAME, $2}' ~/.contribute-system/candidates/*.md | sort
 # Generate PDFs from markdown (tools/)
 cd tools && npm install && npm run pdf
 ```
+
+## Repo-side test infrastructure
+
+The 41 gate scripts + lib/preamble.sh live at `~/.claude/skills/contribute/scripts/gates/` (Phase 1 filesystem-only) but their tests live in **this** repo at `tests/` so they survive clones and ride CI when Phase 2 packaging lands.
+
+```bash
+# Unit tests (bats — 48 cases across 13 phase-A/B/C/D/G samples)
+bats tests/unit/gates/                       # all
+bats tests/unit/gates/a01-already-assigned.bats  # one file
+bats --verbose-run tests/unit/gates/         # show JSON of every gate verdict
+
+# Static analysis (shellcheck against ~/.claude/skills/contribute/scripts/)
+scripts/lint-bash.sh
+
+# Pre-commit hooks (runs shellcheck + test-known-traps.sh on staged .sh files)
+# Note: pre-commit refuses to install over beads' core.hooksPath — run manually:
+pre-commit run --all-files
+```
+
+Engineer policy + audit findings:
+
+| File | Purpose |
+|---|---|
+| `tests/TESTING.md` | engineer-owned test policy (coverage floors, mutation kill rate, etc.) |
+| `tests/README.md` | layout + pattern-for-new-tests guide |
+| `TEST_AUDIT.md` | most recent `/audit-tests` findings (regenerated on demand) |
+| `.shellcheckrc` | documented false-positive disables (SC1091, SC2317) |
+| `.pre-commit-config.yaml` | hook framework config (manual run during beads coexistence) |
 
 Gate phases run per action:
 
@@ -273,7 +311,7 @@ Before submitting ANYTHING to external repos, you MUST:
 
 1. Run all tests locally — ALL must pass
 2. Run project-specific linters — no lint errors
-3. Run the gate-runner (auto-invoked by `/contribute` at every transition; manual: `~/.contribute-system/bin/transition.sh working→submitted <candidate>`)
+3. Run the gate-runner (auto-invoked by `/contribute` at every transition; manual: `~/.claude/skills/contribute/scripts/transition.sh working→submitted <candidate>`)
 4. **Ask Jeremy for approval** — do NOT submit without explicit human OK:
    - Show test results summary
    - Show what files changed
@@ -297,11 +335,11 @@ npm install
 node generate-pdf.js              # Generate PDFs from markdown
 ```
 
-## What was deprecated 2026-04-30
+## History
 
-A previous version of this repo had an internal monorepo (Next.js dashboard, TS CLI, Cloud Functions, Vertex AI orchestrator) plus a SQLite tracker. Neither was used in practice. On 2026-04-30 they were deleted and the workflow collapsed into the `/contribute` skill. Historical planning docs are in `99-archived-system-docs/`. Code lives in git history.
-
-The 2026-05-03 rename moved the repo from `intent-solutions-io/contributions` to `jeremylongshore/contributing-clanker` and dropped all bounty / payment framing. This is just a tool for contributing — no tracker, no payouts, nothing to monetize.
+- **2026-04-30** — collapsed an unused internal monorepo (Next.js dashboard, TS CLI, Cloud Functions, Vertex AI orchestrator) + SQLite tracker into the `/contribute` skill. Historical planning docs in `99-archived-system-docs/`; code in git history.
+- **2026-05-03** — repo renamed from `intent-solutions-io/contributions` → `jeremylongshore/contributing-clanker`; all bounty / payment framing dropped. This is a contribution tool, not a tracker or marketplace.
+- **2026-05-04** — Phase 1 build complete (all 9 epics + Slice 2 closed, 59/59 beads). 41 of 62 gates installed, 80 test assertions green, 11/11 governance files in place. Entered 30-day soak validation. Phase 2 (plugin packaging) gated on clean soak.
 
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
@@ -349,9 +387,8 @@ bd auto-exports to JSONL every 15 min, so committing `.beads/issues.jsonl` is pa
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd dolt push
-   git push
-   git status  # MUST show "up to date with origin"
+   git push                       # `.beads/issues.jsonl` is git-tracked; bd's prepare-commit-msg hook auto-exports
+   git status                     # MUST show "up to date with origin"
    ```
 5. **Clean up** - Clear stashes, prune remote branches
 6. **Verify** - All changes committed AND pushed
