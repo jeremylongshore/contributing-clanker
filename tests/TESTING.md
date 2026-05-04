@@ -10,7 +10,7 @@
 |---|---|
 | Repo type | hybrid: claude-skill + workspace + governance docs |
 | Primary lang | bash (45 scripts: 4 orchestrators + 41 gates + 1 lib) |
-| Test targets | `~/.claude/skills/contribute/scripts/**/*.sh` |
+| Test targets | `skills/contribute/scripts/**/*.sh` |
 | Distribution | Phase 1 personal use; Phase 2 plugin in `~/000-projects/claude-code-plugins/plugins/` |
 
 ## Applicable layers
@@ -46,7 +46,7 @@
 
 | Layer | Framework | Status |
 |---|---|---|
-| L4 | bash + custom assert helpers (`gate_fired_with_severity`) | in `~/.claude/skills/contribute/scripts/test-known-traps.sh` |
+| L4 | bash + custom assert helpers (`gate_fired_with_severity`) | in `skills/contribute/scripts/test-known-traps.sh` |
 
 ## Installed gates
 

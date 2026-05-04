@@ -38,10 +38,10 @@ bats tests/unit/gates/a01-already-assigned.bats
 bats --verbose-run tests/unit/gates/
 
 # The L4 integration regression suites (4 scripts, separate from bats)
-~/.claude/skills/contribute/scripts/test-known-traps.sh           # 4 known-trap cases
-~/.claude/skills/contribute/scripts/test-override-audit.sh        # override audit trail
-~/.claude/skills/contribute/scripts/test-plug-in.sh               # gate plug-in discovery
-~/.claude/skills/contribute/scripts/test-stale-dossier-refresh.sh # dossier freshness
+skills/contribute/scripts/test-known-traps.sh           # 4 known-trap cases
+skills/contribute/scripts/test-override-audit.sh        # override audit trail
+skills/contribute/scripts/test-plug-in.sh               # gate plug-in discovery
+skills/contribute/scripts/test-stale-dossier-refresh.sh # dossier freshness
 
 # Static analysis on all bash scripts
 scripts/lint-bash.sh
@@ -103,5 +103,5 @@ Each gate gets at least 1 PASS-case + 1 FAIL-case. Edge-case coverage grows as n
 
 - Audit findings: `TEST_AUDIT.md` at repo root
 - Engineer policy: `tests/TESTING.md`
-- Real-world traps (L4 integration regression): `~/.claude/skills/contribute/scripts/test-known-traps.sh`
-- Gate library: `~/.claude/skills/contribute/scripts/gates/lib/preamble.sh`
+- Real-world traps (L4 integration regression): `skills/contribute/scripts/test-known-traps.sh`
+- Gate library: `skills/contribute/scripts/gates/lib/preamble.sh`

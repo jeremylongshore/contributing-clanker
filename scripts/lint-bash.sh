@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # lint-bash.sh — run shellcheck against the contributing-clanker bash scripts.
 #
-# The scripts live at ~/.claude/skills/contribute/scripts/ (Phase 1 personal
-# install). For Phase 2 plugin distribution, they'll live inside the plugin
-# package — at that point this script's SCRIPTS_DIR will be relative.
+# The skill is vendored at <repo>/skills/contribute/. SCRIPTS_DIR resolves
+# relative to this script so it works on any clone, regardless of whether
+# the user has installed the skill via bin/install.sh.
 #
 # Excluded checks (with rationale):
 #   SC1091 — source paths resolved at runtime via $(dirname "$0") /
@@ -18,7 +18,8 @@
 
 set -euo pipefail
 
-SCRIPTS_DIR="${CONTRIB_SCRIPTS_DIR:-$HOME/.claude/skills/contribute/scripts}"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPTS_DIR="${CONTRIB_SCRIPTS_DIR:-$REPO_ROOT/skills/contribute/scripts}"
 
 if [[ ! -d "$SCRIPTS_DIR" ]]; then
   echo "scripts dir not found: $SCRIPTS_DIR" >&2
