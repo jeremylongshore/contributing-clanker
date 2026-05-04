@@ -80,8 +80,8 @@ When you want to find an issue worth working on, draft a claim, run tests, or op
 | Layer | Location |
 |---|---|
 | `/contribute` skill | `~/.claude/skills/contribute/SKILL.md` |
-| `@scout` subagent (discovery) | `~/.claude/agents/scout.md` |
-| `@researcher` subagent (per-repo dossiers) | `~/.claude/agents/researcher.md` |
+| `@scout` subagent (discovery) | `~/.claude/skills/contribute/agents/scout.md` |
+| `@researcher` subagent (per-repo dossiers) | `~/.claude/skills/contribute/agents/researcher.md` |
 | Runtime state (gates, dossiers, candidates, log) | `~/.contribute-system/` |
 
 None of those live in this repo — they live globally with your Claude Code config + a personal state directory. This repo is just the workspace where the upstream clones sit.

@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Override-audit reporter (`audit-overrides.sh`) — per-gate override frequency from `log.jsonl`
+- Catalog-to-gate coverage report (`catalog-coverage.sh`) — surfaces which catalog modes still need a gate
+- Scout-refresh regression test harness (`test-scout-refresh.sh`, 10 assertions for body preservation)
+- Community failure-mode submission template at `000-docs/011-DR-TMPL-community-failure-mode-submission.md`
+- `.beads/issues.jsonl` git-tracked — beads state survives machine death
 - Slice 2 anti-slop safety architecture: `@researcher` subagent, gate-runner orchestrator, `transition.sh` lifecycle wrapper
 - 21 new deterministic gates across phases A/B/C/D/E/F/G (31 total installed)
 - Per-repo dossier system at `~/.contribute-system/research/<owner>__<repo>.md`
@@ -15,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pet peeves & Failure log dossier sections (manually curated, survive refresh)
 
 ### Changed
+- **Subagents relocated to skill bundle** per skill-creator spec: `scout.md` + `researcher.md` moved from `~/.claude/agents/` to `~/.claude/skills/contribute/agents/` (canonical, packageable; no symlinks)
+- `5 L4 regression suites green (32/32 assertions): known-traps + override-audit + plug-in + stale-dossier + scout-refresh`
 - Repo renamed from `intent-solutions-io/contributions` → `jeremylongshore/contributing-clanker`
 - SKILL.md migrated from SQLite tracker to markdown-only data model
 - Dropped all bounty / payment / Algora / Gumroad / Cortex framing — this is a contribution tool, not a tracker

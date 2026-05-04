@@ -9,7 +9,7 @@ epic: contributing-clanker-bzq
 
 # Discovery System — @scout subagent
 
-The `@scout` subagent is the first step in the lifecycle: it converts "I want to find OSS work" into a ranked queue of candidate markdown files. Definition: `~/.claude/agents/scout.md`.
+The `@scout` subagent is the first step in the lifecycle: it converts "I want to find OSS work" into a ranked queue of candidate markdown files. Definition: `~/.claude/skills/contribute/agents/scout.md` (bundled inside the `/contribute` skill per skill-creator spec).
 
 ## Star-tier brackets
 

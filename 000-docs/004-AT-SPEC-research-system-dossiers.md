@@ -9,7 +9,7 @@ epic: contributing-clanker-drq
 
 # Research System — @researcher subagent and dossiers
 
-The dossier is **Layer 1** of the architecture (`002-AT-ARCH-system-architecture.md`). One markdown file per upstream repo at `~/.contribute-system/research/<owner>__<repo>.md`. Every gate reads from it. The `@researcher` subagent (`~/.claude/agents/researcher.md`) builds and refreshes them via `~/.contribute-system/bin/researcher-build.sh`.
+The dossier is **Layer 1** of the architecture (`002-AT-ARCH-system-architecture.md`). One markdown file per upstream repo at `~/.contribute-system/research/<owner>__<repo>.md`. Every gate reads from it. The `@researcher` subagent (`~/.claude/skills/contribute/agents/researcher.md`) builds and refreshes them via `~/.claude/skills/contribute/scripts/researcher-build.sh`.
 
 ## Dossier frontmatter schema
 

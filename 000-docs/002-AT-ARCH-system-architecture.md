@@ -56,7 +56,7 @@ epic: contributing-clanker-9dr
 
 ## Layer 1 — Per-repo dossiers (markdown)
 
-One file per upstream repo at `~/.contribute-system/research/<owner>__<repo>.md`. Built by the `@researcher` subagent (`~/.claude/agents/researcher.md`), which wraps `~/.contribute-system/bin/researcher-build.sh` for the deterministic parts (CONTRIBUTING fetch, depth-1 link follows, policy-file inventory, bot detection from a recent merged PR) and uses LLM judgment only for the few questions that require it (tone match, AI policy interpretation).
+One file per upstream repo at `~/.contribute-system/research/<owner>__<repo>.md`. Built by the `@researcher` subagent (`~/.claude/skills/contribute/agents/researcher.md`), which wraps `~/.claude/skills/contribute/scripts/researcher-build.sh` for the deterministic parts (CONTRIBUTING fetch, depth-1 link follows, policy-file inventory, bot detection from a recent merged PR) and uses LLM judgment only for the few questions that require it (tone match, AI policy interpretation).
 
 Frontmatter is the queryable layer — every gate reads it. Body holds curated knowledge: pet peeves, failure log, free-form notes that survive `refresh`. See `004-AT-SPEC-research-system-dossiers.md` for the full schema.
 

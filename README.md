@@ -9,8 +9,8 @@ A personal OSS-contribution workspace + the runtime state that the `/contribute`
 | Concern | Location |
 |---|---|
 | Workflow / lifecycle orchestration | `/contribute` skill at `~/.claude/skills/contribute/` |
-| Discovery subagent | `~/.claude/agents/scout.md` (`@scout`) |
-| Research subagent (in flight) | `~/.claude/agents/researcher.md` (`@researcher`) |
+| Discovery subagent | `~/.claude/skills/contribute/agents/scout.md` (`@scout`) |
+| Research subagent | `~/.claude/skills/contribute/agents/researcher.md` (`@researcher`) |
 | Runtime state (dossiers, candidates, gates, log) | `~/.contribute-system/` |
 | Upstream clones (this repo) | `~/000-projects/contributing-clanker/<repo>/` |
 
