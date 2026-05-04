@@ -6,7 +6,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is an OSS contribution workspace at `https://github.com/jeremylongshore/contributing-clanker.git` — clones of upstream projects we contribute to, plus per-clone notes. The actual workflow lives in the **`/contribute` Claude Code skill** at `~/.claude/skills/contribute/`, not in this repo.
 
-**The repo and the skill are paired but distinct.** Repo = spec + tests + workspace (`000-docs/` = what the skill must do, `tests/` = bats validation, `features/` = Gherkin BDD, upstream clones = where contributions land). Skill = implementation (SKILL.md orchestrator + bundled agents at `agents/scout.md`, `agents/researcher.md`, `agents/{draft-writer,test-runner,repo-analyzer}.md` + 41 gates + reporters). For Phase 1 the skill is filesystem-only / not git-tracked here; for Phase 2 it gets packaged into `claude-code-plugins/plugins/contributing-clanker/` for distribution. Don't conflate them.
+**The repo and the skill are paired but distinct.** Repo = spec + tests + workspace + the vendored skill itself. Layout:
+
+| Path | What |
+|---|---|
+| `skills/contribute/` | The skill (SKILL.md + 5 agents + 45 scripts + 4 templates). **Single source of truth.** |
+| `bin/install.sh` | Installs the skill into `~/.claude/skills/contribute/` (symlink for devs, copy for users) |
+| `000-docs/` | Spec — what the skill must do (epics 1–10) |
+| `tests/` | Validates the skill (bats unit + L4 regression) — references `skills/contribute/scripts/` |
+| `features/` | Gherkin BDD acceptance criteria |
+| upstream clones (posthog/, calcom/, …) | Where contributions land |
+| `~/.contribute-system/` (NOT in repo) | Per-user runtime state — candidates, dossiers, log.jsonl |
+
+**Personal-dev install** (this machine): `~/.claude/skills/contribute/` is a SYMLINK to `<repo>/skills/contribute/` so edits at either path land in the same physical file. No drift, no sync ritual. Phase 2 packaging copies `skills/contribute/` into `claude-code-plugins/plugins/contributing-clanker/skills/contribute/` for marketplace distribution.
+
+**Why `assets/` doesn't bloat as we add repos**: per-repo specifics (tone, AI policy, draft-first, PR template overlays) live in dossiers at `~/.contribute-system/research/<owner>__<repo>.md` — not in the skill. `assets/` holds 4 generic templates forever; dossiers grow linearly with repos.
 
 The contributing-clanker is a **tool for contributing to other people's open source projects**. It's not a tracker, a portfolio, or a bounty board. The system exists to make AI-assisted contributions land cleanly — caught by deterministic gates before they reach upstream maintainers as AI slop.
 

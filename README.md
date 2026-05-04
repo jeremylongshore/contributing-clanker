@@ -8,13 +8,25 @@ A personal OSS-contribution workspace + the runtime state that the `/contribute`
 
 | Concern | Location |
 |---|---|
-| Workflow / lifecycle orchestration | `/contribute` skill at `~/.claude/skills/contribute/` |
-| Discovery subagent | `~/.claude/skills/contribute/agents/scout.md` (`@scout`) |
-| Research subagent | `~/.claude/skills/contribute/agents/researcher.md` (`@researcher`) |
-| Runtime state (dossiers, candidates, gates, log) | `~/.contribute-system/` |
-| Upstream clones (this repo) | `~/000-projects/contributing-clanker/<repo>/` |
+| Workflow / lifecycle orchestration | `skills/contribute/SKILL.md` (vendored in this repo) |
+| Subagents | `skills/contribute/agents/{scout,researcher,draft-writer,test-runner,repo-analyzer}.md` |
+| Gates + orchestrators + reporters | `skills/contribute/scripts/` (45 bash scripts: 4 orchestrators + 41 gates + reporters) |
+| Templates | `skills/contribute/assets/{claim,pr,evidence}-template.md` (generic, repo-agnostic) |
+| Per-repo overrides (CLA, tone, AI policy) | `~/.contribute-system/research/<owner>__<repo>.md` — built by `@researcher` |
+| Runtime state (candidates, log, briefing) | `~/.contribute-system/` |
+| Spec + tests + governance | `000-docs/`, `tests/`, `features/` |
+| Upstream clones | `<repo-name>/` at the root of this repo |
 
-This repo is the workspace dir. The skill is the binary surface. Don't conflate them.
+## Install
+
+```bash
+git clone https://github.com/jeremylongshore/contributing-clanker
+cd contributing-clanker
+bin/install.sh                # production install (copy)
+bin/install.sh --symlink      # dev install (live edits land in repo)
+```
+
+After install, `/contribute` becomes available in Claude Code.
 
 ## Repo layout
 
@@ -57,7 +69,7 @@ Future: Phase 2 packages this as a Claude Code plugin under `claude-code-plugins
 This is a public repo but the system is single-user. The workflow assumes you have the `/contribute` skill installed, your own GitHub auth via `gh`, and your own upstream clones. There's nothing to deploy and no service to run.
 
 To use the system: `/contribute` in any Claude Code session.
-To change the system: edit `~/.claude/skills/contribute/SKILL.md`, the agents at `~/.claude/agents/`, or the gate scripts at `~/.contribute-system/gates/`.
+To change the system: edit anything under `skills/contribute/` (SKILL.md, agents/, scripts/). The dev install (`bin/install.sh --symlink`) makes those edits live immediately at `~/.claude/skills/contribute/`.
 
 ## Conventions
 
