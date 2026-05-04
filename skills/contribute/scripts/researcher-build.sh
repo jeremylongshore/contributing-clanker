@@ -322,20 +322,47 @@ linked_sources_yaml() {
 }
 
 # Resolve the output path. Default: ~/.contribute-system/research/<owner>__<repo>.md.
-# Override via CONTRIBUTE_RESEARCH_DIR. The path is stable per repo so refresh
-# overwrites the previous dossier — engineer-curated sections (## Pet peeves,
-# ## Failure log, ## Notes) survive because the agent layer copies them
-# forward; this script does not preserve them across refresh.
+# Override via CONTRIBUTE_RESEARCH_DIR.
 RESEARCH_DIR="${CONTRIBUTE_RESEARCH_DIR:-$HOME/.contribute-system/research}"
 OUTPUT_FILE="$RESEARCH_DIR/$(/usr/bin/echo "$REPO" | /usr/bin/sed 's|/|__|').md"
 
-# When not in --stdout mode, redirect all subsequent stdout to the dossier
-# file. The two heredocs (DOSSIER and TAIL) and the awk excerpt block in
-# between all write to stdout — `exec` here points stdout at the file once,
-# so every subsequent emission lands in the right place.
+# Smart refresh: three sections in the dossier body are engineer-curated and
+# must survive refresh:
+#   - ## Pet peeves & known triggers
+#   - ## Failure log
+#   - ## Notes
+# Strategy: capture the existing content of these sections (if the file
+# exists) BEFORE we overwrite it, then splice them back over the
+# auto-generated stubs after the heredocs finish. The frontmatter and all
+# auto-generated sections are refreshed normally.
+PRESERVED_FILE=""
+if [[ -f "$OUTPUT_FILE" && "$TO_STDOUT" -eq 0 ]]; then
+  PRESERVED_FILE=$(/usr/bin/mktemp)
+  /usr/bin/python3 - "$OUTPUT_FILE" "$PRESERVED_FILE" <<'PYEOF' || PRESERVED_FILE=""
+import json, re, sys
+src_path, out_path = sys.argv[1:3]
+with open(src_path) as f:
+    text = f.read()
+preserved = {}
+for header in ['## Pet peeves & known triggers', '## Failure log', '## Notes']:
+    m = re.search(
+        re.escape(header) + r'\n(.*?)(?=\n## |\Z)',
+        text, re.DOTALL,
+    )
+    if m:
+        preserved[header] = m.group(1).rstrip('\n')
+with open(out_path, 'w') as f:
+    json.dump(preserved, f)
+PYEOF
+fi
+
+# When not in --stdout mode, redirect all subsequent stdout to a TMP file.
+# We splice preserved sections in afterwards and atomic-rename to OUTPUT_FILE.
+TMP_OUTPUT=""
 if [[ "$TO_STDOUT" -eq 0 ]]; then
   /usr/bin/mkdir -p "$RESEARCH_DIR"
-  exec > "$OUTPUT_FILE"
+  TMP_OUTPUT="$(/usr/bin/mktemp "${OUTPUT_FILE}.tmp.XXXXXX")"
+  exec > "$TMP_OUTPUT"
 fi
 
 /usr/bin/cat <<DOSSIER
@@ -448,9 +475,38 @@ _Free-form area for the human to leave per-repo intuition. Survives refresh._
 
 TAIL
 
-# Success message goes to stderr so it's visible when stdout was redirected
-# to the file. In --stdout mode, the user sees it inline before the dossier
-# content (no — actually after, since heredocs flush before the script exits).
+# Splice preserved engineer-curated sections back over the auto-generated
+# stubs, then atomic-rename TMP → OUTPUT_FILE. Skipped in --stdout mode
+# (no file involvement). Skipped if PRESERVED_FILE was empty (no prior file
+# or extraction failed — we just go with the auto-generated stubs).
 if [[ "$TO_STDOUT" -eq 0 ]]; then
+  if [[ -n "$PRESERVED_FILE" && -f "$PRESERVED_FILE" && -s "$PRESERVED_FILE" ]]; then
+    /usr/bin/python3 - "$TMP_OUTPUT" "$PRESERVED_FILE" <<'PYEOF'
+import json, re, sys
+tmp_path, preserved_path = sys.argv[1:3]
+with open(tmp_path) as f:
+    text = f.read()
+with open(preserved_path) as f:
+    preserved = json.load(f)
+for header, content in preserved.items():
+    if not content.strip():
+        continue  # don't overwrite a fresh stub with empty preserved content
+    # Add a trailing '\n' so there's a blank line between this section's
+    # content and the next '## ' header. The lookahead is `\n## ` (the \n
+    # is NOT consumed by the match), so without our trailing \n we end up
+    # with content directly abutting the next header (one newline only).
+    replacement = header + '\n' + content + '\n'
+    text = re.sub(
+        re.escape(header) + r'\n(.*?)(?=\n## |\Z)',
+        lambda m, r=replacement: r,
+        text, count=1, flags=re.DOTALL,
+    )
+with open(tmp_path, 'w') as f:
+    f.write(text)
+PYEOF
+    /usr/bin/rm -f "$PRESERVED_FILE"
+  fi
+
+  /usr/bin/mv "$TMP_OUTPUT" "$OUTPUT_FILE"  # atomic rename
   log "→ wrote dossier to $OUTPUT_FILE"
 fi
