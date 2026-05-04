@@ -16,6 +16,8 @@ tests/
 │       ├── c12-ci-green.bats           ← phase C sample
 │       ├── d05-no-reopen.bats          ← phase D sample
 │       └── g01-no-vendored-edits.bats  ← phase G sample
+├── integration/
+│   └── test-plugin-install.sh  ← end-to-end install/uninstall flow against a synthetic plugin dir (26 assertions)
 └── fixtures/
     ├── candidates/
     │   └── clean-open.md       ← baseline open-status candidate
@@ -37,11 +39,12 @@ bats tests/unit/gates/a01-already-assigned.bats
 # Verbose
 bats --verbose-run tests/unit/gates/
 
-# The L4 integration regression suites (4 scripts, separate from bats)
+# The L4 integration regression suites (5 scripts, separate from bats)
 skills/contribute/scripts/test-known-traps.sh           # 4 known-trap cases
 skills/contribute/scripts/test-override-audit.sh        # override audit trail
 skills/contribute/scripts/test-plug-in.sh               # gate plug-in discovery
 skills/contribute/scripts/test-stale-dossier-refresh.sh # dossier freshness
+tests/integration/test-plugin-install.sh                # plugin install/uninstall E2E (yvb.4)
 
 # Static analysis on all bash scripts
 scripts/lint-bash.sh

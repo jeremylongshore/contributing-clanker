@@ -23,49 +23,73 @@ If the soak surfaces structural issues (gate latency, dossier drift, override ab
 
 ## Target location
 
-`claude-code-plugins-plus-skills/plugins/contributing-clanker/`. This is Jeremy's existing marketplace repo (2k+ stars, 300+ forks, 45k+ NPM downloads). Plugin layout:
+Local directory: `~/000-projects/claude-code-plugins/plugins/community/contributing-clanker/`.
+
+GitHub repo: `jeremylongshore/claude-code-plugins-plus-skills` (the local clone dir is named `claude-code-plugins/` for brevity but tracks the `-plus-skills` repo). This is Jeremy's existing marketplace repo (2k+ stars, 300+ forks, 45k+ NPM downloads). Plugins live under category subdirectories — `community/` is the right slot for an OSS-contribution tool.
+
+Plugin layout:
 
 ```
-plugins/contributing-clanker/
-├── plugin.json            # manifest
+plugins/community/contributing-clanker/
+├── plugin.json            # manifest (synced version field on each release)
 ├── README.md
 ├── skills/
 │   └── contribute/
-│       └── SKILL.md       # moved from ~/.claude/skills/contribute/
-├── agents/
-│   ├── scout.md           # moved from ~/.claude/agents/scout.md
-│   └── researcher.md      # moved from ~/.claude/agents/researcher.md
-├── bin/                   # gate scripts and transition tooling
-│   ├── transition.sh
-│   ├── gate-runner.sh
-│   └── researcher-build.sh
-├── gates/                 # all installed gate scripts
-│   └── lib/preamble.sh
+│       ├── SKILL.md       # synced from contributing-clanker/skills/contribute/
+│       ├── agents/        # synced — scout, researcher, draft-writer, test-runner, repo-analyzer
+│       ├── scripts/       # synced — 41 gates + 4 orchestrators + lib + reporters
+│       └── assets/        # synced — claim/pr/evidence templates
 └── hooks/
-    ├── install.sh         # creates ~/.contribute-system/, copies bin+gates
-    └── uninstall.sh       # removes the plugin's bin+gates from runtime dir
+    ├── install.sh         # creates ~/.contribute-system/{bin,gates,...}, copies runtime scripts
+    └── uninstall.sh       # removes the plugin's runtime scripts; leaves user data
 ```
 
-The runtime dir (`~/.contribute-system/`) stays per-user — plugin install creates it, plugin uninstall leaves it (user's data is theirs). Only `bin/`, `gates/`, the agents, and the skill are installed/removed.
+**Source of truth**: this repo's `skills/contribute/`. Plugin directory is a **build artifact** synced by `bin/release-plugin.sh` on tagged releases — NOT a parallel-maintained copy. The release script is the single mechanism to move bits across the boundary, eliminating drift by construction. Manual edits to the plugin directory are reverted on next sync; the plugin repo's PR template will say so.
+
+The runtime dir (`~/.contribute-system/`) stays per-user — plugin install creates it, plugin uninstall leaves it (user's data is theirs). Only the skill bundle and the runtime scripts under `bin/` + `gates/` are installed/removed.
 
 ## Plugin manifest (`plugin.json`)
 
-Standard claude-code-plugins manifest:
+Schema matches existing `claude-code-plugins` plugins (see `~/000-projects/claude-code-plugins/plugins/devops/sugar/plugin.json` and `plugins/ai-ml/jeremy-google-adk/plugin.json` for reference):
 
 ```json
 {
   "name": "contributing-clanker",
   "version": "0.1.0",
   "description": "Local-only OSS contribution command center with 41 deterministic gates against AI-slop failure modes",
-  "author": "Jeremy Longshore <jeremy@intentsolutions.io>",
+  "author": {
+    "name": "Jeremy Longshore",
+    "email": "jeremy@intentsolutions.io",
+    "url": "https://github.com/jeremylongshore"
+  },
+  "homepage": "https://github.com/jeremylongshore/contributing-clanker",
+  "repository": "https://github.com/jeremylongshore/contributing-clanker",
   "license": "MIT",
-  "compatibility": "Claude Code 1.x; requires gh CLI and jq on PATH",
-  "tags": ["oss", "contributions", "github", "ai-slop-prevention"],
-  "skills": ["skills/contribute/SKILL.md"],
-  "agents": ["agents/scout.md", "agents/researcher.md"],
-  "hooks": {
-    "post_install": "hooks/install.sh",
-    "pre_uninstall": "hooks/uninstall.sh"
+  "keywords": [
+    "oss",
+    "contributions",
+    "github",
+    "ai-slop-prevention",
+    "code-review",
+    "open-source"
+  ],
+  "requires": {
+    "claude-code": ">=1.0.0"
+  },
+  "capabilities": {
+    "skills": true,
+    "agents": true,
+    "hooks": true
+  },
+  "installation": {
+    "prerequisites": [
+      "gh CLI authenticated (gh auth status)",
+      "jq on PATH"
+    ],
+    "verification": [
+      "gh auth status",
+      "command -v jq"
+    ]
   }
 }
 ```
@@ -85,6 +109,20 @@ Standard claude-code-plugins manifest:
 1. Removes plugin-shipped scripts from `~/.contribute-system/bin/` and `~/.contribute-system/gates/`
 2. **Leaves** `candidates/`, `research/`, `log.jsonl`, `profile.md` — user's data is theirs
 3. Prints: "Plugin removed. Your contribution state is preserved at `~/.contribute-system/`. To purge entirely: `rm -rf ~/.contribute-system/`."
+
+## Release / sync mechanism (`bin/release-plugin.sh`)
+
+The plugin directory is rebuilt by a release script that lives in this repo. The script:
+
+1. Reads `version` from `bin/release-plugin.sh` argv (e.g., `bin/release-plugin.sh 0.1.0`)
+2. Validates: working tree clean, on `master`, tag `v<version>` does not yet exist
+3. Updates `plugin.json#version` in the plugin directory
+4. `rsync --delete` syncs `skills/contribute/` → `<plugin-dir>/skills/contribute/`
+5. Re-copies `hooks/install.sh` + `hooks/uninstall.sh` from a `release/hooks/` source dir in this repo
+6. Tags the contributing-clanker repo as `v<version>` and commits to the plugin repo on a `release/contributing-clanker-v<version>` branch
+7. Prints next-step: open a PR in `jeremylongshore/claude-code-plugins-plus-skills`
+
+Why a script instead of a CI job: this keeps the release flow inspectable and reversible by Jeremy alone. CI can come later. The release script is checked into git, so any contributor can read exactly how plugin bits get assembled.
 
 ## Version bumps
 

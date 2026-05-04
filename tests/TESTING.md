@@ -2,7 +2,7 @@
 
 **Owner**: engineer (Jeremy). AI may read; never modify policy sections.
 **Last audit**: 2026-05-03 (`/audit-tests`)
-**Audit-harness**: not installed (Phase 1; will install in Phase 2 distribution)
+**Audit-harness**: `@intentsolutions/audit-harness@v0.1.0` (vendored at `.audit-harness/`, wrapper at `scripts/audit-harness`)
 
 ## Classification
 
@@ -50,7 +50,11 @@
 
 ## Installed gates
 
-(none yet — pre-commit hook + shellcheck pending)
+- `L0: @intentsolutions/audit-harness@v0.1.0` (installed 2026-05-03)
+  - Vendor: `.audit-harness/` (scripts + VERSION + README + CHANGELOG)
+  - Wrapper: `scripts/audit-harness` (dispatches to `.audit-harness/scripts/*`)
+  - Commands available: `verify`, `init`, `list`, `escape-scan`, `arch`, `bias`, `gherkin-lint`, `crap`
+  - Wiring: not yet wired into pre-commit / CI (deferred to follow-up bead — `init` requires policy file decisions)
 
 ## Traceability
 
