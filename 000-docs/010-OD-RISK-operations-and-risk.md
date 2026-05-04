@@ -4,6 +4,7 @@ category: OD
 type: RISK
 status: draft
 last_updated: 2026-05-03
+revision: 2
 epic: contributing-clanker-i4y
 ---
 
@@ -60,6 +61,36 @@ The 3-layer architecture means each piece can be independently disabled without 
 - A maintainer changing `CONTRIBUTING.md` mid-PR. Dossier was correct at `last_refreshed`; user is responsible for re-reading post-refresh notice.
 - A repo's review bots being temporarily down. `c13-bots-passed` will WARN-then-skip via `gh_safe` graceful degradation, not BLOCK.
 - A repo with no CONTRIBUTING.md at all. Builder writes a minimal dossier flagging the absence; gates that need missing fields return SKIP.
+
+## Future enhancements deferred (with trigger conditions)
+
+These are NOT problems today. They become worth solving if specific empirical signals appear. Listed here so future sessions don't redo the analysis.
+
+### QMD (hybrid markdown search) integration — DEFERRED
+
+**What it would add**: replace `grep`/`awk` over `~/.contribute-system/research/*.md` and `candidates/*.md` with [`@tobilu/qmd`](https://www.npmjs.com/package/@tobilu/qmd) — Tobi Lütke's local hybrid search engine (BM25 + vector + HyDE). Natural-language dossier queries ("which repos require draft-first PRs?"), semantic candidate dedup, cross-dossier institutional-knowledge search. The integration adapter already exists in `~/000-projects/qmd-team-intent-kb/packages/qmd-adapter/`.
+
+**Why we're not doing it now (Phase 1)**:
+
+1. **Premature optimization.** Current corpus is ~10 dossiers + ~60 candidates ≈ <1 MB markdown. Linear `grep`/`awk`/`jq` is sub-second. QMD's BM25/vector advantages only matter past O(thousands) of files.
+2. **Violates Phase 1 invariant.** Phase 1 thesis: "filesystem-only personal use, no daemons, markdown is canonical." QMD adds a binary index DB (derived state — drift surface vs. canonical markdown), embedding refresh costs, daemon-shaped happiness, and an "is the index stale?" lifecycle question. Each is a new thing to maintain.
+3. **The adapter already exists.** When we need it, `@qmd-team-intent-kb/qmd-adapter` is governance-ready and wireable. Waiting wastes no code.
+
+**Triggers to revisit (any of these → reconsider)**:
+
+| Trigger | Action |
+|---|---|
+| Dossier count >100 | Add QMD over `~/.contribute-system/research/` via the existing adapter |
+| Catching self writing >3 `awk`/`jq` queries per session against the dossiers | Same — that's the empirical volume signal |
+| Phase 3 multi-user MCP service | QMD becomes load-bearing for cross-tenant search |
+| New use case: semantic dedup ("have I seen this issue idea before?") | Vector search wins; QMD's wheelhouse |
+
+Two tiny Phase 1 wins worth considering if "no daemon" is preserved (read-only `qmd search` invocations, never `qmd mcp`):
+
+- `@researcher` calling `qmd search` over `~/.contribute-system/research/` when building a NEW dossier, to detect "is there a similar repo we've already documented?"
+- `@scout`'s candidate-dedup pass calling `qmd query` to catch issue-title near-duplicates that string-match misses.
+
+Both are 10-line additions, zero new infrastructure (qmd is already on `PATH`). Skippable if "hold the line on Phase 1 minimalism" wins. Decision deferred until a real trigger fires.
 
 ## Cross-references
 
