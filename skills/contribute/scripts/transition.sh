@@ -95,6 +95,50 @@ if [[ "${#OVERRIDES_NEW[@]}" -gt 0 ]]; then
   fi
 fi
 
+# Advisory: warn on missing required body sections per target status.
+# Per skills/contribute/references/candidate-file-format.md § "Required
+# sections by lifecycle stage". WARN (not BLOCK) — backfilled candidates
+# legitimately came in mid-lifecycle without early-stage sections.
+TARGET_STATUS="${ACTION##*→}"
+REQUIRED_SECTIONS=""
+case "$TARGET_STATUS" in
+  shortlist) REQUIRED_SECTIONS="## Scope|## Files to touch" ;;
+  claimed)   REQUIRED_SECTIONS="## Scope|## Files to touch|## Claim comment draft" ;;
+  working)   REQUIRED_SECTIONS="## Scope|## Files to touch|## Claim comment draft" ;;
+  submitted) REQUIRED_SECTIONS="## PR title|## PR body|## Test results" ;;
+  merged)    REQUIRED_SECTIONS="## PR title|## PR body|## Test results" ;;
+  *)         REQUIRED_SECTIONS="" ;;  # open, dropped: no body requirements
+esac
+
+MISSING_SECTIONS=()
+if [[ -n "$REQUIRED_SECTIONS" ]]; then
+  IFS='|' read -ra SECTIONS <<< "$REQUIRED_SECTIONS"
+  for sec in "${SECTIONS[@]}"; do
+    # Match the section header anchored at line start (avoid false positives
+    # inside code blocks or quoted text).
+    if ! /usr/bin/grep -qE "^${sec}\b" "$CANDIDATE"; then
+      MISSING_SECTIONS+=("$sec")
+    fi
+  done
+fi
+
+if [[ "${#MISSING_SECTIONS[@]}" -gt 0 ]]; then
+  /usr/bin/printf '[transition] WARN: candidate is missing %d required section(s) for status=%s:\n' \
+    "${#MISSING_SECTIONS[@]}" "$TARGET_STATUS" >&2
+  for sec in "${MISSING_SECTIONS[@]}"; do
+    /usr/bin/printf '[transition]   - %s\n' "$sec" >&2
+  done
+  /usr/bin/printf '[transition]   (advisory only — see references/candidate-file-format.md;\n' >&2
+  /usr/bin/printf '[transition]    backfilled candidates legitimately skip early-stage sections)\n' >&2
+  # Log it so audits can see the pattern frequency
+  MISSING_JSON=$(/usr/bin/printf '%s\n' "${MISSING_SECTIONS[@]}" | jq -Rsc 'split("\n") | map(select(. != ""))')
+  jq -nc --arg ts "$NOW" --arg cand "$CANDIDATE" --arg target "$TARGET_STATUS" \
+        --argjson missing "$MISSING_JSON" \
+    '{ts: $ts, event: "transition_section_warn",
+      details: {candidate: $cand, target_status: $target, missing_sections: $missing}}' \
+    >> "$LOG" 2>/dev/null || true
+fi
+
 # Run gate-runner
 /usr/bin/printf '\n[transition] %s on %s\n' "$ACTION" "$(/usr/bin/basename "$CANDIDATE")" >&2
 [[ -n "$DOSSIER" ]] && /usr/bin/printf '[transition]   dossier: %s\n' "$DOSSIER" >&2 || /usr/bin/printf '[transition]   dossier: (none — gates that need it will SKIP)\n' >&2
