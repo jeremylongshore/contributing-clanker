@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-(none — see v0.1.0 for the current shipping release)
+(none)
+
+## [0.1.1] - 2026-05-03
+
+Patch release. Fixes a real misframing bug surfaced in conversation post-v0.1.0: Step 0 was reporting the user's own-repo PRs as if they were in `/contribute` scope.
+
+### Fixed
+
+- **`skills/contribute/SKILL.md` Step 0** — scope PR queries to upstream-only via OWN_ORGS prefix exclusion (`jeremylongshore/`, `intent-solutions-io/`). Replaces deprecated `gh pr list --json repository` with `gh search prs`. Adds explicit "Scope rule (non-negotiable)" paragraph documenting the rationale.
 
 ## [0.1.0] - 2026-05-03
 
@@ -57,5 +65,6 @@ First marketplace release. Plugin live at `jeremylongshore/claude-code-plugins-p
 - Stale money-flavored docs: `001-BL-TRCK-payment-tracker.md`, `002-PM-BKLG-contribution-tracker.csv`, `surgical-contributions.md/pdf`
 - `~/000-projects/contribute-md/` parallel directory (redundant snapshot of `~/.contribute-system/`)
 
-[Unreleased]: https://github.com/jeremylongshore/contributing-clanker/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/jeremylongshore/contributing-clanker/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/jeremylongshore/contributing-clanker/releases/tag/v0.1.1
 [0.1.0]: https://github.com/jeremylongshore/contributing-clanker/releases/tag/v0.1.0
