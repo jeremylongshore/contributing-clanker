@@ -186,6 +186,32 @@ Gate phases run per action:
 | `flip-to-ready` | C |
 | `post-comment` | D |
 
+## Required-sections-by-stage matrix lives in 3 places — keep them in lock-step
+
+The candidate body sections that must exist for each `status` value (per the spec at `skills/contribute/references/candidate-file-format.md` § "Required sections by lifecycle stage") are encoded in **three** places that all must agree. If you change the matrix in one, change it in all three in the **same commit**:
+
+| Place | Mechanism | Shape |
+|---|---|---|
+| `skills/contribute/references/candidate-file-format.md` | docs (the spec — source of truth for humans) | required-sections-by-stage matrix table |
+| `skills/contribute/scripts/transition.sh` | runtime advisory WARN before gate-runner | bash `case` statement in `REQUIRED_SECTIONS` block |
+| `skills/contribute/scripts/lint-candidate.sh` | sweep audit, exit 1 if any candidate has missing sections | bash `required_for()` function |
+
+The matrix today (2026-05-04):
+
+```
+shortlist  → ## Scope, ## Files to touch
+claimed    → ## Scope, ## Files to touch, ## Claim comment draft
+working    → same as claimed
+submitted  → ## PR title, ## PR body, ## Test results
+merged     → same as submitted
+open       → no body requirements
+dropped    → no body requirements
+```
+
+If you add or rename a section requirement, update **all three** files and call it out explicitly in the commit message so future greppers find it. The spec is canonical; the two scripts are enforcement reflections.
+
+History: matrix introduced in PR #18 (spec) + #21 (transition.sh WARN) + #22 (lint-candidate.sh reporter), all 2026-05-04.
+
 ## Per-clone quick reference
 
 ### Screenpipe
