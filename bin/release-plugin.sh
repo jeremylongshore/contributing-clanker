@@ -198,6 +198,6 @@ printf '    1. Push the source repo tag:\n'
 printf '         cd %s && git push origin master --tags\n\n' "$REPO_ROOT"
 printf '    2. Push the plugin repo branch + open the marketplace PR:\n'
 printf '         cd %s && git push -u origin %s\n' "$PLUGIN_REPO_DIR" "$PLUGIN_BRANCH"
-printf "         gh pr create --repo jeremylongshore/claude-code-plugins \\\\\n"
+printf "         gh pr create --repo jeremylongshore/claude-code-plugins-plus-skills \\\\\n"
 printf "           --title 'release(community/contributing-clanker): %s' \\\\\n" "$TAG"
 printf "           --body 'Sync of contributing-clanker %s.'\n\n" "$TAG"

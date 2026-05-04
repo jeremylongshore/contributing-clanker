@@ -23,7 +23,9 @@ If the soak surfaces structural issues (gate latency, dossier drift, override ab
 
 ## Target location
 
-`claude-code-plugins/plugins/community/contributing-clanker/`. This is Jeremy's existing marketplace repo (2k+ stars, 300+ forks, 45k+ NPM downloads). Plugins live under category subdirectories — `community/` is the right slot for an OSS-contribution tool.
+Local directory: `~/000-projects/claude-code-plugins/plugins/community/contributing-clanker/`.
+
+GitHub repo: `jeremylongshore/claude-code-plugins-plus-skills` (the local clone dir is named `claude-code-plugins/` for brevity but tracks the `-plus-skills` repo). This is Jeremy's existing marketplace repo (2k+ stars, 300+ forks, 45k+ NPM downloads). Plugins live under category subdirectories — `community/` is the right slot for an OSS-contribution tool.
 
 Plugin layout:
 
@@ -118,7 +120,7 @@ The plugin directory is rebuilt by a release script that lives in this repo. The
 4. `rsync --delete` syncs `skills/contribute/` → `<plugin-dir>/skills/contribute/`
 5. Re-copies `hooks/install.sh` + `hooks/uninstall.sh` from a `release/hooks/` source dir in this repo
 6. Tags the contributing-clanker repo as `v<version>` and commits to the plugin repo on a `release/contributing-clanker-v<version>` branch
-7. Prints next-step: open a PR in `claude-code-plugins`
+7. Prints next-step: open a PR in `jeremylongshore/claude-code-plugins-plus-skills`
 
 Why a script instead of a CI job: this keeps the release flow inspectable and reversible by Jeremy alone. CI can come later. The release script is checked into git, so any contributor can read exactly how plugin bits get assembled.
 
@@ -143,4 +145,4 @@ Phase 3 (containerized service) only happens if Phase 2 surfaces multi-user dema
 
 - Roadmap: `001-PP-VISN-product-vision-and-roadmap.md`
 - Operations / risk: `010-OD-RISK-operations-and-risk.md`
-- Marketplace repo: https://github.com/jeremylongshore/claude-code-plugins
+- Marketplace repo: https://github.com/jeremylongshore/claude-code-plugins-plus-skills
