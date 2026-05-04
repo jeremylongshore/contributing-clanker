@@ -19,6 +19,7 @@
 | 008 | TQ-TEST | [Testing and Verification Strategy](008-TQ-TEST-testing-and-verification.md) | Draft |
 | 009 | OD-PLAN | [Phase 2 — Plugin Distribution Plan](009-OD-PLAN-plugin-distribution-phase-2.md) | Draft |
 | 010 | OD-RISK | [Operations and Risk Register](010-OD-RISK-operations-and-risk.md) | Draft |
+| 011 | DR-TMPL | [Community failure-mode submission template](011-DR-TMPL-community-failure-mode-submission.md) | Stable |
 
 ---
 
