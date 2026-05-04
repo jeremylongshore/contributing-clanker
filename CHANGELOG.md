@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 (none)
 
+## [0.1.2] - 2026-05-03
+
+Patch release. Three runtime correctness bugs surfaced by a single qualifying flow against `secureblue/secureblue#2138`. All three were silent failures the gate framework was meant to catch — but were inside the framework itself.
+
+### Fixed
+
+- **`skills/contribute/scripts/researcher-build.sh`** — stopped fabricating the `policy_files` inventory. Earlier implementation captured stdout from `gh api` to detect file existence; on 404 `gh api` prints the error JSON to stdout (not stderr), so every probe registered as "exists." Replaced with exit-code-based probing (`gh api ... >/dev/null 2>&1`). Also added `docs/` subdir probing for projects (like secureblue) that house policy docs in `docs/CODE_OF_CONDUCT.md` etc. instead of the repo root. (#24)
+- **`skills/contribute/scripts/transition.sh`** — fixed YAML corruption when adding `--override-gate` entries to candidate frontmatter. Earlier implementation used `awk -v RS='---'` + `sed -i` and produced malformed output (opening `---` became `------`, override entries landed outside the `overrides:` array as sibling top-level list items). Replaced with a Python `yaml` round-trip using `yaml.safe_dump`. NUL-separated pairs file passes overrides bash→Python so reasons containing `:` or `"` round-trip correctly. (#25)
+- **`skills/contribute/scripts/gates/a09-mention-routing.sh`** — fixed false-positive BLOCK on every claim/PR draft without an `@-mention`. Earlier implementation chained `grep -oE | grep -viE | wc -l`; under `set -uo pipefail`, an empty first `grep` returns exit 1, killing the whole pipeline → fail-closed BLOCK. Replaced with a single `awk` pass that handles empty input cleanly and strips trailing punctuation. (#26)
+
+### Caveats
+
+- The 12 dossiers built before this patch have fabricated `policy_files` entries. `@researcher refresh <repo>` would correctly probe + emit honest entries — but the existing `researcher-build.sh` overwrites engineer-curated `## Pet peeves`, `## Failure log`, and `## Notes` sections on refresh. A "smart refresh" that preserves manual sections is a separate follow-up.
+
 ## [0.1.1] - 2026-05-03
 
 Patch release. Fixes a real misframing bug surfaced in conversation post-v0.1.0: Step 0 was reporting the user's own-repo PRs as if they were in `/contribute` scope.
@@ -65,6 +79,7 @@ First marketplace release. Plugin live at `jeremylongshore/claude-code-plugins-p
 - Stale money-flavored docs: `001-BL-TRCK-payment-tracker.md`, `002-PM-BKLG-contribution-tracker.csv`, `surgical-contributions.md/pdf`
 - `~/000-projects/contribute-md/` parallel directory (redundant snapshot of `~/.contribute-system/`)
 
-[Unreleased]: https://github.com/jeremylongshore/contributing-clanker/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/jeremylongshore/contributing-clanker/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/jeremylongshore/contributing-clanker/releases/tag/v0.1.2
 [0.1.1]: https://github.com/jeremylongshore/contributing-clanker/releases/tag/v0.1.1
 [0.1.0]: https://github.com/jeremylongshore/contributing-clanker/releases/tag/v0.1.0
