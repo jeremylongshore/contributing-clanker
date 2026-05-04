@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is an OSS contribution workspace at `https://github.com/jeremylongshore/contributing-clanker.git` — clones of upstream projects we contribute to, plus per-clone notes. The actual workflow lives in the **`/contribute` Claude Code skill** at `~/.claude/skills/contribute/`, not in this repo.
 
+**The repo and the skill are paired but distinct.** Repo = spec + tests + workspace (`000-docs/` = what the skill must do, `tests/` = bats validation, `features/` = Gherkin BDD, upstream clones = where contributions land). Skill = implementation (SKILL.md orchestrator + bundled agents at `agents/scout.md`, `agents/researcher.md`, `agents/{draft-writer,test-runner,repo-analyzer}.md` + 41 gates + reporters). For Phase 1 the skill is filesystem-only / not git-tracked here; for Phase 2 it gets packaged into `claude-code-plugins/plugins/contributing-clanker/` for distribution. Don't conflate them.
+
 The contributing-clanker is a **tool for contributing to other people's open source projects**. It's not a tracker, a portfolio, or a bounty board. The system exists to make AI-assisted contributions land cleanly — caught by deterministic gates before they reach upstream maintainers as AI slop.
 
 See `AGENTS.md` for **non-interactive shell rules** (always use `cp -f`, `rm -f`, `mv -f`, `apt-get -y`, etc. — interactive prompts hang the agent).
