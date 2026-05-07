@@ -16,7 +16,9 @@ description: |
   find new work to take on, claim an issue, build/refresh a repo's dossier,
   or draft a Design Issue or PR. Trigger with "/contribute", "what's my PR
   status", "find a contribution", "claim issue X", "draft a Design Issue
-  for Y", "refresh dossier for Z".
+  for Y", "refresh dossier for Z". Also triggers on "/contribute <github-url>"
+  or "/contribute owner/repo" — onboards a new repo (builds dossier, stubs
+  candidates, surfaces context) or resurfaces briefing for a known repo.
 allowed-tools:
   - Read
   - Write
@@ -86,6 +88,131 @@ gh auth status >/dev/null 2>&1 && echo "gh: ok" || echo "gh: NOT logged in"
 ```
 
 ## Instructions
+
+### Argument Detection — check before Step 0
+
+**On every invocation, inspect the args first.** If the args contain a GitHub URL
+(`https://github.com/owner/repo` or `github.com/owner/repo`) or a bare `owner/repo`
+slug, enter **Repo Init Mode** instead of the normal Step 0 flow. If no args, proceed
+to Step 0.
+
+#### Repo Init Mode
+
+**Step 1 — Parse slug**
+
+```bash
+# Strip URL scaffolding, .git suffix, trailing slash
+ARG="<invocation arg>"
+SLUG=$(echo "$ARG" \
+  | sed 's|https://github\.com/||; s|github\.com/||; s|\.git$||; s|/$||')
+echo "$SLUG" | grep -qE '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' || { echo "INVALID: $SLUG"; exit 1; }
+OWNER=$(echo "$SLUG" | cut -d/ -f1)
+REPO=$(echo "$SLUG" | cut -d/ -f2)
+DOSSIER=~/.contribute-system/research/${OWNER}__${REPO}.md
+```
+
+**Scope guard**: if `OWNER` matches an own-org prefix (`jeremylongshore`, `intent-solutions-io`),
+surface a warning — "this looks like one of your own repos; contribute is for upstream-only work"
+— and ask if they meant a different URL. Stop until clarified.
+
+**Step 2 — Determine branch: New vs. Known**
+
+Check dossier existence, then take the matching path:
+
+```bash
+[ -f "$DOSSIER" ] && BRANCH="known" || BRANCH="new"
+```
+
+---
+
+##### Branch A — New repo (no dossier yet)
+
+Full onboarding. Run these in **parallel** first:
+
+```bash
+# Repo metadata
+gh api repos/${OWNER}/${REPO} \
+  --jq '{description:.description, stars:.stargazers_count, language:.language,
+         license:.license.name, open_issues:.open_issues_count, default_branch:.default_branch,
+         updated:.updated_at, archived:.archived}'
+
+# Open issues
+gh issue list --repo ${OWNER}/${REPO} --state=open --limit=20 \
+  --json number,title,labels,assignees,createdAt
+
+# CONTRIBUTING.md quick read (first 80 lines)
+gh api repos/${OWNER}/${REPO}/contents/CONTRIBUTING.md --jq '.content' \
+  2>/dev/null | base64 -d 2>/dev/null | head -80 || echo "no CONTRIBUTING.md"
+
+# PR history — gauge maintainer activity and external merge velocity
+gh pr list --repo ${OWNER}/${REPO} --state=merged --limit=10 \
+  --json number,title,author,mergedAt
+```
+
+Then:
+
+1. **Build the dossier** — invoke `@researcher build ${OWNER}/${REPO}` (subagent at
+   `agents/researcher.md`). It fetches deep context (issue templates, CLA, AI policy,
+   review bots, etiquette comments) and writes
+   `~/.contribute-system/research/${OWNER}__${REPO}.md`. Returns a one-paragraph summary.
+
+2. **Create candidate stubs** for any open, unassigned, un-closing issues — write
+   `~/.contribute-system/candidates/${OWNER}__${REPO}__issue<N>.md` with `status: open`
+   and `scout_score: 0` (unscored — let `@scout` score them properly before claiming).
+
+3. **Surface onboarding context block** (see Output § Repo Init below).
+
+4. **Log the event**:
+```bash
+jq -n --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      --arg repo "${OWNER}/${REPO}" --arg branch "new" \
+      '{ts:$ts, event:"repo_init", repo:$repo, branch:$branch, source:"contribute_url_arg"}' \
+  >> ~/.contribute-system/log.jsonl
+```
+
+5. **Stop** — surface the context block and wait for the user's next instruction.
+
+---
+
+##### Branch B — Known repo (dossier exists)
+
+Briefing mode. No full rebuild needed. Run these in **parallel**:
+
+```bash
+# Current dossier freshness
+awk '/^last_refreshed:/{print $2; exit}' "$DOSSIER"
+
+# Live open issues (GitHub, not just cached)
+gh issue list --repo ${OWNER}/${REPO} --state=open --limit=20 \
+  --json number,title,labels,assignees,createdAt
+
+# Existing candidates for this repo
+for f in ~/.contribute-system/candidates/${OWNER}__${REPO}__*.md; do
+  [ -f "$f" ] || continue
+  awk '/^(issue_number|status|scout_score|pr_number):/{print FILENAME, $0}' "$f"
+done 2>/dev/null
+
+# Any open PRs already in flight for this repo
+gh pr list --repo ${OWNER}/${REPO} --author=@me --state=open \
+  --json number,title,isDraft,url 2>/dev/null
+```
+
+Then:
+
+1. **If dossier is >14 days old**, invoke `@researcher refresh ${OWNER}/${REPO}`.
+
+2. **Surface a briefing block** (same Output § Repo Init format, but includes existing
+   candidates and any open PRs already filed).
+
+3. **Log the event**:
+```bash
+jq -n --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      --arg repo "${OWNER}/${REPO}" --arg branch "known" \
+      '{ts:$ts, event:"repo_init", repo:$repo, branch:$branch, source:"contribute_url_arg"}' \
+  >> ~/.contribute-system/log.jsonl
+```
+
+4. **Stop** — surface the briefing and wait for the user's next instruction.
 
 ### Step 0 — Refresh state (run first, every time)
 
@@ -487,6 +614,35 @@ Drift: <N> rows where tracker disagrees with GitHub
 | Claim | Markdown draft of the comment, with placeholders filled. Awaits user approval. |
 | Work | Test summary: pass/fail counts, duration, coverage %, log path |
 | Submit | Markdown draft of the PR or Design Issue body. Awaits user approval. |
+
+### Repo Init context block (after URL/repo arg)
+
+```
+Repo: <owner>/<repo> — <description>
+  Stars: N · Language: X · License: Y · Default branch: main
+  Last push: YYYY-MM-DD · Archived: false
+
+Quality gates (from CONTRIBUTING.md):
+  - Build: <local_check_command>
+  - Lint: <linter command if found>
+  - CLA: false | true · DCO: false | true
+  - AI disclosure required: false | true
+  - Conventional commits: true | false
+
+Open issues: N
+  <If 0>: No open issues — nothing to claim right now. Watch for new issues or check ROADMAP.
+  <If >0>:
+  - #N: <title> [labels] (assigned: yes/no)
+  ...
+
+Dossier: built | refreshed | built fresh this session
+  Path: ~/.contribute-system/research/<owner>__<repo>.md
+
+Suggested next steps:
+  - <If issues exist>: Review issues above → /contribute claim <owner>/<repo>#<N>
+  - <If ROADMAP exists>: Check ROADMAP.md for planned work that might open as issues
+  - <If 0 issues>: /contribute scout "<owner>/<repo> custom query" when issues open
+```
 
 ### Audit subcommands
 
