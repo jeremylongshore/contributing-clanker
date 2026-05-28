@@ -232,6 +232,19 @@ LAST_EXT=$(jq -r '
   ] | sort_by(.merged_at) | reverse | .[0].merged_at // ""
   | if . == "" then "(none)" else .[0:10] end' < "$PRS_FILE" 2>/dev/null || echo "(err)")
 
+# ---- 5b. User's prior-merges count at this repo (trust-ladder gate input) ----
+# Read by a07-trust-ladder-fit.sh and b13-trust-ladder-size.sh. Captures the
+# count and the gh user at refresh time so the gate can detect when the
+# authenticated user has changed and the count is stale.
+log "[5b/8] computing user's prior-merges count at $REPO"
+GH_USER=$(gh api user --jq .login 2>/dev/null || /usr/bin/echo "")
+MERGED_BY_USER=0
+if [[ -n "$GH_USER" ]]; then
+  MERGED_BY_USER=$(gh api -X GET search/issues \
+    -f q="repo:$REPO is:pr is:merged author:$GH_USER" \
+    --jq '.total_count' 2>/dev/null || /usr/bin/echo 0)
+fi
+
 # ---- 6. Bot detection (sample most-recently-updated merged PR) ----
 log "[6/8] sampling review bots from a recent merged PR"
 RECENT_PR=$(jq -r '[.[] | select(.merged_at != null)] | .[0].number // empty' < "$PRS_FILE" 2>/dev/null)
@@ -377,6 +390,8 @@ license: $LICENSE
 last_pushed_at: $PUSHED_AT
 external_merge_rate_90d: $EXT_COUNT
 last_external_merge_at: $LAST_EXT
+gh_user_at_refresh: ${GH_USER:-(unknown)}
+merged_prs_by_user: $MERGED_BY_USER
 cla_required: $CLA_REQUIRED
 dco_required: $DCO_REQUIRED
 ai_disclosure_required: $AI_DISCLOSURE

@@ -18,7 +18,7 @@ set -uo pipefail
 VERBOSE="${1:-}"
 SYS="$HOME/.contribute-system"
 TMPDIR=$(/usr/bin/mktemp -d)
-trap 'rm -rf "$TMPDIR"' EXIT
+trap "rm -rf '$TMPDIR'" EXIT
 
 PASS=0
 FAIL=0
@@ -126,6 +126,152 @@ T4=$(make_candidate "lingdojo/kana-dojo" 99999999)
 # (which is the most common false-positive risk).
 assert_gate "  A01 should NOT block (issue 99999999 nonexistent)" \
   "shortlist→claimed" "$T4" "A01" "(PASS|SKIP)"
+
+# ---- TESTS 5-13: Trust-ladder gates (A07 + B13) ----
+# Inputs are dossier-side + candidate-side; no live GH needed. Each test
+# calls the gate script directly with crafted stdin (avoids transition.sh
+# running the full phase chain and producing noise from unrelated gates).
+#
+# Rule motivated by audit of oven-sh/bun#30903 — see
+# ~/.claude/skills/contribute/references/anti-patterns.md.
+
+# Helper: write a synthetic dossier with controllable merged_prs_by_user.
+# Use for A07/B13 tests where we want to vary the contributor's rung.
+make_synth_dossier() {
+  local repo="$1" merged_count="$2" path
+  path="$TMPDIR/synth_dossier_$(/usr/bin/echo "$repo" | /usr/bin/tr '/' '_')_${merged_count}.md"
+  /usr/bin/cat > "$path" <<EOF
+---
+repo: $repo
+last_refreshed: 2026-05-28T00:00:00Z
+default_branch: main
+gh_user_at_refresh: testuser
+merged_prs_by_user: $merged_count
+---
+EOF
+  /usr/bin/echo "$path"
+}
+
+# Helper: write a synthetic candidate with controllable scope_intent +
+# issue_number. Use for A07 tests.
+make_synth_candidate() {
+  local repo="$1" issue="$2" intent="$3" path
+  path="$TMPDIR/synth_cand_$(/usr/bin/echo "$repo" | /usr/bin/tr '/' '_')_${intent}.md"
+  /usr/bin/cat > "$path" <<EOF
+---
+repo: $repo
+issue_number: $issue
+scope_intent: $intent
+status: shortlist
+---
+EOF
+  /usr/bin/echo "$path"
+}
+
+# Helper: run a single gate directly with crafted input JSON. Returns the
+# severity (PASS/WARN/BLOCK/INFORM/SKIP) on stdout.
+gate_severity() {
+  local gate_script="$1" candidate="$2" dossier="$3" action="$4" repo="$5"
+  local input
+  input=$(jq -nc \
+    --arg cand "$candidate" --arg dos "$dossier" \
+    --arg act "$action" --arg r "$repo" \
+    '{candidate: $cand, dossier: $dos, action: $act, env: {repo: $r}}')
+  /usr/bin/printf '%s' "$input" \
+    | "$gate_script" 2>/dev/null \
+    | jq -r '.severity'
+}
+
+assert_severity() {
+  local name="$1" expected="$2" actual="$3"
+  /usr/bin/printf '  %-58s ' "$name"
+  if [[ "$actual" == "$expected" ]]; then
+    green "PASS"; /usr/bin/echo
+    PASS=$((PASS + 1))
+    RESULTS+=("PASS: $name")
+  else
+    red "FAIL"; /usr/bin/echo
+    /usr/bin/printf '    expected %s but got %s\n' "$expected" "$actual" >&2
+    FAIL=$((FAIL + 1))
+    RESULTS+=("FAIL: $name (expected $expected got $actual)")
+  fi
+}
+
+A07="$SYS/gates/a07-trust-ladder-fit.sh"
+B13="$SYS/gates/b13-trust-ladder-size.sh"
+
+/usr/bin/printf '\nTest 5-9: A07 trust-ladder fit (intent vs rung)\n'
+
+# 5. Rung 0 + umbrella → BLOCK
+D0=$(make_synth_dossier "test/repo" 0)
+C_UMB=$(make_synth_candidate "test/repo" "" "umbrella")
+S=$(gate_severity "$A07" "$C_UMB" "$D0" "shortlist→claimed" "test/repo")
+assert_severity "  A07 rung 0 + umbrella MUST BLOCK" "BLOCK" "$S"
+
+# 6. Rung 0 + single-issue + no issue_number → BLOCK
+C_NOISS=$(make_synth_candidate "test/repo" "" "single-issue")
+S=$(gate_severity "$A07" "$C_NOISS" "$D0" "shortlist→claimed" "test/repo")
+assert_severity "  A07 rung 0 + no issue_number MUST BLOCK" "BLOCK" "$S"
+
+# 7. Rung 0 + single-issue + has issue_number → INFORM (PASS path)
+C_OK=$(make_synth_candidate "test/repo" 180 "single-issue")
+S=$(gate_severity "$A07" "$C_OK" "$D0" "shortlist→claimed" "test/repo")
+assert_severity "  A07 rung 0 + has issue MUST INFORM" "INFORM" "$S"
+
+# 8. Rung 0 + design-discussion → PASS unconditionally
+C_DD=$(make_synth_candidate "test/repo" "" "design-discussion")
+S=$(gate_severity "$A07" "$C_DD" "$D0" "open→shortlist" "test/repo")
+assert_severity "  A07 rung 0 + design-discussion MUST PASS" "PASS" "$S"
+
+# 9. Rung 5 + umbrella → PASS (earned)
+D5=$(make_synth_dossier "test/repo" 5)
+S=$(gate_severity "$A07" "$C_UMB" "$D5" "shortlist→claimed" "test/repo")
+assert_severity "  A07 rung 5 + umbrella MUST PASS (earned)" "PASS" "$S"
+
+/usr/bin/printf '\nTest 10-13: B13 trust-ladder size cap\n'
+
+# B13 needs a real clone to measure. We use the agent-brain clone if available.
+AB_CLONE="$HOME/000-projects/contributing-clanker/agent-brain"
+if [[ -d "$AB_CLONE/.git" ]]; then
+  AB_REPO="SpillwaveSolutions/agent-brain"
+
+  # 10. Rung 0 + agent-brain branch (known 218 LOC / 11 files) → BLOCK
+  D0_AB=$(make_synth_dossier "$AB_REPO" 0)
+  C_AB=$(make_synth_candidate "$AB_REPO" 180 "single-issue")
+  S=$(gate_severity "$B13" "$C_AB" "$D0_AB" "working→submitted" "$AB_REPO")
+  assert_severity "  B13 rung 0 + real over-cap diff MUST BLOCK" "BLOCK" "$S"
+
+  # 11. Rung 5+ → PASS unconditionally (skips measurement)
+  D5_AB=$(make_synth_dossier "$AB_REPO" 5)
+  S=$(gate_severity "$B13" "$C_AB" "$D5_AB" "working→submitted" "$AB_REPO")
+  assert_severity "  B13 rung 5 MUST PASS without measuring" "PASS" "$S"
+
+  # 12. trust_ladder_disabled flag → SKIP
+  D_DIS=$(/usr/bin/cat > "$TMPDIR/synth_dossier_disabled.md" <<EOF
+---
+repo: $AB_REPO
+default_branch: main
+merged_prs_by_user: 0
+trust_ladder_disabled: true
+---
+EOF
+  /usr/bin/echo "$TMPDIR/synth_dossier_disabled.md")
+  S=$(gate_severity "$B13" "$C_AB" "$D_DIS" "working→submitted" "$AB_REPO")
+  assert_severity "  B13 trust_ladder_disabled MUST SKIP" "SKIP" "$S"
+else
+  /usr/bin/printf '  '; yellow "SKIP"; /usr/bin/printf ' B13 size tests (no %s clone)\n' "$AB_REPO"
+fi
+
+# 13. No merged_prs_by_user field → SKIP (refresh hint)
+EMPTY_DOSSIER="$TMPDIR/empty_dossier.md"
+/usr/bin/cat > "$EMPTY_DOSSIER" <<EOF
+---
+repo: test/repo
+default_branch: main
+---
+EOF
+S=$(gate_severity "$A07" "$C_OK" "$EMPTY_DOSSIER" "shortlist→claimed" "test/repo")
+assert_severity "  A07 missing merged_prs_by_user MUST SKIP" "SKIP" "$S"
 
 /usr/bin/echo
 /usr/bin/printf '=== summary: %s passed · %s failed ===\n\n' \

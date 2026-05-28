@@ -309,6 +309,76 @@ Copied verbatim from the repo's `CLAUDE.md`:
 >
 > NEVER auto-submit PRs. NEVER bypass human approval. Design issues > PRs.
 
+## Trust-ladder discipline
+
+A contributor's (N+1)th PR to a given repo is constrained by their N prior
+merges *in that same repo*. The rule exists because maintainer review attention
+is the single scarcest resource on a high-velocity project, and a contributor
+who has shipped zero working fixes has not yet earned the right to a
+multi-finding umbrella conversation. The canonical failure case is
+[`oven-sh/bun#30903`](https://github.com/oven-sh/bun/pull/30903): 0 prior merges,
+983 files / +122K lines, asks the maintainer to "decide whether to accept this
+as-is." After 11 days: 1 drive-by comment, 3 thumbs-down, no review. The audit
+of that PR drove the addition of this rule. Full details at
+`references/anti-patterns.md` (the Audit Dump, the Trust-Ladder Skip).
+
+**Rungs** (read from dossier field `merged_prs_by_user`, populated by
+`@researcher` on build/refresh):
+
+| Rung | Prior merges | Permitted scope | PR size cap | Notes |
+|------|---|---|---|---|
+| 0 | 0 | Single-issue (must have `issue_number`) OR Design Issue | ≤ 200 LOC, ≤ 10 files, no new top-level dirs | Umbrella scope blocked at gate `A07` |
+| 1-3 | 1-3 | Single-issue, single-fix; umbrella WARNS | ≤ 500 LOC, ≤ 20 files, no new top-level dirs | Earned moderate trust |
+| 4+ | 4+ | Anything goes | (no cap) | Earned umbrella trust |
+
+**Where this is enforced**:
+
+- **`gates/a07-trust-ladder-fit.sh`** — fires at `shortlist→claimed` /
+  `claimed→working`. Reads the candidate's `scope_intent` field and the
+  dossier's `merged_prs_by_user`. Blocks rung-0 umbrellas and rung-0
+  PRs without an attached `issue_number`. Design Issues
+  (`scope_intent: design-discussion`) bypass the ladder unconditionally.
+- **`gates/b13-trust-ladder-size.sh`** — fires at `working→submitted`.
+  Computes local diff size against `upstream/<default_branch>` (or
+  `origin/<default_branch>` as fallback). Blocks if LOC, file count, or
+  new top-level directory count exceeds the rung's cap.
+
+**Per-repo dossier overrides** (rare; use only when the maintainer has
+explicitly invited a bigger first contribution):
+
+```yaml
+trust_ladder_disabled: true             # bypass both gates entirely
+trust_ladder_threshold: 0               # let rung 0 ship umbrella scope
+trust_ladder_rung0_max_loc: 400         # lift the rung 0 LOC cap
+trust_ladder_rung0_max_files: 20
+trust_ladder_rung13_max_loc: 1000
+trust_ladder_rung13_max_files: 40
+```
+
+**Candidate-side `scope_intent` field** (required for accurate gating; set
+during scout / candidate authoring):
+
+| Value | Meaning |
+|---|---|
+| `single-issue` | Addresses one tracked GitHub issue (set `issue_number`) |
+| `single-fix` | Addresses one untracked finding (no issue, but bounded) |
+| `umbrella` | Multi-finding audit / multi-area refactor / large proposal |
+| `design-discussion` | Design Issue, not a code PR — bypasses ladder |
+
+**Override discipline**: if the user explicitly invokes
+`transition.sh ... --override-gate A07 "<reason>"` or `--override-gate B13`,
+the override is logged to `~/.contribute-system/log.jsonl` and surfaced in
+`scripts/audit-overrides.sh`. A user who overrides A07 or B13 more than once
+per week should expect this skill to surface the pattern: either the rule
+is calibrated wrong for their workflow, or they are systematically skipping
+the ladder. Either way the audit subcommand makes it visible.
+
+**Why this rule sits ABOVE the size gates and not inside them**: the
+trust-ladder rule is a *discipline*, not a measurement. The size caps are
+proxies for "how much trust have you earned at this repo," and a contributor
+who consistently overrides the size cap with a one-line rationale is gaming
+the proxy. The rule is the thing; the gates are the implementation.
+
 ## Output
 
 After Step 0, output a status block. After each subsequent step, output structured progress.
