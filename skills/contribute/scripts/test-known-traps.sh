@@ -273,6 +273,62 @@ EOF
 S=$(gate_severity "$A07" "$C_OK" "$EMPTY_DOSSIER" "shortlist→claimed" "test/repo")
 assert_severity "  A07 missing merged_prs_by_user MUST SKIP" "SKIP" "$S"
 
+# 14. B13 cross-directory rename MUST NOT false-BLOCK
+# Regression for Gemini finding on PR #40 (commit 45fd6b2): `git diff
+# --numstat` without --no-renames produces output like
+# `foo.txt => existing-dir/foo.txt` for renames. The new-top-level-dir
+# parser was reading that as adding a top-level dir named
+# `foo.txt => existing-dir`. With --no-renames in place, git emits the
+# rename as a delete+add pair so the added path is parsed cleanly.
+#
+# This test sets up a fresh git fixture with a cross-directory rename
+# (foo.txt -> existing-dir/foo.txt, where existing-dir already exists on
+# the base ref) and asserts B13 PASSes. If --no-renames is ever stripped
+# from b13-trust-ladder-size.sh, this test BLOCKs and the regression
+# surfaces.
+/usr/bin/printf 'Test 14: B13 cross-directory rename regression (PR #40 fix)\n'
+
+FIXTURE="$HOME/000-projects/contributing-clanker/test-b13-rename-fixture"
+/usr/bin/rm -rf "$FIXTURE"
+/usr/bin/mkdir -p "$FIXTURE"
+(
+  cd "$FIXTURE"
+  /usr/bin/git init -q -b main 2>/dev/null || /usr/bin/git init -q
+  /usr/bin/git config user.email "test@example.com"
+  /usr/bin/git config user.name "Test User"
+
+  /usr/bin/mkdir existing-dir
+  /usr/bin/echo "keep" > existing-dir/keep.txt
+  /usr/bin/echo "to-be-moved" > foo.txt
+  /usr/bin/git add . >/dev/null 2>&1
+  /usr/bin/git commit -q -m "base"
+
+  # Fake origin/main ref pointing at the base commit (b13 looks for
+  # upstream/<branch> first, then origin/<branch>).
+  /usr/bin/git update-ref refs/remotes/origin/main HEAD
+
+  # Move foo.txt across directory boundaries.
+  /usr/bin/git checkout -q -b feature
+  /usr/bin/git mv foo.txt existing-dir/foo.txt
+  /usr/bin/git commit -q -m "rename foo into existing-dir"
+) >/dev/null 2>&1
+
+D_FIX=$(make_synth_dossier "test-fixture/b13-rename" 0)
+C_FIX=$(make_synth_candidate "test-fixture/b13-rename" 1 "single-issue")
+# Override CLONE_DIR derivation: b13 computes CLONE_DIR from the repo's
+# basename, which here will be `b13-rename`. We placed the fixture at
+# .../test-b13-rename-fixture, so symlink it into place for the test.
+LINK="$HOME/000-projects/contributing-clanker/b13-rename"
+[ -e "$LINK" ] && /usr/bin/rm -rf "$LINK"
+/usr/bin/ln -s "$FIXTURE" "$LINK"
+
+S=$(gate_severity "$B13" "$C_FIX" "$D_FIX" "working→submitted" "test-fixture/b13-rename")
+assert_severity "  B13 cross-dir rename MUST NOT false-BLOCK" "PASS" "$S"
+
+# Cleanup
+/usr/bin/rm -f "$LINK"
+/usr/bin/rm -rf "$FIXTURE"
+
 /usr/bin/echo
 /usr/bin/printf '=== summary: %s passed · %s failed ===\n\n' \
   "$(green "$PASS")" "$([ "$FAIL" -gt 0 ] && red "$FAIL" || /usr/bin/echo 0)"
