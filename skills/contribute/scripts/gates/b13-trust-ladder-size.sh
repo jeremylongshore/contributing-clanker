@@ -88,7 +88,14 @@ fi
 # trees (e.g., removing a node_modules/ checkin) by capping per-file deletions
 # at the additions count for the same file — but for simplicity start with
 # the raw shortstat sums.
-NUMSTAT=$(/usr/bin/git diff "$BASE_REF..HEAD" --numstat 2>/dev/null || /usr/bin/echo "")
+#
+# --no-renames forces git to treat renames as a delete + add pair, so the
+# numstat output never contains "old => new" arrow notation. Without this,
+# a rename like `foo.txt => dir/foo.txt` would be parsed as top-level
+# directory `foo.txt => dir` (which doesn't exist on the base ref),
+# producing a false BLOCK on the "new top-level dir" check below.
+# (Caught by Gemini review on PR #40, 2026-05-28.)
+NUMSTAT=$(/usr/bin/git diff "$BASE_REF..HEAD" --numstat --no-renames 2>/dev/null || /usr/bin/echo "")
 
 if [[ -z "$NUMSTAT" ]]; then
   gate_pass "no diff vs $BASE_REF — nothing to measure"

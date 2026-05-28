@@ -237,12 +237,18 @@ LAST_EXT=$(jq -r '
 # count and the gh user at refresh time so the gate can detect when the
 # authenticated user has changed and the count is stale.
 log "[5b/8] computing user's prior-merges count at $REPO"
+# IMPORTANT: leave MERGED_BY_USER empty on any API failure. Writing 0 to the
+# dossier would lock the contributor to rung 0 in the trust-ladder gates
+# until the next refresh — a fail-closed lockout caused by a transient
+# network blip or search-API rate limit. Empty makes a07/b13 SKIP with
+# "refresh dossier to populate" instead of falsely blocking.
+# (Caught by Gemini review on PR #40, 2026-05-28.)
 GH_USER=$(gh api user --jq .login 2>/dev/null || /usr/bin/echo "")
-MERGED_BY_USER=0
+MERGED_BY_USER=""
 if [[ -n "$GH_USER" ]]; then
   MERGED_BY_USER=$(gh api -X GET search/issues \
     -f q="repo:$REPO is:pr is:merged author:$GH_USER" \
-    --jq '.total_count' 2>/dev/null || /usr/bin/echo 0)
+    --jq '.total_count' 2>/dev/null || /usr/bin/echo "")
 fi
 
 # ---- 6. Bot detection (sample most-recently-updated merged PR) ----
