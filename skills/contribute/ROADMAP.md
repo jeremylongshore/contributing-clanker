@@ -175,3 +175,51 @@ warrants a gate, add the spec here.
   "Trust-ladder discipline", `references/anti-patterns.md`, 23/23
   dossiers backfilled, 9 regression tests in `test-known-traps.sh`).
   Motivated by audit of `oven-sh/bun#30903`.
+
+- **2026-05-29**: Phase-C content-fidelity gates (kobiton/automate#64 +
+  #74 review round-trip). Shipped as skeletons — functional but not
+  yet validated against multi-repo hit-rate data.
+
+  Gates:
+  - `C20-doc-file-references-exist` — for modified `**/*.md`, parses
+    backtick-wrapped path-like tokens and warns if any don't resolve in
+    the repo tree. Catches stale doc refs after upstream file removals.
+    Motivated by `kobiton/automate#64` comment 3 (reference to deleted
+    `.mcp.dev-local.json`).
+  - `C21-skill-frontmatter-vs-body` — for modified `**/SKILL.md`, parses
+    the `allowed-tools:` block and warns when a declared top-level tool
+    (Read/Write/Edit/Glob/Grep/MultiEdit/WebFetch/WebSearch/TodoWrite/
+    Task/NotebookEdit) doesn't appear in the body. Catches "Frontmatter
+    Bluff" anti-pattern. Motivated by `kobiton/automate#64` comment 4
+    (`Write` declared, body only uses `Edit`).
+  - `C22-cross-cli-vocabulary` — when the target repo declares multi-CLI
+    support (AGENTS.md / .codex/ / .cursor/ / gemini-extension.json
+    present, or README cites ≥2 of Cursor/Codex/Gemini/Copilot/Continue/
+    Cline), warns on Claude-only phrasing (`claude mcp`, "Claude Code
+    session") in modified skills. Catches "CLI-Centric Skill in a
+    Multi-CLI Plugin" anti-pattern. Motivated by `kobiton/automate#64`
+    comment 5.
+  - `C23-mcp-tool-annotations-spec` — for modified `tools/**/*.yaml`
+    with `annotations:` blocks, walks each tool stanza and warns on
+    (a) `idempotentHint` set with `readOnlyHint: true`, (b)
+    `destructiveHint: true` + `idempotentHint: false`. Catches "MCP
+    Annotation Conflation" anti-pattern. Motivated by
+    `kobiton/automate#74`.
+
+  Hardening:
+  - `G03-no-changelog-edits` — secondary trigger added. Previously
+    fired only when dossier `auto_changelog: true`; now also fires when
+    the target repo has a `scripts/sync-version*`, `scripts/release*`,
+    or `scripts/changelog-check*` script (kobiton/automate's
+    `sync-version.js --check` mode is the motivating case). When the
+    release-script trigger fires, the WARN message specifically names
+    the script-driven CHANGELOG flow.
+
+  Anti-pattern entries added:
+  - Pattern 7 — Frontmatter Bluff (`C21`)
+  - Pattern 8 — CLI-Centric Skill in a Multi-CLI Plugin (`C22`)
+  - Pattern 9 — MCP Annotation Conflation (`C23`)
+
+  Validation TODO: run all five gates against a synthetic candidate that
+  matches each anti-pattern; add cases to `test-known-traps.sh` once
+  hit-rate data accumulates over the next 14 days of `/contribute` use.

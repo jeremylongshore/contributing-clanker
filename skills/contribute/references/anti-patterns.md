@@ -191,6 +191,109 @@ your tool stack.
 
 ---
 
+## Pattern 7 — Frontmatter Bluff
+
+**Definition**: declaring tools, permissions, or capabilities in skill /
+plugin / agent frontmatter that the body never actually uses. The
+contributor pads `allowed-tools` (or `tools:`, or `permissions:`) "just
+in case," and the body uses a strict subset.
+
+**Why it kills the PR**: maintainers reviewing a skill cross-check the
+frontmatter against the body. An over-declared `allowed-tools` reads as
+either careless (didn't audit) or sloppy (didn't trim before sending).
+Worst case it grants the runtime permissions the skill doesn't need,
+which is a security smell. Maintainer asks why X is in there; contributor
+has to drop them and push again.
+
+**Real cases**:
+
+- **`kobiton/automate#64`** ([comment](https://github.com/kobiton/automate/pull/64#discussion_r3324558664)) — `run-automation-suite/SKILL.md` declared `Write` in `allowed-tools`. The body uses `Edit` exclusively and never invokes `Write`. Tu Nguyen (Kobiton): "`Write` in `allowed-tools` isn't backed by the skill body: the body uses `Edit` explicitly and never calls `Write`. Suggest dropping it." Fix: drop the tool from the frontmatter list.
+
+**Gates that catch it**:
+- `C21-skill-frontmatter-vs-body` — for each modified `**/SKILL.md`, parses the `allowed-tools:` block and asserts every top-level tool name (Read/Write/Edit/Glob/Grep/etc.) appears verbatim somewhere in the body.
+
+**Right shape instead**: trim `allowed-tools` to the minimum set the
+body actually uses. If you anticipate a future need, leave it out and
+add it when the body grows to need it — not before. Bash sub-permissions
+(`Bash(npm:*)`, `Bash(sleep:*)`) are harder to verify by grep and live
+under a separate looser policy, but the top-level tool list is exact.
+
+---
+
+## Pattern 8 — CLI-Centric Skill in a Multi-CLI Plugin
+
+**Definition**: a skill (or skill section) uses Claude-only vocabulary
+— `claude mcp`, "Claude Code session", `/mcp` framed as Claude-exclusive
+— inside a plugin whose README, AGENTS.md, or `.codex/` /
+`gemini-extension.json` / `.cursor/mcp.json` declare cross-CLI support
+(Cursor, Codex CLI, Gemini CLI, GitHub Copilot CLI, Continue, Cline).
+
+**Why it kills the PR**: the plugin's marketing surface promises "works
+with N CLIs"; the skill docs promise "works with Claude." A user on
+Codex/Gemini/Copilot reads the auth section, hits a `claude mcp add`
+instruction, and bounces. The maintainer flags the discrepancy on review.
+
+**Real cases**:
+
+- **`kobiton/automate#64`** ([comment](https://github.com/kobiton/automate/pull/64#discussion_r3324565812)) — `run-automation-suite/SKILL.md` Authentication section used `Claude Code session` in the auth-table row and `claude mcp` in the closing paragraph, in a plugin whose README declares support for Claude Code, GitHub Copilot CLI, Gemini CLI, and Codex CLI. Tu Nguyen (Kobiton): "The Authentication section assumes Claude-only. Both the table row description and the `claude mcp` paragraph need to generalize across the five supported CLIs." Fix: rewrite as "AI-CLI session" + cite per-CLI MCP-auth commands (`/mcp`, `/mcp auth <server>`, browser flow) with a pointer to the README.
+
+**Gates that catch it**:
+- `C22-cross-cli-vocabulary` — when the target repo declares multi-CLI support (signal: `AGENTS.md` present, `.codex/` present, `.cursor/mcp.json` present, `gemini-extension.json` present, or README references ≥2 of Cursor/Codex/Gemini/Copilot/Continue/Cline), greps modified skill files for `claude mcp` / `Claude Code session` and warns.
+
+**Right shape instead**: name the host-neutral concept ("AI-CLI",
+"agent"), and if you need to mention a specific invocation, give the
+per-CLI matrix in one breath (e.g. "`/mcp` in Claude Code, `/mcp auth
+<server>` in Copilot CLI + Gemini CLI, browser flow on first tool call
+in Codex CLI") with a pointer to the plugin README's install section as
+the source of truth for current commands.
+
+---
+
+## Pattern 9 — MCP Annotation Conflation
+
+**Definition**: setting MCP tool-hint annotations in ways that violate
+the [MCP 2025-06-18 spec](https://modelcontextprotocol.io/specification/2025-06-18/server/tools).
+Two specific shapes:
+
+(a) **idempotentHint on readOnlyHint:true tools** — the spec says
+`idempotentHint` is *ignored* when `readOnlyHint: true`. Declaring it
+adds clutter and signals the contributor didn't read the spec.
+
+(b) **destructiveHint:true + idempotentHint:false because "destructive"**
+— destructive and idempotent are orthogonal. HTTP DELETE is destructive
+AND idempotent: a second DELETE against the same resource is a no-op,
+not a duplicate side-effect. `terminateSession`, `terminateReservation`,
+`cancelOrder` etc. follow the same pattern. Conflating the two
+mis-advertises tool semantics to clients (Cursor, ChatGPT Apps SDK,
+Continue/Cline) that rely on these hints for retry/dedup logic.
+
+**Why it kills the PR**: maintainers who know the spec catch both
+shapes immediately. The fix is mechanical (drop / flip) but it's a full
+round-trip — push, re-review, re-push.
+
+**Real cases**:
+
+- **`kobiton/automate#74`** ([review](https://github.com/kobiton/automate/pull/74#pullrequestreview-3422055000)) — initial PR set `idempotentHint: true` on 7 read-only tools (listApps, getApp, listDevices, getDeviceStatus, listSessions, getSession, getSessionArtifacts) and `idempotentHint: false` on 2 destructive idempotent tools (terminateReservation, terminateSession). Tu Nguyen (Kobiton) requested both shapes fixed: "`idempotentHint` is meaningless when `readOnlyHint: true`. Keep `openWorldHint: false` on all 12." and "`terminateReservation` and `terminateSession` are destructive but idempotent — flip `idempotentHint: false → true`." Fix landed in [`4d1c00b`](https://github.com/jeremylongshore/automate/commit/4d1c00b): 17 added lines (vs the original 24), surface now matches spec.
+
+**Gates that catch it**:
+- `C23-mcp-tool-annotations-spec` — for any modified `tools/**/*.yaml`
+  declaring an `annotations:` block, walks each tool stanza and warns when
+  (a) `idempotentHint` is set alongside `readOnlyHint: true`, or
+  (b) `destructiveHint: true` co-occurs with `idempotentHint: false`
+      (the destructive-AND-idempotent pattern).
+
+**Right shape instead**: read the spec section *Tool annotations* once
+before declaring any. The four hints — `readOnlyHint`, `destructiveHint`,
+`idempotentHint`, `openWorldHint` — are independent dimensions. For
+read-only tools, set `readOnlyHint: true` + `destructiveHint: false` +
+`openWorldHint` per the repo's bounded-vs-unbounded character; skip
+`idempotentHint`. For destructive tools, decide idempotency on its own
+merit — does a repeated call produce additional state change, or is it a
+no-op against the already-terminated resource? If no-op, `idempotentHint:
+true`.
+
+---
+
 ## Common signatures (for grading a closed PR or pre-flighting yours)
 
 If 3 or more of these appear, the PR almost certainly hit one of the
