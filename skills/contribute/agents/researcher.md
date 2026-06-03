@@ -148,6 +148,39 @@ Example:
 > any non-social outbound links). `local_check_command`: not detected —
 > read CONTRIBUTING for the manual command.
 
+## First-touch fit fields (MANDATORY — added 2026-06-02 after the ISEDC Centaur council)
+
+After build/refresh, populate four frontmatter fields the auto-builder does not yet compute.
+These are what distinguishes a *well-formed* contribution from a *received* one — the council
+found their absence would have driven a credibility-torching first move.
+
+1. **`collaboration_surface: open | guarded | closed`** — judge whether outsiders actually land
+   work here. Evidence to gather via `gh`:
+   - external (non-member/non-collaborator) merged-PR count in the last 90d,
+   - whether external-authored issues get maintainer replies (sample 5 — silence is the tell),
+   - internal merge cadence (a repo merging dozens of internal PRs/week at minute-scale cycles
+     with a dead tracker and no CONTRIBUTING.md is `closed`-collaboration — a canonical repo, not a
+     fork; the term is about posture, not provenance).
+   Default to `guarded` when ambiguous; only call `open` when external PRs demonstrably merge on
+   quality and issues get answered.
+2. **`counterparty_design_intent:`** — fetch `SECURITY.md` + any `docs/**` threat-model / design /
+   roadmap pages. Capture, as a short list, what the maintainers declared **deliberate**,
+   **out-of-scope**, or **WIP / feedback-wanted**. This is load-bearing: a "we found a gap" pitch
+   against a documented-deliberate choice reads as "didn't read your threat model." Record the
+   `feedback-wanted` surfaces explicitly — those are the only safe place to raise design questions.
+3. **`positioning_risk: none | adjacent-builder | direct-competitor`** — does the *operator* (Jeremy)
+   ship a product that overlaps this repo? **This is an OPTICS risk, NOT a conflict of interest** — he
+   owes the upstream no duty. Distinguish honestly: tooling that *governs or composes with* the repo is
+   `adjacent-builder`, not `direct-competitor`. If non-none, note it so the disclosure-first rule fires
+   before any governance contribution.
+4. **`competing_license_fence:`** — if `positioning_risk` is non-none, scan the operator's overlapping repos'
+   licenses for BUSL-1.1 / SSPL / Commons-Clause "Competing Service" clauses that would conflict with
+   naming them upstream. Record the specific clause + repo, or `none`.
+
+Also write a short `## First-touch recommendation` body section: given the four fields, state the
+recommended first-touch shape (per SKILL.md Step 5 table) and the one safe design-question surface.
+Surface all four fields in your Step 5 report to the user.
+
 ## Pet peeves you should curate yourself
 
 After build/refresh, scan the followed links for repo-specific gotchas the
