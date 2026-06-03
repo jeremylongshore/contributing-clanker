@@ -179,6 +179,44 @@ one-paragraph summary.
 If the user already invoked `@researcher` earlier in the session for this
 repo, skip — don't re-build.
 
+### Step 0.6 — First-touch fit (read BEFORE choosing any artifact)
+
+The mechanical gates (CLA, DCO, branch convention, trust-ladder size) tell you whether a
+contribution is *well-formed*. They do **not** tell you whether it will be *received*. The
+2026-06-02 ISEDC Centaur council exposed four signals the dossier historically MISSED — and
+the miss would have produced a credibility-torching first move (a governance Design Issue into a
+closed-collaboration repo whose author ships a competing stack). Every dossier must now carry these, and you
+must read them before Step 5:
+
+1. **`collaboration_surface: open | guarded | closed`** — is the repo actually a place outsiders
+   land work? Derive from external-merge-rate (90d), issue-reply-rate to external authors, median
+   internal merge latency, and presence of CONTRIBUTING. A repo merging 60+ internal PRs/week at
+   minute-scale cycles with a dead tracker is `closed`-collaboration — invert the Design-Issue default
+   (Step 5). NOTE: `closed` describes collaboration *posture*, NOT provenance — it is still the
+   canonical, maintainer-owned repo (verify `isFork:false`), not a fork or third-party copy. A PR
+   there lands on the real thing; the maintainers just don't co-develop via the public tracker.
+2. **`counterparty_design_intent`** — fetch SECURITY.md + any threat-model / design docs and
+   extract what the maintainers declared **deliberate**, **out-of-scope**, or **WIP / feedback-wanted**.
+   NEVER pitch a "gap" that their own docs call an intentional choice or an excluded threat — to a
+   domain-expert maintainer that reads as "you didn't read my threat model." The `feedback-wanted`
+   surfaces are the ONLY safe place to raise design questions.
+3. **`positioning_risk: none | adjacent-builder | direct-competitor`** — does the *contributor* ship a
+   product that overlaps this repo (one web search away)? **This is an OPTICS/perception risk, NOT a
+   conflict of interest** — a contributor owes the upstream no duty, so there is no conflict to manage;
+   the only risk is that a maintainer *misreads* a contribution as a covert pitch. Distinguish honestly:
+   tooling that *governs or composes with* this repo is `adjacent-builder`, not `direct-competitor`. If
+   `adjacent-builder`/`direct-competitor`, any governance/strategic contribution gets **disclosure-first**
+   (one honest line in-body) and the first touch reveals nothing about the overlapping stack — that is
+   good-faith transparency, not COI management.
+4. **`competing_license_fence`** — scan the contributor's OWN referenced repos for BUSL-1.1 / SSPL /
+   Commons-Clause "Competing Service" clauses that conflict with naming them upstream. Resolve in
+   writing before any cross-promotion.
+
+If any of these four fields is absent or stale in the dossier, invoke `@researcher` to populate them
+before proceeding. The first-touch shape (Step 5 table) is a FUNCTION of `collaboration_surface`; the
+reveal level is a function of `positioning_risk`; the safe design-question surface is a function of
+`counterparty_design_intent`.
+
 ### Step 1 — Discover
 
 Find issues worth contributing to. Sources, in priority order:
@@ -245,13 +283,23 @@ Use `agents/test-runner.md` for the structured runner that tees output to `~/.co
 
 ### Step 5 — Submit
 
-**Default to a Design Issue, not a PR.** Auto-opening PRs creates "whack-a-mole slopfests" for maintainers (per the repo's `CLAUDE.md` philosophy).
+**Default to a Design Issue, not a PR — BUT only for repos that are an actual collaboration surface.** Auto-opening PRs creates "whack-a-mole slopfests" for maintainers (per the repo's `CLAUDE.md` philosophy). This default is correct when the upstream uses its issue tracker to think. It is *exactly wrong* for a **closed-collaboration repo** — a canonical, maintainer-owned repo (NOT a fork or third-party copy) that is nonetheless developed at internal velocity and treats its public issue tracker as write-only, where the tracker is a graveyard and the merge filter is "do I already know who you are," not patch quality. There, a Design Issue is the *deadest* channel; leading with one marks you as a stranger-with-an-agenda and gets ignored.
 
-Order:
+Read the dossier's `collaboration_surface:` field (Step 0.6) before choosing:
+
+| `collaboration_surface` | Signals | First-touch shape |
+|---|---|---|
+| `open` | issues get maintainer replies, external PRs merge on quality, CONTRIBUTING invites contribution | **Design Issue first** (the default below) |
+| `guarded` | some external merges but identity-correlated, slow issue replies | **Tiny merge-able PR first** to bank identity, THEN Design Issue |
+| `closed` | near-zero external merges, dead/ignored tracker, high internal velocity, no CONTRIBUTING (canonical repo, but closed *collaboration posture* — not a fork) | **Non-proposal micro-fix PR ONLY** (≤30 LOC, 1 file, zero strategy/governance/self-promotion). No Design Issue until a merge banks identity. If no clean micro-fix exists, ship nothing and build identity through public adjacency first. |
+
+Order (collaboration-surface = `open` only):
 
 1. Open a Design Issue using `assets/pr-template.md` reshaped for an issue body — include problem, proposed solution, diff preview, test results
 2. Wait for maintainer approval of the approach
 3. Open the PR using `assets/pr-template.md`
+
+For `guarded` / `closed`: lead with the identity-banking micro-PR per the table; defer any Design Issue / proposal until after it merges.
 
 Use `agents/draft-writer.md` for the body drafter. Always show the draft to the user for approval before posting.
 
