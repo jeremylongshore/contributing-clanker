@@ -211,11 +211,19 @@ must read them before Step 5:
 4. **`competing_license_fence`** — scan the contributor's OWN referenced repos for BUSL-1.1 / SSPL /
    Commons-Clause "Competing Service" clauses that conflict with naming them upstream. Resolve in
    writing before any cross-promotion.
+5. **`local_test_fit: isolated | partial | full-stack-only`** — how heavy is the repo's
+   local-verification bar? A repo whose only documented test path is "boot the whole stack"
+   (k8s/Helm/secrets/1Password, a `just up` / compose / helm bring-up) is `full-stack-only`: an
+   outsider who can't stand that up can only safely contribute fixes that are **isolatable**
+   (shell-logic, pure functions) and provable on their own machine. Derive from the AGENTS.md /
+   CONTRIBUTING "Testing" section. This shapes which issues are viable — see Step 2.5 "Local-testability
+   fit." (Added 2026-06-03: the Centaur run's `full-stack-only` bar is exactly why a one-line
+   `entrypoint.sh` fix was the right first touch and a slackbot-streaming fix was not.)
 
-If any of these four fields is absent or stale in the dossier, invoke `@researcher` to populate them
+If any of these five fields is absent or stale in the dossier, invoke `@researcher` to populate them
 before proceeding. The first-touch shape (Step 5 table) is a FUNCTION of `collaboration_surface`; the
 reveal level is a function of `positioning_risk`; the safe design-question surface is a function of
-`counterparty_design_intent`.
+`counterparty_design_intent`; the viable-issue set is a function of `local_test_fit`.
 
 ### Step 1 — Discover
 
@@ -244,6 +252,16 @@ Quick-reject signals:
 - Stack mismatch with the user's strengths
 
 Use the bundled `agents/repo-analyzer.md` for the structured eligibility / CLA / rules check.
+
+#### Step 2.5 — Rejection-log + feasibility (read from the dossier)
+
+Before a first contribution, three repo-specific reads decide whether a candidate is *receivable* and *verifiable*, not just well-formed. `@researcher` produces all three in the dossier (added 2026-06-03 after the Centaur run) — read them, don't re-derive by hand:
+
+- **`## Rejection patterns`** — what gets outsiders *denied* here, mined from closed-unmerged `NONE`/`CONTRIBUTOR` PRs (feature/tool-adds silently closed; fixes superseded or fixed-internally; repro disagreement; "live-testing showed wrong layer"). Avoid these in your own PR.
+- **`local_test_fit`** frontmatter — if `full-stack-only`, prefer a fix verifiable *without* their stack (shell-logic / pure-function); never fake an e2e run — say "verified via isolated repro" honestly.
+- **Supersession** — confirm the target file isn't mid-rewrite, the issue has no internal fix in flight, no competing open PR.
+
+If the dossier predates this (no `## Rejection patterns` / `local_test_fit`), run `@researcher refresh <owner>/<repo>` first. (Mechanics live in `agents/researcher.md`.)
 
 ### Step 3 — Claim
 
@@ -356,6 +374,16 @@ Copied verbatim from the repo's `CLAUDE.md`:
 > 4. Default to Design Issue, NOT a PR
 >
 > NEVER auto-submit PRs. NEVER bypass human approval. Design issues > PRs.
+
+#### Strip the attribution footer on external repos (always)
+
+The user's global config auto-appends an `intentsolutions.io` / personal signature to commit messages and PR bodies (`attribution.commit` / `attribution.pr`). That footer is correct on the user's **own** repos and **wrong on every upstream** — it's org/positioning signal on someone else's project, and for an `adjacent-builder` / `direct-competitor` repo it leaks exactly what the first touch is supposed to conceal (Step 0.6 `positioning_risk`). Added 2026-06-03 after the Centaur PR, where this had to be caught by hand.
+
+When committing/pushing/opening a PR to a repo the user does not own:
+
+- **Commit:** write the message with **no footer**, then verify — `git log -1 --format=%B` — and `git commit --amend` if the signature appended. Prefer the user's GitHub no-reply identity as author; never add `Co-Authored-By` or any "generated with" line.
+- **PR body:** after `gh pr create`, **read the body back from GitHub** and grep it — `gh pr view <N> --repo <o>/<r> --json body --jq .body | grep -iE 'intentsolutions|<user full name>|claude|co-authored|generated with'`. If anything matches, overwrite with the clean body via `gh pr edit <N> --repo <o>/<r> --body "<clean>"`.
+- The DCO sign-off (when `dco_required: true`) is the **only** trailer allowed, and only if the dossier says so.
 
 ## Trust-ladder discipline
 

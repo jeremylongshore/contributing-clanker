@@ -176,10 +176,37 @@ found their absence would have driven a credibility-torching first move.
 4. **`competing_license_fence:`** — if `positioning_risk` is non-none, scan the operator's overlapping repos'
    licenses for BUSL-1.1 / SSPL / Commons-Clause "Competing Service" clauses that would conflict with
    naming them upstream. Record the specific clause + repo, or `none`.
+5. **`local_test_fit: isolated | partial | full-stack-only`** (added 2026-06-03) — how heavy is the repo's
+   local-verification bar? Read the AGENTS.md / CONTRIBUTING "Testing" section. A repo whose only documented
+   test path is "boot the whole stack" (k8s/Helm/secrets/1Password, a `just up` / compose / helm bring-up)
+   is `full-stack-only` — an outsider who can't stand that up can only safely contribute fixes that are
+   **isolatable** (shell-logic, pure functions) provable on their own machine. `partial` = some paths run
+   standalone (unit tests) but integration needs the stack. `isolated` = a normal `npm test` / `pytest` runs
+   clean locally. This gates which issues are viable; surface it so selection can weight accordingly.
 
-Also write a short `## First-touch recommendation` body section: given the four fields, state the
-recommended first-touch shape (per SKILL.md Step 5 table) and the one safe design-question surface.
-Surface all four fields in your Step 5 report to the user.
+## Rejection-pattern read (added 2026-06-03, after the Centaur run)
+
+Mechanical gates say a PR is *well-formed*; the repo's own **closed-unmerged** PRs say what gets *denied*.
+On build/refresh, pull them filtered by author association — `NONE` / `CONTRIBUTOR` are the operator's peer
+group; `MEMBER` / `COLLABORATOR` closures are mostly internal WIP churn, not signal:
+
+```bash
+gh api 'repos/<owner>/<repo>/pulls?state=closed&per_page=100&sort=updated&direction=desc' \
+  | jq -r '[.[] | select(.merged_at == null and (.author_association|IN("NONE","CONTRIBUTOR")))]
+           | .[] | "#\(.number) [\(.author_association)] @\(.user.login) — \(.title[0:60])"'
+# read the close reason on the instructive ones:
+gh pr view <N> --repo <owner>/<repo> --json title,closedAt,comments --jq '.title, (.comments|last|.body[0:240])'
+```
+
+Write a `## Rejection patterns` body section summarizing the recurring denial reasons (e.g. *outsider
+feature/tool-add PRs silently closed; fixes superseded by an internal PR or fixed-their-own-way; repro
+disagreement; "live-testing showed it targets the wrong layer"*). Flag **self-closed** PRs separately —
+those are NOT maintainer rejections; read the body to tell them apart. This section is the contributor's
+"what gets you denied here" cheat-sheet — re-derive it on each refresh (it's a fresh query, not curated).
+
+Also write a short `## First-touch recommendation` body section: given the five fields + the rejection
+patterns, state the recommended first-touch shape (per SKILL.md Step 5 table) and the one safe
+design-question surface. Surface all five fields in your Step 5 report to the user.
 
 ## Pet peeves you should curate yourself
 
