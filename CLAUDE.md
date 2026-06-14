@@ -10,7 +10,7 @@ This is an OSS contribution workspace at `https://github.com/jeremylongshore/con
 
 | Path | What |
 |---|---|
-| `skills/contribute/` | The skill (SKILL.md + 5 agents + 45 scripts + 4 templates). **Single source of truth.** |
+| `skills/contribute/` | The skill (SKILL.md + 5 agents + 60 scripts [11 top-level + 49 gates] + 3 templates). **Single source of truth.** |
 | `bin/install.sh` | Installs the skill into `~/.claude/skills/contribute/` (symlink for devs, copy for users) |
 | `000-docs/` | Spec — what the skill must do (epics 1–10) |
 | `tests/` | Validates the skill (bats unit + L4 regression) — references `skills/contribute/scripts/` |
@@ -20,7 +20,7 @@ This is an OSS contribution workspace at `https://github.com/jeremylongshore/con
 
 **Personal-dev install** (this machine): `~/.claude/skills/contribute/` is a SYMLINK to `<repo>/skills/contribute/` so edits at either path land in the same physical file. No drift, no sync ritual. Phase 2 packaging copies `skills/contribute/` into `claude-code-plugins/plugins/contributing-clanker/skills/contribute/` for marketplace distribution.
 
-**Why `assets/` doesn't bloat as we add repos**: per-repo specifics (tone, AI policy, draft-first, PR template overlays) live in dossiers at `~/.contribute-system/research/<owner>__<repo>.md` — not in the skill. `assets/` holds 4 generic templates forever; dossiers grow linearly with repos.
+**Why `assets/` doesn't bloat as we add repos**: per-repo specifics (tone, AI policy, draft-first, PR template overlays) live in dossiers at `~/.contribute-system/research/<owner>__<repo>.md` — not in the skill. `assets/` holds 3 generic templates forever (claim / evidence / PR); dossiers grow linearly with repos.
 
 The contributing-clanker is a **tool for contributing to other people's open source projects**. It's not a tracker, a portfolio, or a bounty board. The system exists to make AI-assisted contributions land cleanly — caught by deterministic gates before they reach upstream maintainers as AI slop.
 
@@ -30,7 +30,7 @@ See `AGENTS.md` for **non-interactive shell rules** (always use `cp -f`, `rm -f`
 
 The product follows a **10-epic beads implementation** per the [intent-blueprint-docs](https://github.com/intent-solutions-io/intent-blueprint-docs) vibe-prd standard. Each epic has a corresponding spec doc in `000-docs/` and individual sub-beads tracking concrete work items, each annotated with description / notes / design context.
 
-**Phase 1 status**: as of 2026-05-04 all 9 epics + Slice 2 umbrella closed (59/59 beads). The system is in a 30-day soak window — see Epic 1 success criteria. Phase 2 (plugin packaging, epic 25c) is deferred until the soak completes cleanly. Re-open future-work beads as empirical signal arrives. Live count: `bd stats`.
+**Phase 1 status**: all 9 epics + Slice 2 umbrella closed 2026-05-04 (59/59 beads at that point); the 30-day soak window has since elapsed and the system stayed in active dogfood — gate count grew from 41 → 49 (trust-ladder A07/B13, content-fidelity C20-C25) and the bead backlog grew past the original 59 as empirical signal arrived. Phase 2 (plugin packaging, epic 25c) is still deferred until packaging is prioritized. Live counts: `bd stats` (beads) and `ls ~/.claude/skills/contribute/scripts/gates/*.sh | wc -l` (gates).
 
 | # | Epic (bead ID) | Doc | What it covers |
 |---|---|---|---|
@@ -75,7 +75,9 @@ Each clone is one upstream project we contribute to. The `Notes` column captures
 
 | Directory | Stack | Notes |
 |-----------|-------|-------|
+| `agent-brain/` | — | Clone of `jeremylongshore/agent-brain` (own repo, not upstream-contrib) |
 | `appsmith/` | Java + React/TS | Low-code platform |
+| `centaur/` | — | Clone of `jeremylongshore/centaur` (own repo; see ISEDC Centaur decision AT-DECR 013) |
 | `cal-com/`, `calcom/` | TypeScript / Next.js | Two clones; prefer `calcom/` (newer) |
 | `claude-cookbooks/` | Various | Has own CLAUDE.md |
 | `cortex/` | Python 3.10+ | AI-native OS — CLA required (`cortex/CLA.md`) |
@@ -87,6 +89,7 @@ Each clone is one upstream project we contribute to. The `Notes` column captures
 | `shadcn-ui/` | TypeScript / React | Has own CLAUDE.md |
 | `tldraw/` | TypeScript / React + yarn workspaces | Drawing library |
 | `vertex-ai-samples/` | Python notebooks | Google Cloud — CLA required |
+| `xireactor-brilliant/` | — | Clone of `thejeremyhodge/xireactor-brilliant` |
 | `zio-blocks/`, `zio/` | Scala 3 + sbt | `zio-blocks/` is the active Schema library |
 
 ## Where the workflow lives
@@ -148,10 +151,10 @@ cd tools && npm install && npm run pdf
 
 ## Repo-side test infrastructure
 
-The 41 gate scripts + lib/preamble.sh live at `~/.claude/skills/contribute/scripts/gates/` (Phase 1 filesystem-only) but their tests live in **this** repo at `tests/` so they survive clones and ride CI when Phase 2 packaging lands.
+The 49 gate scripts + lib/preamble.sh live at `~/.claude/skills/contribute/scripts/gates/` (Phase 1 filesystem-only) but their tests live in **this** repo at `tests/` so they survive clones and ride CI when Phase 2 packaging lands. Phase distribution: A=8, B=10, C=18, D=3, E=2, F=3, G=5.
 
 ```bash
-# Unit tests (bats — 48 cases across 13 phase-A/B/C/D/G samples)
+# Unit tests (bats — 48 cases across 15 phase-A/B/C/D/G sample files)
 bats tests/unit/gates/                       # all
 bats tests/unit/gates/a01-already-assigned.bats  # one file
 bats --verbose-run tests/unit/gates/         # show JSON of every gate verdict
@@ -382,6 +385,7 @@ node generate-pdf.js              # Generate PDFs from markdown
 - **2026-04-30** — collapsed an unused internal monorepo (Next.js dashboard, TS CLI, Cloud Functions, Vertex AI orchestrator) + SQLite tracker into the `/contribute` skill. Historical planning docs in `99-archived-system-docs/`; code in git history.
 - **2026-05-03** — repo renamed from `intent-solutions-io/contributions` → `jeremylongshore/contributing-clanker`; all bounty / payment framing dropped. This is a contribution tool, not a tracker or marketplace.
 - **2026-05-04** — Phase 1 build complete (all 9 epics + Slice 2 closed, 59/59 beads). 41 of 62 gates installed, 80 test assertions green, 11/11 governance files in place. Entered 30-day soak validation. Phase 2 (plugin packaging) gated on clean soak.
+- **2026-05-28 → 2026-06-07** — post-soak dogfood: trust-ladder rule landed (gates A07 + B13, PR #40), then content-fidelity gates C20-C25 (#41) hardened from the kobiton/automate PR-review round-trip; vendored audit-harness bumped to v1.1.5. Gate count now **49**; bead backlog grew past the original 59 (`bd stats` for live count).
 
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
