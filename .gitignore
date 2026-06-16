@@ -12,6 +12,9 @@ screenpipe/
 shadcn-ui/
 tldraw/
 zio/
+agent-brain/
+centaur/
+xireactor-brilliant/
 
 # Python
 .coverage

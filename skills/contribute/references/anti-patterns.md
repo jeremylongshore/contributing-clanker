@@ -294,6 +294,144 @@ true`.
 
 ---
 
+## Pattern 10 — Engagement-Frame Leakage
+
+**Definition.** Shipping engagement-internal taxonomy (finding numbers,
+review-phase labels, op-rule citations, pilot provenance, author
+footers, cross-refs to private workspace paths) as if it were common
+knowledge in a customer-facing public artifact (plugin source, agent
+bodies, skill references, hook scripts, README sections, PR bodies of
+public-repo PRs).
+
+**Why it kills the PR.** Maintainers read engagement-frame language as
+"this contributor is delivering to their employer, not to my users."
+The substance of the change may be genuine customer value, but the
+framing signals divided loyalty — they're now reading every paragraph
+through "who is this actually for?" The mental model has shifted from
+*contributor → community* to *contractor → invoiced client*, and the PR
+description has to do the work of dragging it back. Most won't bother.
+
+**Canonical example.** `kobiton/automate#70` (2026-06-03 review by
+`huytunguyenn`): the PR shipped a `validate-userintent` PreToolUse hook
+that enforced a strict `[partner=<name>] <verb> | contact:<email>`
+format on the `userIntent` argument. That format came from the
+engagement's own op-rule #4 — internal audit-trail discipline for
+Jeremy's Claude sessions, not a customer-facing requirement.
+Maintainer's CHANGES_REQUESTED was unambiguous: drop the hook, format
+discipline belongs in the contributor's tooling, not the shipped plugin.
+The same review-pass also surfaced four sister PRs (`#65`, `#67`, `#75`,
+`#77`) carrying F-series finding numbers, "R2 audit pilot" framing, and
+author footers in committed file content.
+
+**Real cases.**
+
+| PR | Leak |
+|---|---|
+| `kobiton/automate#70` | `validate-userintent` hook enforcing engagement-internal userIntent format on every plugin user |
+| `kobiton/automate#65` | "Two batches: the R2 audit (Intent Solutions pilot) and the post-R3 external audit" in customer-facing Known Limitations preamble |
+| `kobiton/automate#67` | "Per R2 audit finding F25 + F26" / "per R2 F22" in agent body text as if F-IDs were common knowledge |
+| `kobiton/automate#75` | "Relationship to engagement deliverables" + `000-docs/043-AAR-CONSO-…` reference in PR body |
+| `kobiton/automate#77` | Whole-PR consolidated audit catalog in `/docs` duplicating closed issues |
+
+**Right shape instead.** Two questions before pushing a contribution to
+a public repo:
+
+1. Will a customer who clones this fresh from main encounter this
+   token? If yes, would they understand it without reading my private
+   workspace?
+2. If a maintainer searched this token across the repo three months
+   from now, would the result mean anything to them?
+
+If either answer is no, the token is engagement-internal and either
+moves to the contributor's own tooling (which the gate enforces) or
+gets rephrased as a behavior description anchored on the public closed
+issue that documents it. The substance — the agent workaround, the
+documented limitation, the advisory hook — stays in the contribution;
+only the framing changes.
+
+**Gates that catch it.** `c24-engagement-frame-leakage` scans added
+lines in the staged diff for finding-ID tokens (`\bF\d+\b` near
+`finding|audit|issue|catalog`), review-phase labels (`R[123]
+audit|review|deliverable|§`), `Intent Solutions pilot`, `op-rule #\d+`,
+`partner=intentsolutions`, cross-refs to `000-docs/NNN-XX-XX-...`
+paths, and author footers in committed file content. Severity: WARN
+(maintainers may legitimately want some of these for narrow audit
+deliverables); a single hit asks the contributor whether the token is
+truly common knowledge in the target repo.
+
+---
+
+## Pattern 11 — Maintainer-URL Leakage
+
+**Definition.** Shipping maintainer-internal issue or PR URLs
+(`https://github.com/owner/repo/issues/N`, `owner/repo#N`) in
+customer-facing prose — agent bodies, SKILL.md workflow steps, README
+user sections, plugin output templates. Same family as **Pattern 10
+(Engagement-Frame Leakage)** but a distinct failure mode: the URLs are
+the *maintainer's own* tracker, not the contributor's engagement
+artifacts, and they show up because the spec author found it useful
+for human contributors to chase the evidence — not because the
+customer needs the link.
+
+**Why it kills the credibility of a customer-facing surface.** A
+paying customer reading a SKILL.md or an agent diagnosis report sees
+`per [#36]` and reads "this product is unfinished — the maintainers
+are still cross-referencing their own tickets in the docs." It signals
+documentation churn even when the underlying product is mature. For an
+LLM consuming the agent body as a system prompt, the URL is dead
+weight: the model cannot follow it, and the *behavior* is already
+encoded in the prose next to it ("post-`terminateSession` ~5 min
+cooldown" — the URL adds nothing the model can act on).
+
+**Canonical example.** `kobiton/automate#67` (2026-06-04): the
+`device-picker` agent and `run-automation-suite/SKILL.md` § 2 carried
+three maintainer issue URLs (#33 four-conflict-modes, #36 cooldown,
+#55 token-cap pagination). Each was added during a review-cycle to
+"anchor the behavior in evidence" — defensible while the work was in
+review, not defensible once shipping to paying customers. Stripped in
+the same review pass with the rule: the behavioral language (`"choose
+conservatively"`, `"treat truncation as incomplete"`, `"~5 min
+cooldown"`) is what steers behavior; the URL is audit trail.
+
+**Where issue/PR URLs DO belong.** Catalog and reference files whose
+explicit job is "look up the source":
+
+| Location | Why URLs belong here |
+|---|---|
+| `references/known-limitations.md` (or equivalent) | The file IS a catalog of platform behaviors with one-per-finding evidence link. Stripping URLs defeats the file's purpose. |
+| `CHANGELOG.md` | Per-release evidence anchor — humans reading release notes want the link. |
+| `docs/decisions/`, `docs/adr/` | Architecture-decision records explicitly track the issue/PR that triggered each decision. |
+| `.github/ISSUE_TEMPLATE/`, `.github/pull_request_template.md` | Contributor-facing surfaces by definition. |
+| Commit messages | Tracking-only metadata — not part of the shipping surface. |
+
+**Where they DO NOT belong.**
+
+| Location | Replacement |
+|---|---|
+| `agents/*.md` body prose | Inline the behavioral description; let `references/*.md` carry the URL. |
+| `SKILL.md` workflow steps | Same — describe the behavior, route the user to a `references/` file if they need source-evidence. |
+| `README.md` user-guide sections | Plain prose. README's contributor section is different — issue links there are OK. |
+| Plugin tool/skill output templates | Whatever the agent emits to a user must read as customer guidance, not maintainer notes. |
+
+**Right shape instead.** Before shipping a contribution, grep the diff:
+
+```bash
+git diff origin/main..HEAD \
+  | grep -E '^\+' \
+  | grep -E 'github\.com/[^/]+/[^/]+/(issues|pull)/|\b[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+\b'
+```
+
+For each hit: is the file a catalog/reference file (URL belongs) or a
+customer-facing surface (URL goes; behavioral prose stays)?
+
+**Gates that catch it.** `c25-maintainer-url-leakage` scans the diff
+for issue/PR URLs in customer-facing files (`agents/*.md`, `SKILL.md`,
+`README*`) and skips the legitimately allowed paths
+(`references/`, `CHANGELOG`, `docs/decisions/`, `docs/adr/`, anything
+under `.github/`). Severity: WARN.
+
+---
+
 ## Common signatures (for grading a closed PR or pre-flighting yours)
 
 If 3 or more of these appear, the PR almost certainly hit one of the

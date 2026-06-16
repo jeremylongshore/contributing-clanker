@@ -109,6 +109,57 @@ who hasn't internalized the terseness reads as off-tone.
 **Ship-when**: when a user-authored PR body 5x exceeds the template at a
 repo with a known-terse template (Bun, Vercel/Next.js). Low priority.
 
+### Maintainer-URL leakage gate (C25) — SHIPPED 2026-06-04
+
+**What**: scan added lines for `github.com/owner/repo/issues/N` and
+`owner/repo#N` patterns in customer-facing surfaces (`agents/*.md`,
+`SKILL.md`, `README*`). Skip legitimately allowed paths (`references/`,
+`CHANGELOG`, `docs/decisions/`, `docs/adr/`, `.github/`).
+
+**Rationale**: a paying customer reading a SKILL.md or an agent
+diagnosis output sees `per [#36]` and reads "this product is
+unfinished — the maintainers are still cross-referencing their own
+tickets in the docs." Behavioral description carries the load; the URL
+is dead weight to both the LLM (can't follow it) and the customer
+(doesn't need it).
+
+**Canonical case**: `kobiton/automate#67` cleanup 2026-06-04 — three
+maintainer issue URLs (#33 four-conflict-modes, #36 cooldown, #55
+token-cap pagination) drifted into `agents/device-picker.md` + parent
+`SKILL.md § 2` during review-cycle iteration. Stripped before customer
+ship; behavioral language preserved.
+
+**Shipped**: 2026-06-04 at
+`skills/contribute/scripts/gates/c25-maintainer-url-leakage.sh`.
+Anti-pattern `Pattern 11 — Maintainer-URL Leakage` added to
+`references/anti-patterns.md`. Severity WARN.
+
+### Engagement-frame leakage gate (C24) — SHIPPED 2026-06-03
+
+**What**: scan added lines in the diff for tokens that signal
+engagement-internal taxonomy has leaked into a customer-facing public
+artifact — finding-ID numbers near `finding|audit|issue|catalog`,
+review-phase labels (`R[123] audit|review|deliverable|§`), `Intent
+Solutions pilot`, `op-rule #\d+`, `partner=intentsolutions`, cross-refs
+to `000-docs/NNN-XX-...` paths, author footers in committed file
+content.
+
+**Rationale**: maintainers read engagement-frame as divided loyalty
+("delivering to employer, not to my users"). The substance of the
+contribution may be genuine; the framing alone can sink the PR.
+
+**Canonical case**: `kobiton/automate#70` review by `huytunguyenn`
+2026-06-03 — CHANGES_REQUESTED on a `validate-userintent` hook that
+enforced an engagement-internal userIntent format on every plugin
+user. Sister PRs `#65`/`#67`/`#75`/`#77` had the same class of leak
+(F-series IDs, R2/R3 phase labels, "Intent Solutions pilot" provenance,
+author footers in committed file content).
+
+**Shipped**: 2026-06-03 at
+`skills/contribute/scripts/gates/c24-engagement-frame-leakage.sh`.
+Anti-pattern `Pattern 10 — Engagement-Frame Leakage` added to
+`references/anti-patterns.md`. Severity WARN; rate-limit not needed.
+
 ---
 
 ## Known bugs
