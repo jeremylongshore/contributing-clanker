@@ -197,8 +197,11 @@ assert_severity() {
   fi
 }
 
-A07="$SYS/gates/a07-trust-ladder-fit.sh"
-B13="$SYS/gates/b13-trust-ladder-size.sh"
+# Gates are deployed under bin/gates/ (the bundled mirror of the repo's
+# scripts/gates/). ~/.contribute-system/gates/ is the user-override dir and is
+# normally empty — referencing it here broke after the bin/ mirror consolidation.
+A07="$SYS/bin/gates/a07-trust-ladder-fit.sh"
+B13="$SYS/bin/gates/b13-trust-ladder-size.sh"
 
 /usr/bin/printf '\nTest 5-9: A07 trust-ladder fit (intent vs rung)\n'
 

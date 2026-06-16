@@ -45,8 +45,11 @@ assert() {
 /usr/bin/printf '\n=== dossier freshness regression ===\n\n'
 
 # --- TEST 1: researcher-build emits last_refreshed: matching now ---
+# The builder writes the dossier to $CONTRIBUTE_RESEARCH_DIR/<owner>__<repo>.md
+# (default path; nothing on stdout unless --stdout). Point it at TMPDIR so the
+# test exercises the real default file-write path and reads the written file.
 DOSSIER="$TMPDIR/lingdojo__kana-dojo.md"
-"$SCRIPT_DIR/researcher-build.sh" lingdojo/kana-dojo --no-link-follow > "$DOSSIER" 2>/dev/null
+CONTRIBUTE_RESEARCH_DIR="$TMPDIR" "$SCRIPT_DIR/researcher-build.sh" lingdojo/kana-dojo --no-link-follow >/dev/null 2>&1
 
 LAST_REFRESHED=$(/usr/bin/awk '/^last_refreshed:/{print $2; exit}' "$DOSSIER" 2>/dev/null)
 NOW_EPOCH=$(/usr/bin/date +%s)
