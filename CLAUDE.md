@@ -10,7 +10,7 @@ This is an OSS contribution workspace at `https://github.com/jeremylongshore/con
 
 | Path | What |
 |---|---|
-| `skills/contribute/` | The skill (SKILL.md + 5 agents + 60 scripts [11 top-level + 49 gates] + 3 templates). **Single source of truth.** |
+| `skills/contribute/` | The skill (SKILL.md + 5 agents + 68 scripts [17 top-level + 51 gates] + 3 templates). **Single source of truth.** |
 | `bin/install.sh` | Installs the skill into `~/.claude/skills/contribute/` (symlink for devs, copy for users) |
 | `000-docs/` | Spec — what the skill must do (epics 1–10) |
 | `tests/` | Validates the skill (bats unit + L4 regression) — references `skills/contribute/scripts/` |
@@ -30,7 +30,7 @@ See `AGENTS.md` for **non-interactive shell rules** (always use `cp -f`, `rm -f`
 
 The product follows a **10-epic beads implementation** per the [intent-blueprint-docs](https://github.com/intent-solutions-io/intent-blueprint-docs) vibe-prd standard. Each epic has a corresponding spec doc in `000-docs/` and individual sub-beads tracking concrete work items, each annotated with description / notes / design context.
 
-**Phase 1 status**: all 9 epics + Slice 2 umbrella closed 2026-05-04 (59/59 beads at that point); the 30-day soak window has since elapsed and the system stayed in active dogfood — gate count grew from 41 → 49 (trust-ladder A07/B13, content-fidelity C20-C25) and the bead backlog grew past the original 59 as empirical signal arrived. Phase 2 (plugin packaging, epic 25c) is still deferred until packaging is prioritized. Live counts: `bd stats` (beads) and `ls ~/.claude/skills/contribute/scripts/gates/*.sh | wc -l` (gates).
+**Phase 1 status**: all 9 epics + Slice 2 umbrella closed 2026-05-04 (59/59 beads at that point); the 30-day soak window has since elapsed and the system stayed in active dogfood — gate count grew from 41 → 51 (trust-ladder A07/B13, content-fidelity C20-C25, rescued C26/C27) and the bead backlog grew past the original 59 as empirical signal arrived. Phase 2 (plugin packaging, epic 25c) is still deferred until packaging is prioritized. Live counts: `bd stats` (beads) and `ls ~/.claude/skills/contribute/scripts/gates/*.sh | wc -l` (gates).
 
 | # | Epic (bead ID) | Doc | What it covers |
 |---|---|---|---|
@@ -159,7 +159,7 @@ cd tools && npm install && npm run pdf
 
 ## Repo-side test infrastructure
 
-The 49 gate scripts + lib/preamble.sh live at `~/.claude/skills/contribute/scripts/gates/` (Phase 1 filesystem-only) but their tests live in **this** repo at `tests/` so they survive clones and ride CI when Phase 2 packaging lands. Phase distribution: A=8, B=10, C=18, D=3, E=2, F=3, G=5.
+The 51 gate scripts + lib/preamble.sh live at `~/.claude/skills/contribute/scripts/gates/` (Phase 1 filesystem-only) but their tests live in **this** repo at `tests/` so they survive clones and ride CI when Phase 2 packaging lands. Phase distribution: A=8, B=10, C=20, D=3, E=2, F=3, G=5.
 
 ```bash
 # Unit tests (bats — 48 cases across 15 phase-A/B/C/D/G sample files)
