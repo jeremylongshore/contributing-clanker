@@ -114,6 +114,14 @@ These bypass the `/contribute` skill and call the runtime scripts directly — u
 # Direct path: ~/.claude/skills/contribute/scripts/
 SKILL_SCRIPTS=~/.claude/skills/contribute/scripts
 
+# Runtime deployment model: the PreToolUse hook, transition.sh, the scout pipeline,
+# researcher-build.sh, and gate-runner.sh execute from ~/.contribute-system/bin/ —
+# a DEPLOYED MIRROR of skills/contribute/scripts/. bin/install.sh maintains it:
+bin/install.sh --symlink          # dev: symlink bin/ → repo scripts/ (zero drift)
+bin/install.sh --force            # prod: re-copy skill + re-sync the runtime mirror
+$SKILL_SCRIPTS/doctor.sh          # verify bin/ matches the repo (exit 1 on drift/missing)
+# Override targets for tests: CONTRIBUTE_SKILL_DIR, CONTRIBUTE_BIN_DIR.
+
 # Build or refresh a per-repo dossier
 $SKILL_SCRIPTS/researcher-build.sh <owner>/<repo>             # full build with link follows
 $SKILL_SCRIPTS/researcher-build.sh <owner>/<repo> --no-link-follow  # fast, no curl
