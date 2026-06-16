@@ -676,6 +676,7 @@ catching real risk that's being consistently dismissed. Either way, surface it.
 | `gh issue comment` permission denied | Repo private or token missing scope | Show the comment text to the user; they post manually |
 | Gate run BLOCKs unexpectedly | Stale dossier or wrong rule | `@researcher refresh <owner>/<repo>`; if the rule itself is wrong, edit the dossier (manual sections survive refresh) or override with `transition.sh ... --override-gate <ID> "reason"` |
 | Dossier missing for a candidate's repo | First time touching this repo | `@researcher build <owner>/<repo>` (auto-invoked by Step 0.5 anyway) |
+| Hook/transition/scout/gate behaves like an old version, or a script 404s | The deployed runtime mirror at `~/.contribute-system/bin/` has drifted from or is missing repo scripts | `scripts/doctor.sh` to see what drifted/missing, then `bin/install.sh --force` to re-sync the mirror from the repo |
 
 If any external submission would happen without human approval, **stop and ask**. This is non-negotiable.
 
