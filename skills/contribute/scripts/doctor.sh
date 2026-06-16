@@ -20,7 +20,9 @@
 
 set -uo pipefail
 
-SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # = skills/contribute/scripts
+# pwd -P resolves symlinks so the short-circuit below works regardless of whether
+# doctor.sh is invoked from the repo or from a symlinked deploy at ~/.contribute-system/bin.
+SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"   # = skills/contribute/scripts (real path)
 BIN="${CONTRIBUTE_BIN_DIR:-$HOME/.contribute-system/bin}"
 
 if [[ ! -e "$BIN" ]]; then
