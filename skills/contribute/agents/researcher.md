@@ -56,30 +56,34 @@ DOSSIER=~/.contribute-system/research/<owner>__<repo>.md
 [ -f "$DOSSIER" ] && echo "refresh" || echo "build"
 ```
 
-**Build path** is always safe — runs `researcher-build.sh` and writes the
-result. **Refresh path** must preserve the human-edited sections (Pet
-peeves, Failure log, Notes) — those are institutional knowledge and never
-overwritten.
+Both build and refresh run the **same command** — `researcher-build.sh`
+writes the dossier to its canonical path itself and, when overwriting an
+existing dossier, automatically preserves the human-edited sections (Pet
+peeves, Failure log, Notes). You do not snapshot or splice anything by hand.
 
 ## Step 3 — Build (new dossier)
 
-Run the builder:
+Run the builder. It writes the dossier to the canonical path itself
+(`~/.contribute-system/research/<owner>__<repo>.md`, overridable via
+`CONTRIBUTE_RESEARCH_DIR`) and prints `→ wrote dossier to <path>` to stderr.
+**Do not redirect stdout** — the builder emits nothing there unless you pass
+`--stdout`:
 
 ```bash
-~/.contribute-system/bin/researcher-build.sh <owner>/<repo> > "$DOSSIER"
+~/.contribute-system/bin/researcher-build.sh <owner>/<repo>
 ```
 
 The script handles everything: fetches repo metadata, inventories policy
 files, fetches CONTRIBUTING.md, follows depth-1 links (skipping social
 URLs), samples review bots from a recent merged PR, detects conventions,
-and emits the dossier with frontmatter + body sections.
+and writes the dossier with frontmatter + body sections.
 
 If the script exits non-zero, surface the error to the user. Do **not**
 write a partial dossier.
 
 After write:
 
-- Verify the file is non-empty and has the expected frontmatter (`repo:`,
+- Verify `$DOSSIER` is non-empty and has the expected frontmatter (`repo:`,
   `last_refreshed:`, `default_branch:`).
 - Note the path to the user.
 - Append a build event to `~/.contribute-system/log.jsonl`:
@@ -91,38 +95,29 @@ After write:
 
 ## Step 4 — Refresh (existing dossier)
 
-Refresh replaces auto-generated content but preserves the manual sections.
+**The builder handles refresh itself.** When `researcher-build.sh` overwrites
+an existing dossier it captures the three engineer-curated sections —
+`## Pet peeves & known triggers`, `## Failure log`, `## Notes` — *before*
+regenerating, then splices them back over the fresh auto-generated stubs
+(smart refresh, added in PR #30). Everything else (frontmatter + auto
+sections) is refreshed. So refresh is the **same command** as build — no
+manual snapshot, tempfile, or atomic-rename:
 
-1. **Snapshot manual sections** from the existing dossier:
-   - `## Pet peeves & known triggers` (everything until the next `## ` header)
-   - `## Failure log` (everything until next `## `)
-   - `## Notes` (everything until next `## ` or EOF)
+```bash
+~/.contribute-system/bin/researcher-build.sh <owner>/<repo>
+```
 
-2. **Run the builder** to a tempfile:
-   ```bash
-   TMP="${DOSSIER}.tmp.$$"
-   ~/.contribute-system/bin/researcher-build.sh <owner>/<repo> > "$TMP"
-   ```
+Then log the refresh:
 
-3. **Splice the manual sections back** into the new file. The builder
-   emits empty placeholders for these three sections — replace those
-   placeholders with the snapshotted content.
+```bash
+jq -nc --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg repo "$REPO" --arg dossier "$DOSSIER" \
+  '{ts: $ts, event: "researcher_refresh", details: {repo: $repo, dossier: $dossier}}' \
+  >> ~/.contribute-system/log.jsonl
+```
 
-4. **Atomic rename** to commit the refresh:
-   ```bash
-   mv "$TMP" "$DOSSIER"
-   ```
-
-5. **Log the refresh**:
-   ```bash
-   jq -nc --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg repo "$REPO" --arg dossier "$DOSSIER" \
-     '{ts: $ts, event: "researcher_refresh", details: {repo: $repo, dossier: $dossier}}' \
-     >> ~/.contribute-system/log.jsonl
-   ```
-
-If the existing dossier is malformed (no recognizable `## Pet peeves` /
-`## Failure log` / `## Notes` sections), surface a warning and ask whether
-to overwrite or abort.
+If the manual sections come back empty after a refresh (the builder could not
+parse them in the prior file), surface a warning so the user can recover the
+prior content from git / backups before it's lost.
 
 ## Step 5 — Report
 
