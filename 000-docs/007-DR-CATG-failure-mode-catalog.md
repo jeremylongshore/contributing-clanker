@@ -50,7 +50,7 @@ Source plan: `~/.claude/plans/fizzy-sprouting-quokka.md` § "Failure-mode catalo
 | B14 | Skipping local pre-PR commands | Tracer-Cloud: `make lint && make format-check && make typecheck && make test-cov` | b14-local-checks (+ b16-allowlist) |
 | B15 | Unused AI-generated code | LLM helper left in for "completeness" | (b15 planned) |
 
-## C. PR Submission (16 modes)
+## C. PR Submission (25 modes)
 
 | # | Failure | Real-world trigger | Gate |
 |---|---|---|---|
@@ -71,6 +71,14 @@ Source plan: `~/.claude/plans/fizzy-sprouting-quokka.md` § "Failure-mode catalo
 | C15 | Resolved-without-fix threads | trust loss with maintainer | (c15 planned) |
 | C16 | Self-merge / self-approve | `gh pr merge` by author | c16-no-self-merge |
 | C19 | Body claim disagrees with diff | "fixes login" but diff only touches docs | c19-body-claim-vs-diff |
+| C20 | Doc backtick file-ref doesn't resolve | modified doc cites `path/file` absent from the repo | c20-doc-file-references-exist |
+| C21 | Declared SKILL.md tool unused in body | `allowed-tools` entry the skill never invokes | c21-skill-frontmatter-vs-body |
+| C22 | Claude-only vocab in multi-CLI plugin | plugin advertises multi-CLI but body says "Claude" | c22-cross-cli-vocabulary |
+| C23 | MCP tool annotations violate spec | annotations break the 2025-06-18 MCP spec | c23-mcp-tool-annotations-spec |
+| C24 | Engagement-frame leakage | partner/paid framing in a customer-facing diff | c24-engagement-frame-leakage |
+| C25 | Maintainer URL leakage | maintainer issue/PR URLs in customer-facing prose | c25-maintainer-url-leakage |
+| C26 | Coverage-tool blindspot (Go) | tests behind `testing.Short()`/cgo → 0% patch coverage (beads #4061) | c26-coverage-readiness |
+| C27 | Fix at wrong layer (symptom not root cause) | 3+ sibling issues or a maintainer RFC on the component (beads #4061/#4062) | c27-sibling-issue-scan |
 
 ## D. Communication & Tone (8 modes)
 
