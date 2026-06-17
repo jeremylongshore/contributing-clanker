@@ -16,6 +16,9 @@
 # Usage: test-stale-dossier-refresh.sh [--verbose]
 # Exit 0: all assertions hold. Exit 1: any failure.
 
+# shellcheck disable=SC2034  # several vars below are consumed inside the
+# assert helper's single-quoted `eval` expression strings, which shellcheck
+# cannot see — so it false-flags them as unused (file-level directive).
 set -uo pipefail
 
 VERBOSE="${1:-}"

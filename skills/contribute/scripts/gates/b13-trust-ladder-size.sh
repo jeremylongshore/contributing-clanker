@@ -61,7 +61,7 @@ if [[ ! -d "$CLONE_DIR/.git" ]]; then
   gate_skip "no local clone at $CLONE_DIR — cannot measure diff size"
 fi
 
-cd "$CLONE_DIR"
+cd "$CLONE_DIR" || gate_skip "cannot cd into $CLONE_DIR — clone unreadable"
 
 # Find the base branch — try dossier, then upstream/main, then origin/main
 DEFAULT_BRANCH=""
