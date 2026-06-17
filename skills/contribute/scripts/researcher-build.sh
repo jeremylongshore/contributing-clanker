@@ -76,7 +76,8 @@ DESC=$(jq -r '.description // ""' < "$META_FILE" | /usr/bin/head -c 200)
 
 # ---- 2. Policy file inventory ----
 log "[2/8] inventorying policy files"
-declare -A POLICY_FILES
+declare -A POLICY_FILES=()  # init empty (set -u): never-assigned assoc array
+                            # throws "unbound variable" on ${#..[@]} / ${!..[@]}
 # Map: filename → display name. Try multiple paths per file (root + .github/).
 for entry in \
   "CONTRIBUTING.md:CONTRIBUTING" \
@@ -179,6 +180,20 @@ else
   : > "$LINKS_FILE"
 fi
 
+# ---- 3b. Probe .github/semantic.yml (semantic-pull-request bot) ----
+# A repo can enforce conventional-commit PR titles via the semantic-pull-request
+# GitHub App, configured by .github/semantic.yml, without ever saying
+# "conventional commits" in CONTRIBUTING. Detect that so conventional_commits
+# isn't a false-negative for those repos (bead 8ex). `enabled` defaults to true
+# when the key is absent — only an explicit `enabled: false` disables the app.
+log "[3b/8] probing .github/semantic.yml"
+SEMANTIC_PR=false
+SEMANTIC_YML=$(gh api "repos/$REPO/contents/.github/semantic.yml" --jq '.content' 2>/dev/null \
+  | /usr/bin/base64 -d 2>/dev/null || /usr/bin/printf '')
+if [[ -n "$SEMANTIC_YML" ]] && ! /usr/bin/grep -qiE '^[[:space:]]*enabled:[[:space:]]*false' <<< "$SEMANTIC_YML" ; then
+  SEMANTIC_PR=true
+fi
+
 # ---- 4. Follow depth-1 links — aggressively (per user direction 2026-05-02) ----
 # Init array empty (set -u trip otherwise on `${#FOLLOWED_LINKS[@]}`).
 declare -a FOLLOWED_LINKS=()
@@ -277,8 +292,29 @@ detect() { /usr/bin/grep -qiE "$1" "$ALL_TEXT" 2>/dev/null && echo "true" || ech
 
 CLA_REQUIRED=$(detect '\b(CLA|contributor license agreement)\b')
 DCO_REQUIRED=$(detect '\b(DCO|developer certificate of origin|signed-off-by|sign-off)\b')
-AI_DISCLOSURE=$(detect '\b(AI[-_ ]?(generated|assisted|policy|disclos)|Claude|Copilot|ChatGPT|LLM)\b')
+# ai_disclosure_required is true ONLY when the repo actually DEMANDS disclosure of
+# AI-assisted work — an AI policy file, or CONTRIBUTING language tying AI/LLM to a
+# disclosure requirement / prohibition. A bare mention of "Claude"/"Copilot"/"AI"
+# is noise in AI-ecosystem repos and must NOT trip this (bead g6t: old heuristic
+# was ~always-true because these repos mention AI everywhere).
+if [[ -n "${POLICY_FILES[AI_POLICY]:-}" ]] ; then
+  AI_DISCLOSURE=true
+else
+  AI_DISCLOSURE=$(detect '\bAI[-_ ]?policy\b|disclos[a-z]*[^.]{0,40}\b(AI|LLM|generated|assisted)\b|\b(AI|LLM|AI-generated|AI-assisted)\b[^.]{0,40}(must be (disclosed|noted|flagged)|disclos|not (allowed|permitted|accepted))')
+fi
+
+# conventional_commits: text signal in CONTRIBUTING OR an active semantic.yml (3b).
 CONVENTIONAL_COMMITS=$(detect '\bconventional commits?\b|^[a-z]+\([a-z-]+\): ')
+[[ "${SEMANTIC_PR:-false}" == "true" ]] && CONVENTIONAL_COMMITS=true
+
+# pr_title_regex feeds gate c02 (it SKIPs when the field is empty). Emit the
+# conventional-commit regex when conventional_commits holds, else empty. Uses
+# [(]/[)] char-classes (not \( ) so it stays valid YAML and works with grep -qE.
+if [[ "$CONVENTIONAL_COMMITS" == "true" ]] ; then
+  PR_TITLE_REGEX='^(feat|fix|chore|docs|refactor|test|ci|build|perf|style|revert)([(][a-z0-9 ._/-]+[)])?!?: .+'
+else
+  PR_TITLE_REGEX=''
+fi
 ETIQUETTE_REQUIRED=$(detect 'comment on the issue|request assignment|let.{0,20}know you.{0,5}working|don.{0,3}t.{0,10}assign')
 # Try to grab a test command pattern
 TEST_CMD=$(/usr/bin/grep -ioE '(make|cargo|pnpm|yarn|npm|pytest|sbt|go) (test|test-cov|lint|format-check|typecheck|check)[^`\n]*' "$ALL_TEXT" 2>/dev/null | /usr/bin/head -1 | /usr/bin/sed 's/[`"]//g' | /usr/bin/cut -c1-100)
@@ -287,6 +323,13 @@ TEST_CMD=$(/usr/bin/grep -ioE '(make|cargo|pnpm|yarn|npm|pytest|sbt|go) (test|te
 log "[8/8] emitting dossier ($CONTRIB_BYTES bytes CONTRIBUTING, ${#FOLLOWED_LINKS[@]} links followed, $EXT_COUNT ext merges)"
 
 policy_list_yaml() {
+  # Emit an explicit "(none detected)" item when no policy files were found, so
+  # the dossier never has a bare `policy_files:` with a dangling colon (bead 7rr).
+  # Matches the convention used by bot_list_yaml / issue_templates below.
+  if [[ "${#POLICY_FILES[@]}" -eq 0 ]] ; then
+    /usr/bin/printf '  - (none detected)\n'
+    return
+  fi
   for KEY in "${!POLICY_FILES[@]}" ; do
     /usr/bin/printf '  - %s: %s\n' "$KEY" "${POLICY_FILES[$KEY]}"
   done | /usr/bin/sort
@@ -402,6 +445,7 @@ cla_required: $CLA_REQUIRED
 dco_required: $DCO_REQUIRED
 ai_disclosure_required: $AI_DISCLOSURE
 conventional_commits: $CONVENTIONAL_COMMITS
+pr_title_regex: "$PR_TITLE_REGEX"
 etiquette_comment_required: $ETIQUETTE_REQUIRED
 local_check_command: "${TEST_CMD:-(not detected)}"
 policy_files:
