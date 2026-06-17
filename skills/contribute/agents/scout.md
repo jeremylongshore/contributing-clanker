@@ -72,17 +72,37 @@ mode**: pick the single tier from the user's prompt.
 > downstream. Don't pre-emptively rebuild dossiers in scout flows.
 
 ```bash
+# Tier-search mode (broad discovery across GitHub):
 ~/.contribute-system/bin/scout-discover.sh <mode> <tier> "<langs-csv>"
+
+# Surgical mode (an explicit target list — e.g. the MCP repos in 000-docs/012):
+~/.contribute-system/bin/scout-discover.sh --repos=<owner/repo,owner/repo,...>
 ```
 
 The script wraps `gh search repos` + `gh search issues` and emits
 structured JSONL on stdout. Each line is one (repo, issue) candidate
 with: `repo`, `issue_number`, `issue_title`, `issue_url`, `star_count`,
 `star_tier`, `repo_lang`, `repo_updated_at`, `primary_label`, `labels`,
-`competing_prs`. Trust the script — do not call gh directly.
+`competing_prs`. Trust the script — do not call gh directly. In surgical
+mode (`--repos`) tier/langs are skipped and `star_tier` is `targeted`.
 
 If discover.sh exits non-zero, surface the error to the user and stop.
 Common causes: gh not authenticated, rate limit, invalid tier name.
+
+### Fix-locality judgment (the part the script can't do — wl9)
+
+`scout-discover.sh` deterministically drops repos that merge **no** substantive
+code (pure issue-trackers / roadmap / docs-only). It does **not** catch the
+harder pattern: a SaaS whose public repo has real code but whose *issues* are
+about a **private backend** (canonical case: `upstash/context7` — the repo is
+the MCP client; the doc-extraction data lives in their closed backend, so its
+"docs are wrong for library X" issues are unfixable in-repo).
+
+Before queueing a candidate, **sanity-check that the issue's fix could plausibly
+live in this repo's visible code**: read the issue, then ask whether the change
+is in code you can see (frontend/CLI/library) vs. a hosted backend/data pipeline.
+If it's a backend/data issue on a SaaS-with-public-tracker, drop it — a surgical
+PR there is wasted effort. This is a per-issue read, not a repo-level rule.
 
 ## Step 4 — Pipe through scout-score.py
 

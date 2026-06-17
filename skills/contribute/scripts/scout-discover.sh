@@ -12,25 +12,45 @@
 
 set -euo pipefail
 
-MODE="${1:-}"
-TIER="${2:-}"
-LANGS_CSV="${3:-}"
+# Arg parsing: positional (mode, tier, langs-csv) for tier-search mode, plus an
+# optional --repos=<owner/repo,...> flag for surgical targeting of a known list
+# (bead 8fp — e.g. the MCP target list in 000-docs/012). With --repos, tier and
+# langs are not needed (the repo set is explicit); tier defaults to 'targeted'.
+REPOS_CSV=""
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --repos=*) REPOS_CSV="${1#--repos=}" ;;
+    --repos)   shift; REPOS_CSV="${1:-}" ;;
+    *)         POSITIONAL+=("$1") ;;
+  esac
+  shift
+done
+MODE="${POSITIONAL[0]:-}"
+TIER="${POSITIONAL[1]:-}"
+LANGS_CSV="${POSITIONAL[2]:-}"
 
-if [[ -z "$MODE" || -z "$TIER" || -z "$LANGS_CSV" ]]; then
+if [[ -n "$REPOS_CSV" ]]; then
+  [[ -z "$MODE" ]] && MODE="adhoc"
+  [[ -z "$TIER" ]] && TIER="targeted"
+elif [[ -z "$MODE" || -z "$TIER" || -z "$LANGS_CSV" ]]; then
   echo "usage: $0 <mode> <tier> <langs-csv>" >&2
+  echo "       $0 [<mode>] --repos=<owner/repo,owner/repo,...>   (surgical mode)" >&2
   exit 64
 fi
 
-# Tier → star-range qualifier
-case "$TIER" in
-  emerging)    STAR_QUAL="stars:<100" ;;
-  growing)     STAR_QUAL="stars:100..500" ;;
-  established) STAR_QUAL="stars:500..1000" ;;
-  mainstream)  STAR_QUAL="stars:1000..5000" ;;
-  major)       STAR_QUAL="stars:5000..10000" ;;
-  flagship)    STAR_QUAL="stars:>10000" ;;
-  *) echo "unknown tier: $TIER" >&2; exit 64 ;;
-esac
+# Tier → star-range qualifier (only needed for tier-search mode)
+if [[ -z "$REPOS_CSV" ]]; then
+  case "$TIER" in
+    emerging)    STAR_QUAL="stars:<100" ;;
+    growing)     STAR_QUAL="stars:100..500" ;;
+    established) STAR_QUAL="stars:500..1000" ;;
+    mainstream)  STAR_QUAL="stars:1000..5000" ;;
+    major)       STAR_QUAL="stars:5000..10000" ;;
+    flagship)    STAR_QUAL="stars:>10000" ;;
+    *) echo "unknown tier: $TIER" >&2; exit 64 ;;
+  esac
+fi
 
 # gh auth check
 if ! gh auth status >/dev/null 2>&1; then
@@ -38,27 +58,45 @@ if ! gh auth status >/dev/null 2>&1; then
   exit 65
 fi
 
-# Build language qualifier (gh search accepts repeated language: filters)
-IFS=',' read -ra LANGS <<< "$LANGS_CSV"
-LANG_QUAL=""
-for l in "${LANGS[@]}"; do
-  LANG_QUAL+="language:$l "
-done
-
-# Discover repos in the tier matching at least one preferred language.
-# Sort by recently-updated to bias toward active maintainers.
-# --limit 30 per language; we filter further in Python.
-REPOS_JSON=$(
-  # shellcheck disable=SC2086  # LANG_QUAL is an intentional word-split: each
-  # "language:X" must reach `gh search` as a SEPARATE argument (and empty when
-  # no langs are configured). Quoting it would pass one combined/empty arg.
-  gh search repos \
-    "$STAR_QUAL" $LANG_QUAL "archived:false" "is:public" \
-    --sort updated \
-    --limit 30 \
-    --json fullName,stargazersCount,language,updatedAt,description,url \
-  2>/dev/null
-)
+if [[ -n "$REPOS_CSV" ]]; then
+  # Surgical mode (8fp): build the repo set from the explicit target list by
+  # fetching each repo's metadata. Same shape as the tier-search output below,
+  # so the per-repo issue loop is identical.
+  IFS=',' read -ra TARGET_REPOS <<< "$REPOS_CSV"
+  REPOS_JSON=$(
+    for r in "${TARGET_REPOS[@]}"; do
+      [[ -z "$r" ]] && continue
+      gh api "repos/$r" --jq '{
+        fullName: .full_name,
+        stargazersCount: .stargazers_count,
+        language: (.language // "unknown"),
+        updatedAt: .updated_at,
+        description: (.description // ""),
+        url: .html_url
+      }' 2>/dev/null || /usr/bin/echo "scout-discover: skipping unresolvable repo $r" >&2
+    done | jq -sc '.'
+  )
+else
+  # Tier-search mode: discover repos in the tier matching a preferred language.
+  # Sort by recently-updated to bias toward active maintainers. --limit 30.
+  # Build language qualifier (gh search accepts repeated language: filters).
+  IFS=',' read -ra LANGS <<< "$LANGS_CSV"
+  LANG_QUAL=""
+  for l in "${LANGS[@]}"; do
+    LANG_QUAL+="language:$l "
+  done
+  REPOS_JSON=$(
+    # shellcheck disable=SC2086  # LANG_QUAL is an intentional word-split: each
+    # "language:X" must reach `gh search` as a SEPARATE argument (and empty when
+    # no langs are configured). Quoting it would pass one combined/empty arg.
+    gh search repos \
+      "$STAR_QUAL" $LANG_QUAL "archived:false" "is:public" \
+      --sort updated \
+      --limit 30 \
+      --json fullName,stargazersCount,language,updatedAt,description,url \
+    2>/dev/null
+  )
+fi
 
 if [[ -z "$REPOS_JSON" || "$REPOS_JSON" == "[]" ]]; then
   exit 0
@@ -72,6 +110,30 @@ echo "$REPOS_JSON" | jq -c '.[]' | while read -r repo_obj; do
   REPO_LANG=$(echo "$repo_obj" | jq -r '.language // "unknown"')
   UPDATED=$(echo "$repo_obj" | jq -r '.updatedAt')
   REPO_URL=$(echo "$repo_obj" | jq -r '.url')
+
+  # wl9: verify the fix can plausibly live in THIS repo's code before queueing.
+  # Deterministic part — drop repos that merge NO substantive code: pure
+  # issue-tracker / roadmap / docs-only repos where surgical PRs are impossible.
+  # Heuristic: sample recent merged PRs; if none carry a >10-LOC diff, the repo
+  # isn't a code-contribution target. (Surfaced 2026-05-04 from wgd.3.)
+  #
+  # LIMITATION (verified 2026-06-16): this does NOT catch the harder context7
+  # pattern — a SaaS whose public repo HAS substantive code (the MCP client) but
+  # whose *issues* are about a PRIVATE backend (doc-extraction data). context7
+  # passes this check (9/10 recent merges are substantive); only per-issue
+  # judgment distinguishes "fixable here" from "lives in the backend". That
+  # judgment is @scout agent guidance (agents/scout.md § fix-locality), not a
+  # repo-level heuristic — a description/README scan would false-drop legit repos.
+  SUBSTANTIVE_MERGES=$(
+    gh pr list --repo "$REPO_FULL" --state merged --limit 10 \
+      --json additions,deletions 2>/dev/null \
+      | jq '[.[] | select((.additions + .deletions) > 10)] | length' 2>/dev/null \
+      || echo 0
+  )
+  if [[ "${SUBSTANTIVE_MERGES:-0}" -eq 0 ]] ; then
+    /usr/bin/echo "scout-discover: dropping $REPO_FULL — no recent merged PR with a substantive code diff (pure issue-tracker / no-code repo, wl9)" >&2
+    continue
+  fi
 
   # Look for approachable open issues; prefer 'good first issue' > 'help wanted'
   # NOTE: use `gh issue list --repo` (list API), NOT `gh search issues` —
