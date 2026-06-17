@@ -18,7 +18,7 @@ set -uo pipefail
 VERBOSE="${1:-}"
 SYS="$HOME/.contribute-system"
 TMPDIR=$(/usr/bin/mktemp -d)
-trap "rm -rf '$TMPDIR'" EXIT
+trap 'rm -rf "$TMPDIR"' EXIT
 
 PASS=0
 FAIL=0
@@ -295,7 +295,7 @@ FIXTURE="$HOME/000-projects/contributing-clanker/test-b13-rename-fixture"
 /usr/bin/rm -rf "$FIXTURE"
 /usr/bin/mkdir -p "$FIXTURE"
 (
-  cd "$FIXTURE"
+  cd "$FIXTURE" || exit 1
   /usr/bin/git init -q -b main 2>/dev/null || /usr/bin/git init -q
   /usr/bin/git config user.email "test@example.com"
   /usr/bin/git config user.name "Test User"
