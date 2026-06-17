@@ -1,83 +1,139 @@
-# The Contributing Clanker
+# contributing-clanker v0.2.0
 
-A personal OSS-contribution workspace + the runtime state that the `/contribute` Claude Code skill operates against.
+Make AI-assisted open-source contributions land cleanly — caught by deterministic gates before they reach maintainers as slop.
 
-**What "clanker" means here**: an AI-assisted contribution system that fights AI slop in OSS by running deterministic gates before any external action. The workflow itself is in the skill, not in this repo.
+A local-only Claude Code skill plus workspace for contributing to open-source projects you don't own. It runs 51 deterministic safety gates over every claim comment, design issue, and pull request, so AI-generated work never reaches an upstream maintainer as low-quality "slop." State is plain markdown — greppable, git-trackable, no database, no cloud calls.
 
-## Where things live
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/jeremylongshore/contributing-clanker/blob/master/LICENSE)
+[![Release](https://img.shields.io/badge/release-v0.2.0-green.svg)](https://github.com/jeremylongshore/contributing-clanker/releases/tag/v0.2.0)
 
-| Concern | Location |
-|---|---|
-| Workflow / lifecycle orchestration | `skills/contribute/SKILL.md` (vendored in this repo) |
-| Subagents | `skills/contribute/agents/{scout,researcher,draft-writer,test-runner,repo-analyzer}.md` |
-| Gates + orchestrators + reporters | `skills/contribute/scripts/` (45 bash scripts: 4 orchestrators + 41 gates + reporters) |
-| Templates | `skills/contribute/assets/{claim,pr,evidence}-template.md` (generic, repo-agnostic) |
-| Per-repo overrides (CLA, tone, AI policy) | `~/.contribute-system/research/<owner>__<repo>.md` — built by `@researcher` |
-| Runtime state (candidates, log, briefing) | `~/.contribute-system/` |
-| Spec + tests + governance | `000-docs/`, `tests/`, `features/` |
-| Upstream clones | `<repo-name>/` at the root of this repo |
+**Links:** [GitHub](https://github.com/jeremylongshore/contributing-clanker) · [Gist One-Pager](https://gist.github.com/jeremylongshore/ff44ab81d255fd183c2f14bdfbad2c14)
 
-## Install
+## What Is This?
 
+`contributing-clanker` is a workspace repo plus a vendored Claude Code skill (`/contribute`). The skill orchestrates discovery, per-repo research, drafting, and testing for upstream OSS contributions; the workspace holds the skill's source, its spec, its tests, and the upstream clones you contribute to. Every externally-visible action (claim, design issue, PR) is routed through a gate-runner that blocks anything failing one of 51 deterministic checks — with the reason written to an append-only log.
+
+The runtime is deliberately boring: Bash + `gh` + `jq`, with markdown and JSONL as the only persistence. No server, no database, no cloud — the whole system is inspectable by hand and recoverable from git.
+
+### Capabilities
+
+| Capability | Description |
+|------------|-------------|
+| Discovery | `@scout` finds + ranks upstream issues by star-tier; `--repos` for surgical targeting |
+| Research | `@researcher` builds per-repo dossiers (CLA / DCO / AI-policy / commit format / templates) |
+| Gating | 51 deterministic gates (phases A–G) block AI-slop before it ships; verdicts logged |
+| Trust ladder | a contributor's (N+1)th PR scope is governed by N prior merges at that repo (gates A07 + B13) |
+| Lifecycle | `transition.sh` walks each candidate `open → shortlist → claimed → working → submitted → merged` |
+| Runtime mirror | `install.sh` deploys `scripts/` → `~/.contribute-system/bin/`; `doctor.sh` verifies no drift |
+
+### Key Principles
+
+- **Deterministic over vibes** — logged shell verdicts (`PASS`/`WARN`/`BLOCK`), not an LLM saying "looks fine"
+- **Markdown-only state** — greppable, git-trackable, survives any tool; no DB, no daemon, no cloud
+- **Enforcement travels with the code** — gates + per-repo dossiers live in the repo / runtime state, never hard-coded
+- **Human approval before any external submission** — the skill stops and asks; it never auto-posts upstream
+
+## Scope
+
+| Supported | Not Yet |
+|-----------|---------|
+| Filesystem-only (Phase 1), single-user | MCP service (Phase 3) |
+| 51 gates across phases A–G | the remaining planned catalog gates (62-mode catalog) |
+| Local Claude Code skill | marketplace plugin packaging (Phase 2, epic 25c) |
+| `gh`-driven live GitHub state | cross-machine / multi-user coordination |
+
+## Quickstart
+
+### Prerequisites
+- Claude Code
+- `gh` CLI, authenticated (`gh auth status`)
+- `jq` on PATH
+
+### Install
 ```bash
 git clone https://github.com/jeremylongshore/contributing-clanker
 cd contributing-clanker
-bin/install.sh                # production install (copy)
-bin/install.sh --symlink      # dev install (live edits land in repo)
+bin/install.sh              # production install (copy)
+bin/install.sh --symlink   # dev install (edits land live in the repo)
+```
+Both modes also deploy the runtime mirror to `~/.contribute-system/bin/`. After install, `/contribute` is available in Claude Code.
+
+### Run
+```text
+/contribute            # in any Claude Code session — surfaces in-flight PRs/issues + candidates
+/contribute <owner>/<repo>   # onboard a new upstream repo (builds dossier, briefs you)
 ```
 
-After install, `/contribute` becomes available in Claude Code.
+### Run Tests
+```bash
+bats tests/unit/gates/            # unit tests (48 cases across the gates)
+skills/contribute/scripts/test-known-traps.sh        # regression suite (5 total: test-*.sh)
+skills/contribute/scripts/doctor.sh                  # verify the deployed runtime mirror matches the repo
+skills/contribute/scripts/lint-bash.sh               # shellcheck the gate scripts
+```
 
-## Repo layout
+## Configuration
+
+The skill is configured by markdown state, not env vars. The two env vars below exist only to retarget the deploy for tests.
+
+| Variable / file | Default | Purpose |
+|-----------------|---------|---------|
+| `~/.contribute-system/profile.md` | (created on first run) | scout preferred languages / star tiers + own-org exclusions |
+| `CONTRIBUTE_BIN_DIR` | `~/.contribute-system/bin` | runtime-mirror deploy target (overridable for tests) |
+| `CONTRIBUTE_RESEARCH_DIR` | `~/.contribute-system/research` | per-repo dossier directory (overridable for tests) |
+
+## Architecture
+
+Three layers, gates in the middle:
+
+```
+/contribute (SKILL.md) ──spawns──→ subagents: scout · researcher · draft-writer · test-runner
+        │
+        │ every external action
+        ▼
+   transition.sh ──→ gate-runner.sh ──→ 51 gates (phases A–G)   ──BLOCK/WARN/PASS (logged)
+        │
+        ▼
+   ~/.contribute-system/  (markdown state: candidates · research/dossiers · log.jsonl · profile.md)
+        │  gh CLI (live, never cached)        only after gates PASS + human approval
+        ▼
+   upstream GitHub repo
+```
+
+- **Layer 1 — Per-repo dossiers** (`~/.contribute-system/research/<owner>__<repo>.md`): what a specific upstream expects (branch convention, CLA/DCO, AI policy, PR/issue templates, draft-first, review bots, etiquette). Built by `@researcher`; cached + refreshable (smart-refresh preserves engineer-curated sections).
+- **Layer 2 — Deterministic gates** (`scripts/gates/`, deployed to `~/.contribute-system/bin/gates/`): one small script per failure mode → `PASS / WARN / BLOCK / INFORM` + a one-line reason. Pluggable: drop a script in, the runner discovers it.
+- **Layer 3 — Lifecycle workflow** (`/contribute`): walks each candidate through the states above, running the right gate set per transition. BLOCK refuses the transition; WARN surfaces in the briefing.
+
+## Project Structure
 
 ```
 contributing-clanker/
-├── 000-docs/                    Doc filing (per Doc-Filing v4.3)
-├── 99-archived-system-docs/     Legacy planning from the deprecated monorepo
-├── <upstream-repo>/             One subdirectory per upstream clone
-├── scripts/, tools/             Utility scripts
-├── AGENTS.md                    Non-interactive shell rules
-├── CLAUDE.md                    Project conventions for Claude Code
-└── README.md                    You are here
+├── skills/contribute/        # the skill — single source of truth
+│   ├── SKILL.md              # /contribute orchestrator
+│   ├── agents/               # 5 subagents
+│   ├── scripts/              # 17 top-level + gates/ (51) + gates/lib/
+│   ├── references/           # candidate / dossier / workflow specs
+│   └── assets/               # 3 generic templates (claim / pr / evidence)
+├── bin/install.sh            # deploys skill + runtime mirror (with doctor smoke-check)
+├── 000-docs/                 # spec (10 epics) + release AARs
+├── tests/                    # bats unit + L4 regression
+├── features/                 # Gherkin BDD acceptance
+├── <upstream-repo>/          # one subdirectory per upstream clone (own CLAUDE.md each)
+├── AGENTS.md                 # non-interactive shell rules
+└── CLAUDE.md                 # project conventions for Claude Code
+~/.contribute-system/         # runtime state (candidates, dossiers, log) — NOT in this repo
 ```
 
-Each upstream clone has its own `CLAUDE.md` with stack-specific commands and conventions. Read it before working in that clone.
+Each upstream clone has its own `CLAUDE.md` with stack-specific commands — read it before working there.
 
-## The architecture (3 layers)
+## Documentation
 
-**Layer 1 — Per-repo dossiers** (`~/.contribute-system/research/<owner>__<repo>.md`).
-What this specific repo expects of contributors: branch convention, CLA/DCO, AI policy, PR template requirements, draft-first preference, review bots, etiquette comment requirements, etc. Built by `@researcher` from CONTRIBUTING.md + linked policy docs + bot detection + merge-velocity metrics. Cached, refreshable.
+- **Spec + index:** [`000-docs/000-INDEX.md`](000-docs/000-INDEX.md) — 10 epics → spec docs + release AARs
+- **Changelog:** [`CHANGELOG.md`](CHANGELOG.md) (Keep a Changelog + SemVer)
+- **One-pager + operator audit:** [the Gist](https://gist.github.com/jeremylongshore/ff44ab81d255fd183c2f14bdfbad2c14)
+- **Shell rules:** [`AGENTS.md`](AGENTS.md) — always `cp -f` / `rm -f` / `mv -f` / `apt-get -y` (interactive prompts hang the agent)
+- **History:** the pre-2026-04-30 SQLite-tracker + monorepo system was deprecated; planning docs in [`99-archived-system-docs/`](./99-archived-system-docs/), code in git history.
 
-**Layer 2 — Deterministic gates** (`~/.contribute-system/gates/`).
-One small script per failure mode. Each gate takes (candidate, dossier, intended action) and returns `PASS / WARN / BLOCK / INFORM` + a one-line reason. The orchestrator runs the right subset per lifecycle transition. Gates are read-only and pluggable — drop a script in the directory, the runner discovers it.
+## License
 
-**Layer 3 — Lifecycle workflow** (the `/contribute` skill).
-Walks each candidate through `open → shortlist → claimed → working → submitted → merged`. At each transition runs the appropriate gate set. BLOCK gates refuse the transition; WARN gates surface in the briefing.
-
-## Status
-
-| Date | Slice | What landed |
-|---|---|---|
-| 2026-04-30 | Reset | Deprecated previous SQLite + monorepo system; pivoted to skill-only architecture |
-| 2026-05-02 | Slice 1 | `@scout` subagent + memory bank shipped; 7 strategic candidates shortlisted |
-| 2026-05-03 | Slice 2 | Researcher subagent + dossier system + 62-gate inventory in flight |
-
-Future: Phase 2 packages this as a Claude Code plugin under `claude-code-plugins-plus-skills/plugins/contributing-clanker/` for distribution.
-
-## Working on this
-
-This is a public repo but the system is single-user. The workflow assumes you have the `/contribute` skill installed, your own GitHub auth via `gh`, and your own upstream clones. There's nothing to deploy and no service to run.
-
-To use the system: `/contribute` in any Claude Code session.
-To change the system: edit anything under `skills/contribute/` (SKILL.md, agents/, scripts/). The dev install (`bin/install.sh --symlink`) makes those edits live immediately at `~/.claude/skills/contribute/`.
-
-## Conventions
-
-- Branch naming: `feat/<short>` or `fix/<short>`
-- Commits: Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`)
-- See `CLAUDE.md` for project-specific rules and per-clone test commands
-- See `AGENTS.md` for non-interactive shell rules (always `cp -f`, `rm -f`, `mv -f`, `apt-get -y` — interactive prompts hang the agent)
-
-## What was deprecated 2026-04-30
-
-A previous version of this repo had an internal `contribute-system/` monorepo (Next.js dashboard, TS CLI, Cloud Functions, Vertex AI orchestrator) plus a SQLite tracker at `~/.contribute-system/contribute.db`. Both were never used in practice. They were ripped out; the workflow collapsed into the `/contribute` skill. Historical planning docs are in [`99-archived-system-docs/`](./99-archived-system-docs/). Code lives in git history.
+MIT — see [LICENSE](LICENSE)
