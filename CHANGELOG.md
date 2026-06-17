@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 (none)
 
+## [0.2.0] - 2026-06-16
+
+Minor release. 43 days of dogfood-driven hardening since v0.1.2: a trust-ladder discipline, ten new gates (C20–C27 + A07/B13), a self-maintaining runtime-mirror deploy with a drift checker, surgical scout targeting, and a batch of researcher-build correctness fixes — all surfaced by real contribution round-trips (kobiton, secureblue, the MCP pipeline). No breaking changes.
+
+> Note: the `v0.2.0` tag from 2026-02-03 (pre-rebaseline "schema consolidation," never released) was removed during this release; this is the first real 0.2.0.
+
+### Added
+
+- **Trust-ladder rule** for first-time contributions — a contributor's (N+1)th PR scope is governed by their N prior merges in that repo. Enforced by gates **A07** (`a07-trust-ladder-fit`) and **B13** (`b13-trust-ladder-size`); overrides logged + audited.
+- **Content-fidelity gates C20–C23** + **G03** hardening, derived from the kobiton/automate PR-review round-trip: doc file-reference resolution, SKILL.md frontmatter-vs-body, cross-CLI vocabulary, MCP tool-annotation spec.
+- **Gates C24 + C25** — engagement-frame leakage and maintainer-URL leakage in customer-facing diffs (#45).
+- **Gates C26 + C27** — coverage-tool blindspot detection and sibling-issue (root-cause) scan, rescued from deploy-only into source control (#47).
+- **`/contribute <url>` / `owner/repo` onboarding** — two-branch (new-repo onboarding / known-repo briefing) entry mode with own-org scope guard (#38).
+- **`scout-discover.sh --repos=<csv>`** surgical mode for explicit target lists, plus a fix-locality drop of pure issue-tracker / no-code repos (#51).
+- **`researcher-build.sh` smart refresh** — preserves engineer-curated `## Pet peeves` / `## Failure log` / `## Notes` across rebuilds (#30); resolves the v0.1.2 caveat.
+- **`.github/semantic.yml` detection** in `researcher-build.sh` → sets `conventional_commits` and emits `pr_title_regex`, which activates gate **C02** (#50).
+- **Runtime-mirror deploy** — `bin/install.sh` now deploys `skills/contribute/scripts/` → `~/.contribute-system/bin/` (symlink or copy), and a new **`scripts/doctor.sh`** verifies the deployed copy matches the repo. The four scout scripts (`scout-discover.sh`, `scout-{refresh,score,write}.py`) are now in source control (#46).
+- MCP server target-list reference doc (#31).
+
+### Changed
+
+- **`@researcher` agent** (Steps 3/4) realigned to the builder's write-to-file + internal smart-refresh interface — removed the obsolete stdout-redirect / manual snapshot-splice dance (#49).
+- **ISEDC Centaur decision** (AT-DECR 013) recorded + first-touch-fit skill hardening (#41).
+- CLAUDE.md drift corrected — gate counts, scripts/templates inventory, runtime-deployment model (#43).
+- Vendored `@intentsolutions/audit-harness` bumped to v1.1.5 (#42).
+
+### Fixed
+
+- `researcher-build.sh`: `ai_disclosure_required` no longer false-positives on bare AI/Claude/Copilot mentions — now requires an actual disclosure demand (#50).
+- `researcher-build.sh`: empty `policy_files` no longer emits a dangling YAML colon (root cause: `POLICY_FILES` was declared without `=()` → `set -u` unbound on zero-policy repos) (#50).
+- `precheck-hook.sh`: three-path candidate lookup (explicit number / `--head` branch / single-active fallback) (#39).
+- `scripts/doctor.sh`: symlink short-circuit now resolves `SRC` with `pwd -P`, so it's correct whether invoked from the repo or the deployed symlink (#48).
+- `test-stale-dossier-refresh.sh` + `test-known-traps.sh` realigned with the builder interface and the bin/ mirror gate location (#49).
+- Two robustness bugs in the trust-ladder gates caught in PR #40 review.
+
+### Security
+
+- `npm audit fix` in `tools/` (PDF tooling) — patched `ip-address` (XSS in Address6 HTML methods) and `ws` (uninitialized memory disclosure); `npm audit` now clean (#44).
+
 ## [0.1.2] - 2026-05-03
 
 Patch release. Three runtime correctness bugs surfaced by a single qualifying flow against `secureblue/secureblue#2138`. All three were silent failures the gate framework was meant to catch — but were inside the framework itself.
