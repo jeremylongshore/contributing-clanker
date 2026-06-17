@@ -1,8 +1,8 @@
 # TESTING.md — contributing-clanker
 
 **Owner**: engineer (Jeremy). AI may read; never modify policy sections.
-**Last audit**: 2026-05-03 (`/audit-tests`)
-**Audit-harness**: `@intentsolutions/audit-harness@v0.1.0` (vendored at `.audit-harness/`, wrapper at `scripts/audit-harness`)
+**Last audit**: 2026-06-17 (`/audit-tests`) — see `TEST_AUDIT.md`
+**Audit-harness**: `@intentsolutions/audit-harness@v1.1.5` (vendored at `.audit-harness/`, wrapper at `scripts/audit-harness`; npm latest 1.2.2 — drift, run `/sync-testing-harness`)
 
 ## Classification
 
@@ -46,7 +46,8 @@
 
 | Layer | Framework | Status |
 |---|---|---|
-| L4 | bash + custom assert helpers (`gate_fired_with_severity`) | in `skills/contribute/scripts/test-known-traps.sh` |
+| L3 | **bats** | installed — 48 cases / 15 files in `tests/unit/gates/`; covers 15 of 51 gates (29%) as of 2026-06-17 |
+| L4 | bash + custom assert helpers (`gate_fired_with_severity`) | 5 regression suites in `skills/contribute/scripts/test-*.sh` + `tests/integration/test-plugin-install.sh` |
 
 ## Installed gates
 
