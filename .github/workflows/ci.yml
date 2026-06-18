@@ -1,0 +1,52 @@
+name: ci
+
+# Deterministic correctness gates — the lane Gemini (the PR-review workhorse)
+# and CodeQL (security/SAST) do NOT cover. shellcheck lints all bash; bats runs
+# the repo's 51-gate unit suite (250 cases). This closes the "no CI" gap from
+# the 2026-06-17 /audit-tests. (The L4 regression suites are dev-env integration
+# tests run via pre-commit/local — see the note below the bats job.)
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shellcheck:
+    name: shellcheck (L2)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: lint bash (gates + scripts)
+        run: scripts/lint-bash.sh
+
+  bats:
+    name: bats unit — 51 gates (L3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install bats + jq
+        run: sudo apt-get update && sudo apt-get install -y bats jq
+      - name: deploy skill (so GATES_DIR ~/.claude/skills/contribute/scripts/gates resolves)
+        run: bin/install.sh --symlink
+      - name: run gate unit tests
+        run: bats tests/unit/gates/
+
+  # NOTE: the L4 regression suites (skills/contribute/scripts/test-*.sh) are
+  # intentionally NOT a clean-room CI job. They are dev-environment INTEGRATION
+  # tests: they assume local upstream clones at $HOME/000-projects/... and a
+  # deployed user-override gate dir (~/.contribute-system/gates/ with its own
+  # lib/preamble.sh). Per tests/TESTING.md they run as the pre-commit gate +
+  # locally, where that environment exists. The portable correctness signal in
+  # CI is the bats unit suite (250 cases over all 51 gates) above; security is
+  # CodeQL; review is Gemini. Re-add a regression job only after the suites are
+  # refactored to provision their own clones/override-dir in a clean runner.

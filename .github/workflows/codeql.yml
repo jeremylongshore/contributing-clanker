@@ -1,0 +1,40 @@
+name: codeql
+
+# Security / SAST lane — CodeQL owns this so Gemini (the review workhorse) and
+# the CI test gates don't replicate it. Covers the repo's CodeQL-supported
+# languages: python (scout pipeline + tools) and javascript (PDF/email tools).
+# The 78 bash scripts are NOT CodeQL-supported — shellcheck (ci.yml) covers those.
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  schedule:
+    - cron: "17 3 * * 1" # weekly, Monday 03:17 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: codeql (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript]
+    steps:
+      - uses: actions/checkout@v4
+      - name: initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+      - name: analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

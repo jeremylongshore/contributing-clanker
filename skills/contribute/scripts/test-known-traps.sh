@@ -235,8 +235,10 @@ assert_severity "  A07 rung 5 + umbrella MUST PASS (earned)" "PASS" "$S"
 
 # B13 needs a real clone to measure. We use the agent-brain clone if available.
 AB_CLONE="$HOME/000-projects/contributing-clanker/agent-brain"
+# Bind AB_REPO before the branch so the else-SKIP message can reference it
+# without tripping `set -u` when the clone is absent (e.g. clean-room CI).
+AB_REPO="SpillwaveSolutions/agent-brain"
 if [[ -d "$AB_CLONE/.git" ]]; then
-  AB_REPO="SpillwaveSolutions/agent-brain"
 
   # 10. Rung 0 + agent-brain branch (known 218 LOC / 11 files) → BLOCK
   D0_AB=$(make_synth_dossier "$AB_REPO" 0)

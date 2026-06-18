@@ -67,11 +67,18 @@ teardown() {
 @test "WARN when clone is more than 100 commits behind origin" {
   # Push 101 new commits to origin (via the seed) so the target clone, after
   # the gate's own fetch, is 101 behind origin/main.
+  # Add 101 commits to the seed, then REBUILD the bare origin from it via a full
+  # `git clone --bare` (an object-DB copy) instead of an incremental file://
+  # push. The incremental 101-commit receive-pack intermittently corrupts the
+  # bare repo under CI runner I/O ("unpacker error" / "could not parse commit");
+  # a full clone has no receive-pack negotiation and is robust. Empty commits
+  # keep the object set tiny. The target clone (HEAD at 'init') is then 101
+  # behind origin/main after the gate's own fetch.
   for i in $(seq 1 101); do
-    echo "line $i" >> "$SEED_DIR/README.md"
-    /usr/bin/git -C "$SEED_DIR" add . && /usr/bin/git -C "$SEED_DIR" commit -qm "commit $i"
+    /usr/bin/git -C "$SEED_DIR" commit -q --allow-empty -m "commit $i"
   done
-  /usr/bin/git -C "$SEED_DIR" push -q origin main
+  /usr/bin/rm -rf "$ORIGIN_DIR"
+  /usr/bin/git clone -q --bare "$SEED_DIR" "$ORIGIN_DIR"
   run_gate "$GATE" "$CANDIDATE" "$DOSSIER" "claimed→working" "example-org/$REPO_NAME"
   assert_severity "WARN"
 }
