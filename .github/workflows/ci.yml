@@ -1,10 +1,14 @@
 name: ci
 
-# Deterministic correctness gates — the lane Gemini (the PR-review workhorse)
+# Deterministic correctness gates — the lane CodeRabbit (the PR-review workhorse)
 # and CodeQL (security/SAST) do NOT cover. shellcheck lints all bash; bats runs
 # the repo's 51-gate unit suite (250 cases). This closes the "no CI" gap from
 # the 2026-06-17 /audit-tests. (The L4 regression suites are dev-env integration
 # tests run via pre-commit/local — see the note below the bats job.)
+#
+# No apt: shellcheck + jq are preinstalled on ubuntu-latest, bats installs via
+# npm — avoids the archive.ubuntu.com mirror stall that hung a run for 6h
+# (2026-06-18). timeout-minutes caps any residual hang.
 
 on:
   pull_request:
@@ -22,20 +26,20 @@ jobs:
   shellcheck:
     name: shellcheck (L2)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: install shellcheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
-      - name: lint bash (gates + scripts)
+      - name: lint bash (gates + scripts) # shellcheck is preinstalled on ubuntu-latest
         run: scripts/lint-bash.sh
 
   bats:
     name: bats unit — 51 gates (L3)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: install bats + jq
-        run: sudo apt-get update && sudo apt-get install -y bats jq
+      - name: install bats # jq is preinstalled; npm avoids the apt-mirror hang
+        run: npm install -g bats
       - name: deploy skill (so GATES_DIR ~/.claude/skills/contribute/scripts/gates resolves)
         run: bin/install.sh --symlink
       - name: run gate unit tests
@@ -48,5 +52,5 @@ jobs:
   # lib/preamble.sh). Per tests/TESTING.md they run as the pre-commit gate +
   # locally, where that environment exists. The portable correctness signal in
   # CI is the bats unit suite (250 cases over all 51 gates) above; security is
-  # CodeQL; review is Gemini. Re-add a regression job only after the suites are
+  # CodeQL; review is CodeRabbit. Re-add a regression job only after the suites are
   # refactored to provision their own clones/override-dir in a clean runner.
