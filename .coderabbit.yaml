@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
+#
+# CodeRabbit = the PRIMARY PR-review workhorse for contributing-clanker.
+# Three non-overlapping lanes (no replicated work):
+#   • Security / SAST (python, js)   → CodeQL   (.github/workflows/codeql.yml)
+#   • bash lint + gate unit tests    → CI       (shellcheck + bats, ci.yml)
+#   • Code review (logic/design/...)  → CodeRabbit (this file) ← the workhorse
+language: en-US
+
+tone_instructions: >-
+  Be direct and technical; lead with the highest-severity issue and skip praise.
+  Stay in your lane: security SAST is handled by CodeQL and bash lint + unit tests
+  by CI — do NOT re-report shellcheck-class lint or CodeQL-class security findings.
+  Focus on logic, design, bash fail-open-vs-closed pitfalls, and AI-slop in skill prose.
+
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - master
+  # Don't spend review budget on code we don't own or no longer maintain.
+  path_filters:
+    - "!.audit-harness/**"          # vendored upstream (@intentsolutions/audit-harness)
+    - "!99-archived-system-docs/**" # deprecated pre-2026-04-30 monorepo planning
+    - "!tools/node_modules/**"
+    - "!**/*.pdf"
+    - "!.beads/**"                  # bd state ledger, not reviewable code
+  path_instructions:
+    - path: "**"
+      instructions: >-
+        Repo: a local-only Claude Code skill (/contribute) + a 51-gate bash safety
+        harness that stops AI-slop in OSS contributions before it reaches maintainers.
+        Primary language bash; state is markdown + JSONL (no DB/server). Single source
+        of truth: skills/contribute/. Review for substance, not ceremony — the linter
+        (CI shellcheck) and CodeQL already own style + security. Look for: bash
+        correctness the linter misses (set -e/pipefail foot-guns, unbound arrays needing
+        =(), quoting/word-split intent, fail-open vs fail-closed); leaky abstractions and
+        missing error handling on external calls (gh/curl/git); and AI-slop in skill prose
+        (SKILL.md / agents / dossiers must not contain marketing fluff like "seamlessly",
+        "robust", "game-changer" or claims the code doesn't back). Conventions to enforce
+        (don't nitpick): Conventional Commits (lowercase, no trailing period); NO
+        Co-Authored-By / "generated with" / Anthropic-Claude attribution in commits or
+        code; non-interactive shell per AGENTS.md (always cp -f / rm -f / mv -f /
+        apt-get -y — flag interactive forms that hang automation).
+    - path: "skills/contribute/scripts/gates/**"
+      instructions: >-
+        Each gate emits {severity: PASS|WARN|BLOCK|INFORM|SKIP} via the gate_* helpers in
+        lib/preamble.sh. Flag gates that can crash to a fail-closed BLOCK (e.g. ((x++))
+        from 0 under set -e, or grep -c pipelines under pipefail) or that have unreachable
+        / dead branches (these have bitten real gates here — see bead lhg.6). Every new
+        gate must ship a tests/unit/gates/<gate>.bats with asymmetric, exact-assertion,
+        non-tautological cases.
+    - path: "skills/contribute/scripts/transition.sh"
+      instructions: >-
+        The required-sections-by-stage matrix lives in THREE places that must stay in
+        lock-step: this file's REQUIRED_SECTIONS case, references/candidate-file-format.md,
+        and lint-candidate.sh's required_for(). Flag any change that touches one without
+        the other two.
+  tools:
+    shellcheck:
+      enabled: false # bash lint is the CI lane (scripts/lint-bash.sh)
+    semgrep:
+      enabled: false # SAST (python/js) is the CodeQL lane
+
+chat:
+  auto_reply: true
