@@ -1,9 +1,10 @@
 name: ci
 
 # Deterministic correctness gates — the lane Gemini (the PR-review workhorse)
-# and CodeQL (security/SAST) do NOT cover. shellcheck + bats run the repo's own
-# 51-gate test suite; the regression suites exercise the real-world traps.
-# This closes the "no CI" gap from the 2026-06-17 /audit-tests.
+# and CodeQL (security/SAST) do NOT cover. shellcheck lints all bash; bats runs
+# the repo's 51-gate unit suite (250 cases). This closes the "no CI" gap from
+# the 2026-06-17 /audit-tests. (The L4 regression suites are dev-env integration
+# tests run via pre-commit/local — see the note below the bats job.)
 
 on:
   pull_request:
@@ -40,24 +41,12 @@ jobs:
       - name: run gate unit tests
         run: bats tests/unit/gates/
 
-  regression:
-    name: regression suites (L4)
-    runs-on: ubuntu-latest
-    env:
-      # test-known-traps + test-stale-dossier-refresh query public GitHub via gh;
-      # the default token grants the public read access they need.
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-      - name: deploy skill (runtime mirror + GATES_DIR)
-        run: bin/install.sh --symlink
-      - name: run regression suites
-        run: |
-          set -e
-          for t in test-known-traps test-override-audit test-plug-in test-scout-refresh test-stale-dossier-refresh; do
-            echo "::group::$t"
-            skills/contribute/scripts/"$t".sh
-            echo "::endgroup::"
-          done
+  # NOTE: the L4 regression suites (skills/contribute/scripts/test-*.sh) are
+  # intentionally NOT a clean-room CI job. They are dev-environment INTEGRATION
+  # tests: they assume local upstream clones at $HOME/000-projects/... and a
+  # deployed user-override gate dir (~/.contribute-system/gates/ with its own
+  # lib/preamble.sh). Per tests/TESTING.md they run as the pre-commit gate +
+  # locally, where that environment exists. The portable correctness signal in
+  # CI is the bats unit suite (250 cases over all 51 gates) above; security is
+  # CodeQL; review is Gemini. Re-add a regression job only after the suites are
+  # refactored to provision their own clones/override-dir in a clean runner.

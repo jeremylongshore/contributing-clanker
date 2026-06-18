@@ -10,7 +10,7 @@ Three tools split the work; only review what the others can't:
 |---|---|---|
 | Security / SAST (injection, secrets, unsafe eval in **python/js**) | **CodeQL** (`codeql.yml`) | Don't re-report CodeQL-class findings. |
 | Shell lint (quoting, SC-codes), formatting | **shellcheck** (`ci.yml` → `lint-bash.sh`) | Don't re-report shellcheck-class nits. |
-| Deterministic correctness (gate predicates) | **bats + regression** (`ci.yml`) | Don't restate what a failing test already says. |
+| Deterministic correctness (gate predicates) | **bats** (`ci.yml`) + **regression** (pre-commit/local) | Don't restate what a failing test already says. |
 | **Logic, design, maintainability, bash-correctness pitfalls, AI-slop** | **You** | This is your focus. |
 
 If CI is red, reference it — don't re-derive the failure.
