@@ -1,0 +1,63 @@
+name: ci
+
+# Deterministic correctness gates — the lane Gemini (the PR-review workhorse)
+# and CodeQL (security/SAST) do NOT cover. shellcheck + bats run the repo's own
+# 51-gate test suite; the regression suites exercise the real-world traps.
+# This closes the "no CI" gap from the 2026-06-17 /audit-tests.
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shellcheck:
+    name: shellcheck (L2)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: lint bash (gates + scripts)
+        run: scripts/lint-bash.sh
+
+  bats:
+    name: bats unit — 51 gates (L3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install bats + jq
+        run: sudo apt-get update && sudo apt-get install -y bats jq
+      - name: deploy skill (so GATES_DIR ~/.claude/skills/contribute/scripts/gates resolves)
+        run: bin/install.sh --symlink
+      - name: run gate unit tests
+        run: bats tests/unit/gates/
+
+  regression:
+    name: regression suites (L4)
+    runs-on: ubuntu-latest
+    env:
+      # test-known-traps + test-stale-dossier-refresh query public GitHub via gh;
+      # the default token grants the public read access they need.
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: deploy skill (runtime mirror + GATES_DIR)
+        run: bin/install.sh --symlink
+      - name: run regression suites
+        run: |
+          set -e
+          for t in test-known-traps test-override-audit test-plug-in test-scout-refresh test-stale-dossier-refresh; do
+            echo "::group::$t"
+            skills/contribute/scripts/"$t".sh
+            echo "::endgroup::"
+          done
