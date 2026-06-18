@@ -71,7 +71,14 @@ teardown() {
     echo "line $i" >> "$SEED_DIR/README.md"
     /usr/bin/git -C "$SEED_DIR" add . && /usr/bin/git -C "$SEED_DIR" commit -qm "commit $i"
   done
-  /usr/bin/git -C "$SEED_DIR" push -q origin main
+  # Retry the 101-commit pack push: local-bare pushes occasionally hit a
+  # transient "eof before pack header / unpacker error" under CI runner I/O load.
+  pushed=0
+  for attempt in 1 2 3; do
+    if /usr/bin/git -C "$SEED_DIR" push -q origin main; then pushed=1; break; fi
+    sleep 1
+  done
+  [ "$pushed" -eq 1 ] || { echo "push to bare origin failed after 3 attempts"; return 1; }
   run_gate "$GATE" "$CANDIDATE" "$DOSSIER" "claimed→working" "example-org/$REPO_NAME"
   assert_severity "WARN"
 }
