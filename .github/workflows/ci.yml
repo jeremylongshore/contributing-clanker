@@ -38,8 +38,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: install bats # jq is preinstalled; npm avoids the apt-mirror hang
-        run: npm install -g bats
+      - name: install bats # jq is preinstalled; npm avoids the apt-mirror hang (sudo: global prefix is root-owned)
+        run: sudo npm install -g bats
       - name: deploy skill (so GATES_DIR ~/.claude/skills/contribute/scripts/gates resolves)
         run: bin/install.sh --symlink
       - name: run gate unit tests
