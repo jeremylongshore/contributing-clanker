@@ -114,10 +114,15 @@ def main() -> int:
             continue
 
         # Issue still open?
+        # NOTE: ask for a JSON object ('{state}'), not a bare scalar ('.state').
+        # `--jq .state` prints an unquoted string (e.g. `closed\n`) which is not
+        # valid JSON, so gh_json()'s json.loads() raises and returns None — the
+        # drop would then never fire. An object round-trips through json.loads
+        # cleanly, matching the repo-metadata call above.
         issue_data = gh_json(
-            ["gh", "api", f"repos/{repo}/issues/{issue_number}", "--jq", ".state"]
+            ["gh", "api", f"repos/{repo}/issues/{issue_number}", "--jq", "{state}"]
         )
-        if issue_data == "closed":
+        if isinstance(issue_data, dict) and issue_data.get("state") == "closed":
             path.unlink()
             dropped += 1
             drop_reasons["issue_closed"] = drop_reasons.get("issue_closed", 0) + 1
