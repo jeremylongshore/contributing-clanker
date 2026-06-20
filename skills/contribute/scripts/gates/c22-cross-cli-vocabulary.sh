@@ -21,14 +21,17 @@ DEFAULT_BRANCH=$(fm_field "$GATE_DOSSIER_PATH" "default_branch")
 
 # Detect cross-CLI surface from canonical signals
 MULTI_CLI_SIGNALS=0
-[[ -f "$CLONE/AGENTS.md" ]] && ((MULTI_CLI_SIGNALS++))
-[[ -f "$CLONE/.cursor/mcp.json" ]] && ((MULTI_CLI_SIGNALS++))
-[[ -d "$CLONE/.codex" ]] && ((MULTI_CLI_SIGNALS++))
-[[ -f "$CLONE/gemini-extension.json" ]] && ((MULTI_CLI_SIGNALS++))
+[[ -f "$CLONE/AGENTS.md" ]] && MULTI_CLI_SIGNALS=$((MULTI_CLI_SIGNALS + 1))
+[[ -f "$CLONE/.cursor/mcp.json" ]] && MULTI_CLI_SIGNALS=$((MULTI_CLI_SIGNALS + 1))
+[[ -d "$CLONE/.codex" ]] && MULTI_CLI_SIGNALS=$((MULTI_CLI_SIGNALS + 1))
+[[ -f "$CLONE/gemini-extension.json" ]] && MULTI_CLI_SIGNALS=$((MULTI_CLI_SIGNALS + 1))
 # Look for README declaring multi-CLI support
 if [[ -f "$CLONE/README.md" ]]; then
-  hits=$(/usr/bin/grep -ciE "(Copilot CLI|Gemini CLI|Codex CLI|Cursor|Continue|Cline)" "$CLONE/README.md" 2>/dev/null || echo 0)
-  [[ "$hits" -ge 2 ]] && ((MULTI_CLI_SIGNALS++))
+  # grep -c prints the count AND exits 1 on zero matches; `|| true` swallows that
+  # without appending a second line (the old `|| echo 0` produced "0\n0", which
+  # then broke `[[ -ge ]]` with a syntax error).
+  hits=$(/usr/bin/grep -ciE "(Copilot CLI|Gemini CLI|Codex CLI|Cursor|Continue|Cline)" "$CLONE/README.md" 2>/dev/null || true)
+  [[ "${hits:-0}" -ge 2 ]] && MULTI_CLI_SIGNALS=$((MULTI_CLI_SIGNALS + 1))
 fi
 
 if [[ "$MULTI_CLI_SIGNALS" -lt 1 ]]; then

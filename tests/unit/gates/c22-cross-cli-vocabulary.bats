@@ -1,20 +1,18 @@
 #!/usr/bin/env bats
 # Unit tests for gate C22: Claude-only vocabulary in a multi-CLI plugin
 #
-# PARTIAL COVERAGE — gate bug blocks the WARN/PASS-with-signal paths.
-# The gate counts multi-CLI signals with `((MULTI_CLI_SIGNALS++))`. Under
-# `set -e` (inherited from preamble.sh) a post-increment that READS zero returns
-# exit status 1, so the FIRST signal it detects (AGENTS.md, .cursor, .codex,
-# gemini-extension.json, or a README CLI list) crashes the gate via the ERR trap
-# and it emits BLOCK ("crashed at line N — fail-closed") rather than ever scanning
-# the modified SKILL.md for Claude-only phrasing. Consequence: the intended WARN
-# (Claude-only phrasing) and PASS (agnostic phrasing) verdicts in a multi-CLI repo
-# are unreachable without editing the gate. We therefore assert the ACTUAL
-# observed behavior:
-#   - BLOCK (crash) when a multi-CLI signal is present  <- documents the real bug
-#   - SKIP when no multi-CLI signal is present          <- reachable
-#   - SKIP when no local clone exists                   <- reachable
-# These are exact, non-tautological assertions of real predicate outcomes.
+# The gate counts multi-CLI signals (AGENTS.md, .cursor/mcp.json, .codex,
+# gemini-extension.json, or a README naming 2+ CLIs), then scans the changed
+# SKILL.md files for Claude-only invocation phrasing (`claude mcp …`,
+# `Claude Code session/user`). Verdicts:
+#   - WARN when a multi-CLI repo's changed skill carries Claude-only phrasing
+#   - PASS when the changed skill is CLI-agnostic
+#   - SKIP when no multi-CLI signal is present
+#   - SKIP when no local clone exists
+# (Previously the counter used `((MULTI_CLI_SIGNALS++))`, which returns exit 1
+# when read at zero and fail-closed the gate under `set -e`; fixed to
+# `MULTI_CLI_SIGNALS=$((MULTI_CLI_SIGNALS + 1))`. These tests assert the real
+# predicate outcomes that fix unlocks.)
 
 load '../test_helper'
 
@@ -55,10 +53,10 @@ teardown() {
   rm -rf "$TARGET_DIR"
 }
 
-@test "BLOCK (crash) when a multi-CLI signal trips the increment-from-zero bug" {
+@test "WARN when a multi-CLI repo has Claude-only phrasing in a changed skill" {
   cd "$TARGET_DIR" || exit 1
-  # AGENTS.md is the first signal the gate checks; the ((counter++)) from zero
-  # returns exit 1 under set -e, firing the ERR trap → fail-closed BLOCK.
+  # AGENTS.md is a multi-CLI signal; the changed skill uses `claude mcp add` +
+  # `Claude Code session` — Claude-only phrasing in a cross-CLI plugin → WARN.
   echo 'This plugin supports Cursor, Codex, and Gemini CLIs.' > AGENTS.md
   mkdir -p skills/demo
   cat > skills/demo/SKILL.md <<'EOF'
@@ -71,7 +69,26 @@ Run `claude mcp add demo-server` in your Claude Code session.
 EOF
   /usr/bin/git add . && /usr/bin/git commit -qm 'multi-cli signal + claude-only skill'
   run_gate "$GATE" "$CANDIDATE" "$DOSSIER" "working→submitted" "example-org/$REPO_NAME"
-  assert_severity "BLOCK"
+  assert_severity "WARN"
+}
+
+@test "PASS when a multi-CLI repo's changed skill is CLI-agnostic" {
+  cd "$TARGET_DIR" || exit 1
+  # Same multi-CLI signal, but the skill avoids Claude-only invocation phrasing —
+  # the verdict the increment-from-zero bug previously made unreachable.
+  echo 'This plugin supports Cursor, Codex, and Gemini CLIs.' > AGENTS.md
+  mkdir -p skills/demo
+  cat > skills/demo/SKILL.md <<'EOF'
+---
+name: demo
+description: a demo skill
+---
+
+Run `/mcp auth demo-server` in your AI-CLI session.
+EOF
+  /usr/bin/git add . && /usr/bin/git commit -qm 'multi-cli signal + agnostic skill'
+  run_gate "$GATE" "$CANDIDATE" "$DOSSIER" "working→submitted" "example-org/$REPO_NAME"
+  assert_severity "PASS"
 }
 
 @test "SKIP when there are no multi-CLI signals in the repo" {
