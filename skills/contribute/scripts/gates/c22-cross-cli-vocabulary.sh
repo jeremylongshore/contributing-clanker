@@ -27,10 +27,12 @@ MULTI_CLI_SIGNALS=0
 [[ -f "$CLONE/gemini-extension.json" ]] && MULTI_CLI_SIGNALS=$((MULTI_CLI_SIGNALS + 1))
 # Look for README declaring multi-CLI support
 if [[ -f "$CLONE/README.md" ]]; then
-  # grep -c prints the count AND exits 1 on zero matches; `|| true` swallows that
-  # without appending a second line (the old `|| echo 0` produced "0\n0", which
-  # then broke `[[ -ge ]]` with a syntax error).
-  hits=$(/usr/bin/grep -ciE "(Copilot CLI|Gemini CLI|Codex CLI|Cursor|Continue|Cline)" "$CLONE/README.md" 2>/dev/null || true)
+  # Count CLI *mentions* with grep -o | wc -l, not grep -c (which counts matching
+  # LINES — a README naming 2+ CLIs on one line would miscount as 1 and miss the
+  # signal). wc -l yields a single clean integer; `|| true` keeps a zero-match
+  # grep from tripping set -e (the old `|| echo 0` produced "0\n0" → `[[ -ge ]]`
+  # syntax error).
+  hits=$(/usr/bin/grep -oiE "(Copilot CLI|Gemini CLI|Codex CLI|Cursor|Continue|Cline)" "$CLONE/README.md" 2>/dev/null | /usr/bin/wc -l || true)
   [[ "${hits:-0}" -ge 2 ]] && MULTI_CLI_SIGNALS=$((MULTI_CLI_SIGNALS + 1))
 fi
 
