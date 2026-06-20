@@ -153,6 +153,72 @@ assert "draft claim comment preserved" \
 assert "pet peeves section preserved" \
   "/usr/bin/grep -q \"Don't @-mention @alice on weekends\" \"$CANDIDATE\""
 
+# ─────────────────────────────────────────────────────────────────────────
+# Regression: the closed-issue drop ACTUALLY fires (contributing-clanker-m81)
+#
+# Bug: scout-refresh.py fetched issue state via `gh api ... --jq .state`, which
+# prints a bare unquoted string (e.g. `closed`). gh_json() then ran json.loads()
+# on it, which raises on a bare scalar, is swallowed, and returns None — so
+# `issue_data == "closed"` was never true and closed issues were never dropped
+# (empirically: 0 issue_closed drops across 161 real candidates on 2026-06-19;
+# 18 closed issues had survived as `open`). The assertions above are an awk
+# SIMULATION and never run the real script, which is why they missed this.
+#
+# This section runs the REAL scout-refresh.py against a `gh` stub that emulates
+# gh's actual --jq behavior (bare scalar for `.state`, JSON object for `{state}`).
+# It therefore FAILS on the buggy code (closed candidate survives) and PASSES on
+# the fix (closed candidate is dropped, open candidate survives).
+
+REFRESH_PY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/scout-refresh.py"
+RT_HOME="$TMPDIR/rt-home"
+CAND_DIR="$RT_HOME/.contribute-system/candidates"
+STUB_BIN="$TMPDIR/stub-bin"
+/usr/bin/mkdir -p "$CAND_DIR" "$STUB_BIN"
+
+# Two candidates at the same active repo: #7 closed upstream, #8 still open.
+for n in 7 8; do
+  /usr/bin/cat > "$CAND_DIR/example__repo__issue$n.md" <<EOF
+---
+status: open
+repo: example/repo
+issue_number: $n
+scout_score: 0.9
+star_count: 100
+---
+body for $n
+EOF
+done
+
+# gh stub: emulate real gh, honoring the --jq the script passes. Crucially, for
+# `--jq .state` it emits a BARE scalar (what real gh does) so the OLD code path
+# reproduces the json.loads failure; for `--jq {state}` it emits a JSON object.
+/usr/bin/cat > "$STUB_BIN/gh" <<'STUB'
+#!/usr/bin/env bash
+args="$*"; jq=""; prev=""
+for a in "$@"; do [ "$prev" = "--jq" ] && jq="$a"; prev="$a"; done
+case "$args" in
+  *"issues/7"*)  # closed
+    case "$jq" in "{state}") echo '{"state":"closed"}';; ".state") echo 'closed';; *) echo '{"state":"closed","number":7}';; esac ;;
+  *"issues/8"*)  # open
+    case "$jq" in "{state}") echo '{"state":"open"}';; ".state") echo 'open';; *) echo '{"state":"open","number":8}';; esac ;;
+  *"pr list"*) echo '[]' ;;
+  *"api repos/example/repo"*)  # repo metadata: recent push, not archived
+    echo "{\"stargazers_count\":120,\"pushed_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"archived\":false}" ;;
+  *) echo 'null' ;;
+esac
+STUB
+/usr/bin/chmod +x "$STUB_BIN/gh"
+
+PATH="$STUB_BIN:$PATH" HOME="$RT_HOME" /usr/bin/env python3 "$REFRESH_PY" \
+  > "$TMPDIR/refresh.out" 2>&1 || true
+
+assert "real refresh DROPS the closed-issue candidate (#7 deleted)" \
+  "[[ ! -f \"$CAND_DIR/example__repo__issue7.md\" ]]"
+assert "real refresh KEEPS the still-open candidate (#8 survives)" \
+  "[[ -f \"$CAND_DIR/example__repo__issue8.md\" ]]"
+assert "refresh output reports an issue_closed drop reason" \
+  "/usr/bin/grep -q 'issue_closed' \"$TMPDIR/refresh.out\""
+
 # Summary
 /usr/bin/printf '\n  scout-refresh: %s passed, %s failed\n\n' \
   "$(green "$PASS")" "$([[ $FAIL -eq 0 ]] && green 0 || red "$FAIL")"
