@@ -159,10 +159,19 @@ cd tools && npm install && npm run pdf
 
 ## Repo-side test infrastructure
 
-The 51 gate scripts + lib/preamble.sh live at `~/.claude/skills/contribute/scripts/gates/` (Phase 1 filesystem-only) but their tests live in **this** repo at `tests/` so they survive clones and ride CI when Phase 2 packaging lands. Phase distribution: A=8, B=10, C=20, D=3, E=2, F=3, G=5.
+The 51 gate scripts + lib/preamble.sh live at `~/.claude/skills/contribute/scripts/gates/` (Phase 1 filesystem-only) but their tests live in **this** repo at `tests/` so they survive clones and ride CI. Phase distribution: A=8, B=10, C=20, D=3, E=2, F=3, G=5.
+
+CI (runs on every PR to `master` + pushes to `master`):
+
+| Workflow | Jobs | What it gates |
+|---|---|---|
+| `.github/workflows/ci.yml` | `shellcheck`, `bats` | static analysis of the gate scripts + the 252-case bats suite |
+| `.github/workflows/codeql.yml` | CodeQL | security scanning |
+
+PR review is **CodeRabbit** (`.coderabbit.yaml`) — switched off Gemini Code Assist in PR #56. The deterministic gate is the two CI workflows above.
 
 ```bash
-# Unit tests (bats — 48 cases across 15 phase-A/B/C/D/G sample files)
+# Unit tests (bats — 252 cases across 51 files, one .bats per gate, all phases A–G)
 bats tests/unit/gates/                       # all
 bats tests/unit/gates/a01-already-assigned.bats  # one file
 bats --verbose-run tests/unit/gates/         # show JSON of every gate verdict
@@ -393,7 +402,8 @@ node generate-pdf.js              # Generate PDFs from markdown
 - **2026-04-30** — collapsed an unused internal monorepo (Next.js dashboard, TS CLI, Cloud Functions, Vertex AI orchestrator) + SQLite tracker into the `/contribute` skill. Historical planning docs in `99-archived-system-docs/`; code in git history.
 - **2026-05-03** — repo renamed from `intent-solutions-io/contributions` → `jeremylongshore/contributing-clanker`; all bounty / payment framing dropped. This is a contribution tool, not a tracker or marketplace.
 - **2026-05-04** — Phase 1 build complete (all 9 epics + Slice 2 closed, 59/59 beads). 41 of 62 gates installed, 80 test assertions green, 11/11 governance files in place. Entered 30-day soak validation. Phase 2 (plugin packaging) gated on clean soak.
-- **2026-05-28 → 2026-06-07** — post-soak dogfood: trust-ladder rule landed (gates A07 + B13, PR #40), then content-fidelity gates C20-C25 (#41) hardened from the kobiton/automate PR-review round-trip; vendored audit-harness bumped to v1.1.5. Gate count now **49**; bead backlog grew past the original 59 (`bd stats` for live count).
+- **2026-05-28 → 2026-06-07** — post-soak dogfood: trust-ladder rule landed (gates A07 + B13, PR #40), then content-fidelity gates C20-C25 (#41) hardened from the kobiton/automate PR-review round-trip; vendored audit-harness bumped to v1.1.5. Bead backlog grew past the original 59 (`bd stats` for live count).
+- **2026-06-16 → 2026-06-20** — gates C26 (coverage-readiness) + C27 (sibling-issue-scan) rescued; gate count now **51** (A=8, B=10, C=20, D=3, E=2, F=3, G=5). Test hardening: full bats coverage for all 51 gates — 252 cases, one `.bats` per gate (PR #54). CI rebuilt: CodeQL + deterministic gate workflow (#55), PR-review workhorse switched Gemini → CodeRabbit (#56), apt dropped from CI (#57). Scout `--refresh` now drops closed issues (#58); c22 no longer fail-closes under `set -e`.
 
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
