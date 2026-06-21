@@ -10,7 +10,7 @@ This is an OSS contribution workspace at `https://github.com/jeremylongshore/con
 
 | Path | What |
 |---|---|
-| `skills/contribute/` | The skill (SKILL.md + 5 agents + 68 scripts [17 top-level + 51 gates] + 3 templates). **Single source of truth.** |
+| `skills/contribute/` | The skill (SKILL.md + 5 agents + 69 scripts [18 top-level + 51 gates] + 3 templates). **Single source of truth.** |
 | `bin/install.sh` | Installs the skill into `~/.claude/skills/contribute/` (symlink for devs, copy for users) |
 | `000-docs/` | Spec — what the skill must do (epics 1–10) |
 | `tests/` | Validates the skill (bats unit + L4 regression) — references `skills/contribute/scripts/` |
@@ -141,7 +141,9 @@ $SKILL_SCRIPTS/test-plug-in.sh               # gate auto-discovery (4 assertions
 $SKILL_SCRIPTS/test-stale-dossier-refresh.sh # 14d staleness auto-refresh (8 assertions)
 $SKILL_SCRIPTS/test-scout-refresh.sh         # scout-refresh body preservation (10 assertions)
 
-# Reporters (read-only, surface signal from log.jsonl)
+# Reporters (read-only, surface signal from local state)
+$SKILL_SCRIPTS/dashboard.sh                          # ASCII status dashboard (pipeline/shipped/next/timeline) — printed first by /contribute Step 0
+$SKILL_SCRIPTS/dashboard.sh --no-box                 # same, frame stripped (for piping/grepping)
 $SKILL_SCRIPTS/audit-overrides.sh                    # per-gate override frequency
 $SKILL_SCRIPTS/audit-overrides.sh --since=30 --json  # filter + machine-readable
 $SKILL_SCRIPTS/catalog-coverage.sh                   # 000-docs/007 catalog → gate coverage
@@ -165,13 +167,13 @@ CI (runs on every PR to `master` + pushes to `master`):
 
 | Workflow | Jobs | What it gates |
 |---|---|---|
-| `.github/workflows/ci.yml` | `shellcheck`, `bats` | static analysis of the gate scripts + the 252-case bats suite |
+| `.github/workflows/ci.yml` | `shellcheck`, `bats` | static analysis of the gate scripts + the 260-case bats suite (51 gates + dashboard reporter) |
 | `.github/workflows/codeql.yml` | CodeQL | security scanning |
 
 PR review is **CodeRabbit** (`.coderabbit.yaml`) — switched off Gemini Code Assist in PR #56. The deterministic gate is the two CI workflows above.
 
 ```bash
-# Unit tests (bats — 252 cases across 51 files, one .bats per gate, all phases A–G)
+# Unit tests (bats — 260 cases: 51 gate files [one per gate, phases A–G] + dashboard.bats)
 bats tests/unit/gates/                       # all
 bats tests/unit/gates/a01-already-assigned.bats  # one file
 bats --verbose-run tests/unit/gates/         # show JSON of every gate verdict
@@ -403,7 +405,7 @@ node generate-pdf.js              # Generate PDFs from markdown
 - **2026-05-03** — repo renamed from `intent-solutions-io/contributions` → `jeremylongshore/contributing-clanker`; all bounty / payment framing dropped. This is a contribution tool, not a tracker or marketplace.
 - **2026-05-04** — Phase 1 build complete (all 9 epics + Slice 2 closed, 59/59 beads). 41 of 62 gates installed, 80 test assertions green, 11/11 governance files in place. Entered 30-day soak validation. Phase 2 (plugin packaging) gated on clean soak.
 - **2026-05-28 → 2026-06-07** — post-soak dogfood: trust-ladder rule landed (gates A07 + B13, PR #40), then content-fidelity gates C20-C25 (#41) hardened from the kobiton/automate PR-review round-trip; vendored audit-harness bumped to v1.1.5. Bead backlog grew past the original 59 (`bd stats` for live count).
-- **2026-06-16 → 2026-06-20** — gates C26 (coverage-readiness) + C27 (sibling-issue-scan) rescued; gate count now **51** (A=8, B=10, C=20, D=3, E=2, F=3, G=5). Test hardening: full bats coverage for all 51 gates — 252 cases, one `.bats` per gate (PR #54). CI rebuilt: CodeQL + deterministic gate workflow (#55), PR-review workhorse switched Gemini → CodeRabbit (#56), apt dropped from CI (#57). Scout `--refresh` now drops closed issues (#58); c22 no longer fail-closes under `set -e`.
+- **2026-06-16 → 2026-06-20** — gates C26 (coverage-readiness) + C27 (sibling-issue-scan) rescued; gate count now **51** (A=8, B=10, C=20, D=3, E=2, F=3, G=5). Test hardening: full bats coverage for all 51 gates — 252 cases, one `.bats` per gate (PR #54). CI rebuilt: CodeQL + deterministic gate workflow (#55), PR-review workhorse switched Gemini → CodeRabbit (#56), apt dropped from CI (#57). Scout `--refresh` now drops closed issues (#58); c22 no longer fail-closes under `set -e`. Added `scripts/dashboard.sh` — a local-only ASCII status dashboard (pipeline funnel / in-flight / shipped / suggested-next / timeline) now printed first by `/contribute` Step 0; +8 bats cases (260 total) with an alignment invariant guarding multibyte-title border drift.
 
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->

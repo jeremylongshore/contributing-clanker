@@ -33,7 +33,7 @@ jobs:
         run: scripts/lint-bash.sh
 
   bats:
-    name: bats unit — 51 gates (L3)
+    name: bats unit — 51 gates + dashboard (L3)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -44,6 +44,8 @@ jobs:
         run: bin/install.sh --symlink
       - name: run gate unit tests
         run: bats tests/unit/gates/
+      - name: run reporter unit tests (dashboard, etc.)
+        run: bats tests/unit/*.bats
 
   # NOTE: the L4 regression suites (skills/contribute/scripts/test-*.sh) are
   # intentionally NOT a clean-room CI job. They are dev-environment INTEGRATION
