@@ -96,6 +96,17 @@ gh auth status >/dev/null 2>&1 && echo "gh: ok" || echo "gh: NOT logged in"
 slug, enter **Repo Init Mode** instead of the normal Step 0 flow. If no args, proceed
 to Step 0.
 
+**Wasteland federation repos** — if the owner is `gastownhall` (the org), or the repo
+is specifically `julianknutsen/wasteland` (match the **repo**, not the owner —
+`julianknutsen` is a personal account with unrelated repos), or the user references a
+`w-<id>` board item or the `wl` CLI, this is **Wasteland
+work**: claims happen in a Dolt commons via `wl claim` (not `gh issue comment`),
+and the deliverable is still a GitHub PR. Read `references/wasteland-federation.md`
+before drafting any claim for those repos — it maps the `wl claim → PR → wl done`
+flow, which gates adapt (A-phase claim gates read the `wl` board, not GitHub
+assignees; C-phase PR gates still fully apply), the `[wendy:github-mirror]`
+staleness trap, and the candidate `wl_id` / `scope_verdict` fields.
+
 #### Repo Init Mode
 
 **Step 1 — Parse slug**
@@ -409,6 +420,13 @@ If the dossier predates this (no `## Rejection patterns` / `local_test_fit`), ru
 ### Step 3 — Claim
 
 Draft a claim comment from `assets/claim-template.md`. Adapt to the upstream's tone (lowercase if they use lowercase). Show the draft to the user for approval. Never `gh issue comment` autonomously.
+
+**Wasteland federation exception** — for `gastownhall/*` and `julianknutsen/wasteland`
+board work, the claim is **`wl claim w-<id>`** against the Dolt commons, not a GitHub
+issue comment; completion is recorded with `wl done w-<id> --evidence "<PR-url>"` after
+the PR opens. Still human-approved — show the intended `wl claim` to the user and never
+run it autonomously. For `[wendy:github-mirror]` items, **verify the mirrored GitHub
+issue isn't already closed** before claiming (see `references/wasteland-federation.md`).
 
 **Gate-checked transitions** — before showing the claim draft to the user,
 run the gate-runner via `transition.sh` to catch traps (already-assigned,
@@ -768,6 +786,7 @@ User asks to verify a working branch.
 ### References
 
 - `references/workflow-guide.md` — long-form narrative of the 5-step workflow with project-specific gotchas
+- `references/wasteland-federation.md` — contributing to Wasteland (`gastownhall/*`, `julianknutsen/wasteland`): the `wl claim → PR → wl done` Dolt-commons flow, gate adaptations, the github-mirror staleness trap, and candidate `wl_id` / `scope_verdict` fields
 
 ### External
 
