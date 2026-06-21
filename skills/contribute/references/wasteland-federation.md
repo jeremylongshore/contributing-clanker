@@ -147,9 +147,11 @@ keeps tabs on it:
 ## When `/contribute` should read this file
 
 Enter Wasteland-federation handling when the target repo owner is `gastownhall`
-or `julianknutsen` (the federation repos), or when the user references a `w-<id>`
-board item / the `wl` CLI. Read this file before drafting any claim for those
-repos — the claim path is `wl claim`, not `gh issue comment`.
+(the org), or the repo is specifically `julianknutsen/wasteland` — match that
+**repo**, not the `julianknutsen` owner, which is a personal account with
+unrelated repos — or when the user references a `w-<id>` board item / the `wl`
+CLI. Read this file before drafting any claim for those repos — the claim path is
+`wl claim`, not `gh issue comment`.
 
 ## Cross-references
 

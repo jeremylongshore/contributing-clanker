@@ -96,8 +96,10 @@ gh auth status >/dev/null 2>&1 && echo "gh: ok" || echo "gh: NOT logged in"
 slug, enter **Repo Init Mode** instead of the normal Step 0 flow. If no args, proceed
 to Step 0.
 
-**Wasteland federation repos** — if the owner is `gastownhall` or `julianknutsen`,
-or the user references a `w-<id>` board item or the `wl` CLI, this is **Wasteland
+**Wasteland federation repos** — if the owner is `gastownhall` (the org), or the repo
+is specifically `julianknutsen/wasteland` (match the **repo**, not the owner —
+`julianknutsen` is a personal account with unrelated repos), or the user references a
+`w-<id>` board item or the `wl` CLI, this is **Wasteland
 work**: claims happen in a Dolt commons via `wl claim` (not `gh issue comment`),
 and the deliverable is still a GitHub PR. Read `references/wasteland-federation.md`
 before drafting any claim for those repos — it maps the `wl claim → PR → wl done`
