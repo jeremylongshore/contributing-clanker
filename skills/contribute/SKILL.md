@@ -221,7 +221,8 @@ output **verbatim** in a fenced code block (so the box-drawing renders) — this
 headline the user sees the moment `/contribute` fires:
 
 ```bash
-~/.claude/skills/contribute/scripts/dashboard.sh
+# ${CLAUDE_SKILL_DIR} when set (distributable per skill-creator spec); else the install path
+"${CLAUDE_SKILL_DIR:-$HOME/.claude/skills/contribute}/scripts/dashboard.sh"
 ```
 
 It reads only local markdown (candidates + dossiers + `log.jsonl`) — no network — so it

@@ -7,7 +7,10 @@
 # content row must have an identical byte length even when upstream titles
 # carry multibyte chars (the em-dash drift bug this script was hardened against).
 
-DASH="${HOME}/.claude/skills/contribute/scripts/dashboard.sh"
+# Resolve the script repo-relative (works from a fresh checkout without bin/install.sh);
+# DASHBOARD_SCRIPT overrides for out-of-tree runs.
+REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)"
+DASH="${DASHBOARD_SCRIPT:-$REPO_ROOT/skills/contribute/scripts/dashboard.sh}"
 
 setup() {
   STATE_DIR="$(mktemp -d)"
