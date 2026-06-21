@@ -216,7 +216,23 @@ jq -n --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
 
 ### Step 0 — Refresh state (run first, every time)
 
-Before answering anything contribution-related, surface current state. Run these in **parallel** with the Bash tool:
+**First, print the dashboard.** Run the local ASCII status dashboard and show its
+output **verbatim** in a fenced code block (so the box-drawing renders) — this is the
+headline the user sees the moment `/contribute` fires:
+
+```bash
+# ${CLAUDE_SKILL_DIR} when set (distributable per skill-creator spec); else the install path
+"${CLAUDE_SKILL_DIR:-$HOME/.claude/skills/contribute}/scripts/dashboard.sh"
+```
+
+It reads only local markdown (candidates + dossiers + `log.jsonl`) — no network — so it
+renders instantly and deterministically: the candidate pipeline funnel, in-flight work
+needing action, recently-shipped PRs, suggested next tasks (top open by `scout_score` +
+stale dossiers + drift), and a recent-activity timeline. Don't paraphrase it; paste the
+block, then add any live-state notes below it.
+
+Then, to reconcile that local snapshot against **live** GitHub PR state, run these in
+**parallel** with the Bash tool:
 
 ```bash
 # Upstream PRs in flight (filtered to outside-org repos only —
@@ -587,6 +603,12 @@ the proxy. The rule is the thing; the gates are the implementation.
 After Step 0, output a status block. After each subsequent step, output structured progress.
 
 ### State summary (after Step 0)
+
+The `dashboard.sh` ASCII block (printed first, per Step 0) is the primary state view —
+pipeline funnel, in-flight, shipped, suggested-next, timeline. The text summary below is
+the **live-GitHub reconciliation layer** that goes *beneath* the dashboard: it surfaces
+anything the local snapshot can't know (PR draft/review state, merges not yet reconciled
+into candidate files, drift between `gh` and the candidate `status:`).
 
 ```
 PRs in flight: <N> open, <M> draft
