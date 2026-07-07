@@ -25,7 +25,9 @@
 
 set -uo pipefail
 
-LOG="${HOME}/.contribute-system/log.jsonl"
+# CONTRIBUTE_STATE_DIR override matches dashboard.sh — lets tests point the
+# reporter at a fixture state dir.
+LOG="${CONTRIBUTE_STATE_DIR:-${HOME}/.contribute-system}/log.jsonl"
 SINCE_DAYS=""
 SCOPE=""
 GATE_FILTER=""

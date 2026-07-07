@@ -10,7 +10,7 @@ This is an OSS contribution workspace at `https://github.com/jeremylongshore/con
 
 | Path | What |
 |---|---|
-| `skills/contribute/` | The skill (SKILL.md + 5 agents + 66 scripts [15 top-level + 51 gates] + 3 templates + 4 references). **Single source of truth.** |
+| `skills/contribute/` | The skill (SKILL.md + 5 agents + 67 scripts [16 top-level + 51 gates] + 3 templates + 4 references). **Single source of truth.** |
 | `bin/install.sh` | Installs the skill into `~/.claude/skills/contribute/` (symlink for devs, copy for users) |
 | `bin/release-plugin.sh` + `release/hooks/` | Phase 2 machinery: rsyncs `skills/contribute/` into the marketplace plugin repo on a semver release (`--dry-run` supported); `release/hooks/` = the plugin's install/uninstall hooks |
 | `000-docs/` | Spec — what the skill must do (epics 1–10) |
@@ -149,6 +149,8 @@ $SKILL_SCRIPTS/dashboard.sh                          # ASCII status dashboard (p
 $SKILL_SCRIPTS/dashboard.sh --no-box                 # same, frame stripped (for piping/grepping)
 $SKILL_SCRIPTS/audit-overrides.sh                    # per-gate override frequency
 $SKILL_SCRIPTS/audit-overrides.sh --since=30 --json  # filter + machine-readable
+$SKILL_SCRIPTS/contribute-daily-recap.sh --dry-run   # daily recap email, printed not sent (house HTML template: tiles + Action-needed + pipeline + 2d events + override trend)
+$SKILL_SCRIPTS/contribute-daily-recap.sh             # compose + email (cron: 45 6 * * *; recipient CONTRIBUTE_RECAP_TO)
 $SKILL_SCRIPTS/catalog-coverage.sh                   # 000-docs/007 catalog → gate coverage
 
 # Query the event log
@@ -170,14 +172,14 @@ CI (runs on every PR to `master` + pushes to `master`):
 
 | Workflow | Jobs | What it gates |
 |---|---|---|
-| `.github/workflows/ci.yml` | `shellcheck`, `bats` | static analysis of the gate scripts + the 268-case bats suite (51 gates + dashboard reporter) |
+| `.github/workflows/ci.yml` | `shellcheck`, `bats` | static analysis of the gate scripts + the 276-case bats suite (51 gates + reporters) |
 | `.github/workflows/codeql.yml` | CodeQL | security scanning |
 
 PR review is **CodeRabbit** (`.coderabbit.yaml`) — switched off Gemini Code Assist in PR #56. Estate-wide policy (2026-06-23) moved AI PR review to **Greptile**; `.coderabbit.yaml` gets removed when the GitHub App swap reaches this repo. Until then CodeRabbit still reviews PRs here. The deterministic gate is the two CI workflows above, unchanged by the bot transition.
 
 ```bash
-# Unit tests (bats — 268 cases = 260 gate cases [51 files, one per gate, phases A–G] + 8 dashboard.bats)
-bats tests/unit/gates/                       # all gate cases (260)
+# Unit tests (bats — 276 cases = 262 gate cases [51 files, one per gate, phases A–G] + 14 reporter cases [dashboard, daily recap])
+bats tests/unit/gates/                       # all gate cases (262)
 bats tests/unit/*.bats                       # reporter suites (dashboard.bats lives OUTSIDE gates/)
 bats tests/unit/gates/a01-already-assigned.bats  # one file
 bats --verbose-run tests/unit/gates/         # show JSON of every gate verdict
@@ -411,6 +413,7 @@ node generate-pdf.js              # Generate PDFs from markdown
 - **2026-05-28 → 2026-06-07** — post-soak dogfood: trust-ladder rule landed (gates A07 + B13, PR #40), then content-fidelity gates C20-C25 (#41) hardened from the kobiton/automate PR-review round-trip; vendored audit-harness bumped to v1.1.5. Bead backlog grew past the original 59 (`bd stats` for live count).
 - **2026-06-16 → 2026-06-20** — gates C26 (coverage-readiness) + C27 (sibling-issue-scan) rescued; gate count now **51** (A=8, B=10, C=20, D=3, E=2, F=3, G=5). Test hardening: full bats coverage for all 51 gates — 250 cases, one `.bats` per gate (PR #54). CI rebuilt: CodeQL + deterministic gate workflow (#55), PR-review workhorse switched Gemini → CodeRabbit (#56), apt dropped from CI (#57). Scout `--refresh` now drops closed issues (#58).
 - **2026-06-21 → 2026-07-05** — added `scripts/dashboard.sh` (#60), a local-only ASCII status dashboard (pipeline funnel / in-flight / shipped / suggested-next / timeline) printed first by `/contribute` Step 0; +8 bats cases with an alignment invariant guarding multibyte-title border drift. Gate c22 no longer fail-closes under `set -e` (two increment bugs; +2 gate cases → 260 total, #61). Wasteland federation support landed (#62): the `wl claim → PR → wl done` flow, board→repo mapping, A-phase gate adaptations for federated claims, the `[wendy:github-mirror]` staleness trap, and the collaboration-surface inversion — all specified in `skills/contribute/references/wasteland-federation.md`.
+- **2026-07-06** — /init drift audit + observability round, shipped as a 4-PR stack (#63→#64→#65→#66). CLAUDE.md re-verified against the tree (#63). The 5 gate-logic bugs from the 2026-06-17 bats pass all closed out red-tests-first: c24 engagement-frame-leakage was **fail-OPEN** — its `|`-split truncated 3 regex tokens into unparseable patterns and the author-footer anchor was dead — fixed with parallel token arrays + a loud-on-unevaluable BLOCK (#64); c26's unreachable no-new-funcs SKIP, c11's `0\n0` stderr noise, and f04's dead disclosure-verify paths + lowercase-ID crash fixed in #65, which also made every load-bearing `log.jsonl` append fail loud (visible stderr WARN) instead of silently swallowing. New `scripts/contribute-daily-recap.sh` (#66): deterministic personal daily recap email — house HTML template (stat tiles, Action-needed card, pipeline funnel + in-flight tables, event badges, override-trend table), heartbeat only on positive log-read proof, fixed 2-day window with no watermark, zero LLM — live on the dev-box crontab at `45 6 * * *` after Jeremy approved the shape. Observability epic mirrored at GH #67 (weekly team mode + notify-tail consumer deferred with recorded triggers). Suite now 274 bats cases (260 gate + 14 reporter).
 
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->

@@ -81,3 +81,32 @@ EOF
   run_gate_e02
   assert_severity "BLOCK"
 }
+
+# The live log carries historical torn hook_intercept entries (an old hook
+# wrote unescaped heredoc newlines; the writer was since fixed). A strict jq
+# pass aborts on them (exit 5), and under pipefail that tripped the ERR trap:
+# the gate crashed fail-closed on EVERY shortlist→claimed on this box.
+# Caught 2026-07-06 by the daily recap's block-event table on day one.
+
+@test "PASS with torn log lines and no strikes (no fail-closed crash)" {
+  export HOME="$TMPHOME"
+  cat > "$TMPHOME/.contribute-system/log.jsonl" <<'EOF'
+{"ts":"2026-05-03T00:00:00Z","event":"hook_intercept","details":{"cmd_preview":"gh pr create --body \"$(cat <<'HEREDOC'
+torn fragment — this line is not valid JSON
+{"ts":"2026-05-04T00:00:00Z","event":"candidate_dropped","details":{"repo":"example-org/x","reason":"superseded"}}
+EOF
+  run_gate_e02
+  assert_severity "PASS"
+  echo "$output" | jq -e '.reason | test("crashed") | not' >/dev/null
+}
+
+@test "strikes are still counted past torn log lines (BLOCK names the strike, not a crash)" {
+  export HOME="$TMPHOME"
+  cat > "$TMPHOME/.contribute-system/log.jsonl" <<'EOF'
+torn fragment — this line is not valid JSON
+{"ts":"2026-05-01T00:00:00Z","event":"candidate_dropped","details":{"repo":"example-org/another","reason":"ai_policy violation"}}
+EOF
+  run_gate_e02
+  assert_severity "BLOCK"
+  echo "$output" | jq -e '.reason | test("AI-policy closure")' >/dev/null
+}

@@ -70,7 +70,7 @@ while IFS= read -r line; do
     regex="${TOKEN_REGEXES[$i]}"
     hint="${TOKEN_HINTS[$i]}"
     rc=0
-    echo "$line" | /usr/bin/grep -qE "$regex" || rc=$?
+    /usr/bin/printf '%s\n' "$line" | /usr/bin/grep -qE "$regex" || rc=$?
     if [[ $rc -ge 2 ]]; then
       # A gate that cannot evaluate its own rule must go loud, never
       # silently pass — same fail-closed contract as the ERR trap.

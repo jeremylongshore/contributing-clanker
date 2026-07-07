@@ -7,12 +7,13 @@
 #      release script would perform on tag.
 #   2. Run install.sh against a tmp HOME, asserting:
 #      - runtime tree exists at all expected subdirs
-#      - 41 gate scripts copied + executable
-#      - 10 orchestrator/reporter scripts copied + executable
+#      - every gate script copied + executable (expected count derived from
+#        the repo source at runtime — no hand-maintained numbers, they rot)
+#      - every orchestrator/reporter script copied + executable (same)
 #      - lib/preamble.sh copied
 #      - profile.md template written
 #   3. Run uninstall.sh, asserting:
-#      - all 51 plugin-shipped scripts removed
+#      - all plugin-shipped scripts removed
 #      - user data preserved (profile.md, candidates/, research/)
 #   4. Cleanup
 #
@@ -84,8 +85,12 @@ printf '[1/4] Synthesizing fake plugin directory\n'
 
 PLUGIN_GATE_COUNT=$(/usr/bin/find "$FAKE_PLUGIN_DIR/skills/contribute/scripts/gates" -maxdepth 1 -name '*.sh' -type f | /usr/bin/wc -l)
 PLUGIN_SCRIPT_COUNT=$(/usr/bin/find "$FAKE_PLUGIN_DIR/skills/contribute/scripts" -maxdepth 1 -name '*.sh' -type f | /usr/bin/wc -l)
-assert_eq "fake plugin: gate count" 41 "$PLUGIN_GATE_COUNT"
-assert_eq "fake plugin: script count" 10 "$PLUGIN_SCRIPT_COUNT"
+# Expected counts derive from the repo source at runtime: the assertion is
+# copy FIDELITY (rsync/install lost nothing), not a hand-maintained number.
+SRC_GATE_COUNT=$(/usr/bin/find "$REPO_ROOT/skills/contribute/scripts/gates" -maxdepth 1 -name '*.sh' -type f | /usr/bin/wc -l)
+SRC_SCRIPT_COUNT=$(/usr/bin/find "$REPO_ROOT/skills/contribute/scripts" -maxdepth 1 -name '*.sh' -type f | /usr/bin/wc -l)
+assert_eq "fake plugin: gate count" "$SRC_GATE_COUNT" "$PLUGIN_GATE_COUNT"
+assert_eq "fake plugin: script count" "$SRC_SCRIPT_COUNT" "$PLUGIN_SCRIPT_COUNT"
 assert_file_exists "fake plugin: lib/preamble.sh" "$FAKE_PLUGIN_DIR/skills/contribute/scripts/gates/lib/preamble.sh"
 assert_executable "fake plugin: hooks/install.sh executable" "$FAKE_PLUGIN_DIR/hooks/install.sh"
 
@@ -109,8 +114,8 @@ done
 # Assert script counts copied to runtime
 RUNTIME_GATE_COUNT=$(/usr/bin/find "$FAKE_RUNTIME_DIR/gates" -maxdepth 1 -name '*.sh' -type f | /usr/bin/wc -l)
 RUNTIME_SCRIPT_COUNT=$(/usr/bin/find "$FAKE_RUNTIME_DIR/bin" -maxdepth 1 -name '*.sh' -type f | /usr/bin/wc -l)
-assert_eq "runtime: gate count" 41 "$RUNTIME_GATE_COUNT"
-assert_eq "runtime: script count" 10 "$RUNTIME_SCRIPT_COUNT"
+assert_eq "runtime: gate count" "$SRC_GATE_COUNT" "$RUNTIME_GATE_COUNT"
+assert_eq "runtime: script count" "$SRC_SCRIPT_COUNT" "$RUNTIME_SCRIPT_COUNT"
 assert_file_exists "runtime: lib/preamble.sh" "$FAKE_RUNTIME_DIR/gates/lib/preamble.sh"
 assert_file_exists "runtime: profile.md template" "$FAKE_RUNTIME_DIR/profile.md"
 

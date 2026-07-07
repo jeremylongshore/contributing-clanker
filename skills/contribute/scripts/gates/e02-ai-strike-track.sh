@@ -36,8 +36,14 @@ case "$STRIKE_SCOPE" in
   *)       gate_block "unknown strike_scope in dossier: $STRIKE_SCOPE" "set strike_scope to repo|org|account in the dossier" ;;
 esac
 
-STRIKE_COUNT=$(jq -c "
-  select(.event == \"candidate_dropped\")
+# Tolerant per-line parse (-R + fromjson?): the live log carries historical
+# torn hook_intercept entries; a strict parse aborts jq (exit 5) and, under
+# pipefail, tripped the ERR trap — this gate crashed fail-closed on EVERY
+# shortlist→claimed until 2026-07-06. Malformed lines carry no strike data;
+# skipping them cannot hide a strike.
+STRIKE_COUNT=$(jq -cR "
+  fromjson? | objects
+  | select(.event == \"candidate_dropped\")
   | select($SCOPE_FILTER)
   | select(.details.reason | tostring | test(\"ai[ _-]?policy|ai[ _-]?slop\"; \"i\"))
 " "$LOG" 2>/dev/null | /usr/bin/wc -l | /usr/bin/awk '{print $1}')
