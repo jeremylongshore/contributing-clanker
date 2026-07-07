@@ -10,10 +10,11 @@ This is an OSS contribution workspace at `https://github.com/jeremylongshore/con
 
 | Path | What |
 |---|---|
-| `skills/contribute/` | The skill (SKILL.md + 5 agents + 69 scripts [18 top-level + 51 gates] + 3 templates). **Single source of truth.** |
+| `skills/contribute/` | The skill (SKILL.md + 5 agents + 66 scripts [15 top-level + 51 gates] + 3 templates + 4 references). **Single source of truth.** |
 | `bin/install.sh` | Installs the skill into `~/.claude/skills/contribute/` (symlink for devs, copy for users) |
+| `bin/release-plugin.sh` + `release/hooks/` | Phase 2 machinery: rsyncs `skills/contribute/` into the marketplace plugin repo on a semver release (`--dry-run` supported); `release/hooks/` = the plugin's install/uninstall hooks |
 | `000-docs/` | Spec — what the skill must do (epics 1–10) |
-| `tests/` | Validates the skill (bats unit + L4 regression) — references `skills/contribute/scripts/` |
+| `tests/` | Validates the skill (bats unit + L4 regression + `tests/integration/test-plugin-install.sh`) — references `skills/contribute/scripts/` |
 | `features/` | Gherkin BDD acceptance criteria |
 | upstream clones (posthog/, calcom/, …) | Where contributions land |
 | `~/.contribute-system/` (NOT in repo) | Per-user runtime state — candidates, dossiers, log.jsonl |
@@ -101,6 +102,8 @@ When you want to find an issue worth working on, draft a claim, run tests, or op
 | `/contribute` skill | `~/.claude/skills/contribute/SKILL.md` |
 | `@scout` subagent (discovery) | `~/.claude/skills/contribute/agents/scout.md` |
 | `@researcher` subagent (per-repo dossiers) | `~/.claude/skills/contribute/agents/researcher.md` |
+| support subagents (repo-analyzer, draft-writer, test-runner) | `~/.claude/skills/contribute/agents/` |
+| Wasteland federation reference (wl claim → PR → wl done) | `~/.claude/skills/contribute/references/wasteland-federation.md` |
 | Runtime state (gates, dossiers, candidates, log) | `~/.contribute-system/` |
 
 None of those live in this repo — they live globally with your Claude Code config + a personal state directory. This repo is just the workspace where the upstream clones sit.
@@ -170,11 +173,12 @@ CI (runs on every PR to `master` + pushes to `master`):
 | `.github/workflows/ci.yml` | `shellcheck`, `bats` | static analysis of the gate scripts + the 260-case bats suite (51 gates + dashboard reporter) |
 | `.github/workflows/codeql.yml` | CodeQL | security scanning |
 
-PR review is **CodeRabbit** (`.coderabbit.yaml`) — switched off Gemini Code Assist in PR #56. The deterministic gate is the two CI workflows above.
+PR review is **CodeRabbit** (`.coderabbit.yaml`) — switched off Gemini Code Assist in PR #56. Estate-wide policy (2026-06-23) moved AI PR review to **Greptile**; `.coderabbit.yaml` gets removed when the GitHub App swap reaches this repo. Until then CodeRabbit still reviews PRs here. The deterministic gate is the two CI workflows above, unchanged by the bot transition.
 
 ```bash
-# Unit tests (bats — 260 cases: 51 gate files [one per gate, phases A–G] + dashboard.bats)
-bats tests/unit/gates/                       # all
+# Unit tests (bats — 260 cases = 252 gate cases [51 files, one per gate, phases A–G] + 8 dashboard.bats)
+bats tests/unit/gates/                       # all gate cases (252)
+bats tests/unit/*.bats                       # reporter suites (dashboard.bats lives OUTSIDE gates/)
 bats tests/unit/gates/a01-already-assigned.bats  # one file
 bats --verbose-run tests/unit/gates/         # show JSON of every gate verdict
 
@@ -405,7 +409,8 @@ node generate-pdf.js              # Generate PDFs from markdown
 - **2026-05-03** — repo renamed from `intent-solutions-io/contributions` → `jeremylongshore/contributing-clanker`; all bounty / payment framing dropped. This is a contribution tool, not a tracker or marketplace.
 - **2026-05-04** — Phase 1 build complete (all 9 epics + Slice 2 closed, 59/59 beads). 41 of 62 gates installed, 80 test assertions green, 11/11 governance files in place. Entered 30-day soak validation. Phase 2 (plugin packaging) gated on clean soak.
 - **2026-05-28 → 2026-06-07** — post-soak dogfood: trust-ladder rule landed (gates A07 + B13, PR #40), then content-fidelity gates C20-C25 (#41) hardened from the kobiton/automate PR-review round-trip; vendored audit-harness bumped to v1.1.5. Bead backlog grew past the original 59 (`bd stats` for live count).
-- **2026-06-16 → 2026-06-20** — gates C26 (coverage-readiness) + C27 (sibling-issue-scan) rescued; gate count now **51** (A=8, B=10, C=20, D=3, E=2, F=3, G=5). Test hardening: full bats coverage for all 51 gates — 252 cases, one `.bats` per gate (PR #54). CI rebuilt: CodeQL + deterministic gate workflow (#55), PR-review workhorse switched Gemini → CodeRabbit (#56), apt dropped from CI (#57). Scout `--refresh` now drops closed issues (#58); c22 no longer fail-closes under `set -e`. Added `scripts/dashboard.sh` — a local-only ASCII status dashboard (pipeline funnel / in-flight / shipped / suggested-next / timeline) now printed first by `/contribute` Step 0; +8 bats cases (260 total) with an alignment invariant guarding multibyte-title border drift.
+- **2026-06-16 → 2026-06-20** — gates C26 (coverage-readiness) + C27 (sibling-issue-scan) rescued; gate count now **51** (A=8, B=10, C=20, D=3, E=2, F=3, G=5). Test hardening: full bats coverage for all 51 gates — 250 cases, one `.bats` per gate (PR #54). CI rebuilt: CodeQL + deterministic gate workflow (#55), PR-review workhorse switched Gemini → CodeRabbit (#56), apt dropped from CI (#57). Scout `--refresh` now drops closed issues (#58).
+- **2026-06-21 → 2026-07-05** — added `scripts/dashboard.sh` (#60), a local-only ASCII status dashboard (pipeline funnel / in-flight / shipped / suggested-next / timeline) printed first by `/contribute` Step 0; +8 bats cases with an alignment invariant guarding multibyte-title border drift. Gate c22 no longer fail-closes under `set -e` (two increment bugs; +2 gate cases → 260 total, #61). Wasteland federation support landed (#62): the `wl claim → PR → wl done` flow, board→repo mapping, A-phase gate adaptations for federated claims, the `[wendy:github-mirror]` staleness trap, and the collaboration-surface inversion — all specified in `skills/contribute/references/wasteland-federation.md`.
 
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
