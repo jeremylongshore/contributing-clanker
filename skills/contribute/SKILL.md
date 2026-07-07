@@ -705,14 +705,17 @@ catching real risk that's being consistently dismissed. Either way, surface it.
 ### Daily recap email (cron-driven, deterministic)
 
 `scripts/contribute-daily-recap.sh` composes a personal daily recap from the
-existing reporters — no LLM anywhere in the correctness path. Body: a lead
-"Action needed (N)" block (stale claims, quiet PRs, overrides awaiting audit —
-each with a default next step), the `dashboard.sh --no-box` snapshot, a fixed
-2-day `log.jsonl` event window (1-day overlap cushion, no watermark file by
-design), and `audit-overrides.sh --since=7` as a trend footer. A quiet day
-collapses to a one-line heartbeat + pipeline count, valid ONLY on positive
-proof of a successful log read — a read failure is an alert, never a
-heartbeat.
+existing reporters — no LLM anywhere in the correctness path. It renders the
+Intent Solutions house email template (styled `<div>`, inline CSS, real HTML
+tables — same design language as the weekly growth rollup / posting packets;
+never raw text dumps). Body: stat tiles, a lead "Action needed (N)" card
+(stale claims, quiet PRs, overrides awaiting audit — each with a default next
+step), a pipeline funnel + in-flight table (the same data `dashboard.sh`
+renders in the terminal), a fixed 2-day `log.jsonl` event window (1-day
+overlap cushion, no watermark file by design), and the
+`audit-overrides.sh --since=7 --json` trend as a table. A quiet day collapses
+to a one-card heartbeat + pipeline count, valid ONLY on positive proof of a
+successful log read — a read failure is an alert, never a heartbeat.
 
 ```bash
 ${CLAUDE_SKILL_DIR}/scripts/contribute-daily-recap.sh --dry-run   # print HTML, send nothing

@@ -45,8 +45,9 @@ EOF
   run "$RECAP" --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"Action needed"* ]]
-  [[ "$output" == *"OVERRIDES    1 gate override(s)"* ]]
-  [[ "$output" == *"STALE CLAIM  old__claim__issue1.md"* ]]
+  [[ "$output" == *"1 gate override(s) in 7d"* ]]
+  [[ "$output" == *"Stale claim"* ]]
+  [[ "$output" == *"old__claim__issue1.md"* ]]
 }
 
 @test "fixed window includes an in-window event and excludes an out-of-window one" {
@@ -57,9 +58,9 @@ EOF
 
   run "$RECAP" --dry-run --window=2
   [ "$status" -eq 0 ]
-  # Scope to the recap's own events section — the embedded dashboard has its
-  # own (longer) timeline recency and may legitimately show older events.
-  events_section=$(printf '%s' "$output" | /usr/bin/awk '/<h2>Last 2d events/{f=1} /<h2>Override trend/{f=0} f')
+  # Scope to the recap's events section (between its heading and the
+  # override-trend heading).
+  events_section=$(printf '%s' "$output" | /usr/bin/awk '/Last 2d events/{f=1} /Override trend/{f=0} f')
   [[ "$events_section" == *"IN-WINDOW.md"* ]]
   [[ "$events_section" != *"OUT-WINDOW.md"* ]]
 }
@@ -98,7 +99,7 @@ EOF
   [[ "$output" == *"quiet day"* ]]
   [[ "$output" == *"Quiet day"* ]]
   [[ "$output" == *"1 active candidate"* ]]
-  [[ "$output" != *"<h2>Action needed"* ]]
+  [[ "$output" != *"Action needed"* ]]
 }
 
 @test "malformed historical lines are skipped and surfaced in the proof string" {

@@ -149,7 +149,7 @@ $SKILL_SCRIPTS/dashboard.sh                          # ASCII status dashboard (p
 $SKILL_SCRIPTS/dashboard.sh --no-box                 # same, frame stripped (for piping/grepping)
 $SKILL_SCRIPTS/audit-overrides.sh                    # per-gate override frequency
 $SKILL_SCRIPTS/audit-overrides.sh --since=30 --json  # filter + machine-readable
-$SKILL_SCRIPTS/contribute-daily-recap.sh --dry-run   # daily recap email, printed not sent (Action-needed + dashboard + 2d events + override trend)
+$SKILL_SCRIPTS/contribute-daily-recap.sh --dry-run   # daily recap email, printed not sent (house HTML template: tiles + Action-needed + pipeline + 2d events + override trend)
 $SKILL_SCRIPTS/contribute-daily-recap.sh             # compose + email (cron: 45 6 * * *; recipient CONTRIBUTE_RECAP_TO)
 $SKILL_SCRIPTS/catalog-coverage.sh                   # 000-docs/007 catalog → gate coverage
 
