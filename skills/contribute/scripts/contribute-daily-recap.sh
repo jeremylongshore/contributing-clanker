@@ -144,13 +144,14 @@ if [[ "$LINES_SCANNED" -gt 0 && "$PARSEABLE" -eq 0 ]]; then
   read_failure "0 of $LINES_SCANNED lines parseable in $LOG_JSONL"
 fi
 
-WINDOW_EVENTS=$(jq -c --arg since "$WINDOW_START" 'select(.ts? >= $since)' "$CLEAN_EVENTS_FILE" 2>>"$RUN_LOG" || true)
-
 # Meaningful events for the email body (committed transitions, overrides,
 # BLOCK verdicts). Everything else is plumbing noise at daily cadence.
-# TSV rows: ts <TAB> kind <TAB> detail — rendered as an HTML table.
-MEANINGFUL=$(/usr/bin/printf '%s\n' "$WINDOW_EVENTS" | jq -r '
-  select(.event == "transition_committed" or .event == "gate_override"
+# One jq pass straight off the clean-events file — no intermediate variable
+# round-tripped through an external printf (which would hit ARG_MAX on a
+# heavy window). TSV rows: ts <TAB> kind <TAB> detail.
+MEANINGFUL=$(jq -r --arg since "$WINDOW_START" '
+  select(.ts? >= $since)
+  | select(.event == "transition_committed" or .event == "gate_override"
          or (.event == "gate_run" and (.details.severity? // "") == "BLOCK"))
   | (if .event == "transition_committed" then
       [.ts, "state-change", "\(.details.candidate | split("/") | last) → \(.details.new_state)"]
@@ -158,7 +159,7 @@ MEANINGFUL=$(/usr/bin/printf '%s\n' "$WINDOW_EVENTS" | jq -r '
       [.ts, "override", "\(.details.gate): \(.details.reason)"]
     else
       [.ts, "block", "\(.details.gate) — \(.details.repo)"]
-    end) | @tsv' 2>/dev/null || true)
+    end) | @tsv' "$CLEAN_EVENTS_FILE" 2>/dev/null || true)
 EVENT_COUNT=0
 [[ -n "$MEANINGFUL" ]] && EVENT_COUNT=$(/usr/bin/printf '%s\n' "$MEANINGFUL" | /usr/bin/grep -c .)
 
@@ -170,11 +171,15 @@ ACTIONS=""
 action() { ACTIONS+="$1"$'\n'; }
 
 # Map each candidate to its last committed-transition timestamp (one jq pass).
+# Keyed by BASENAME, not absolute path — historical log entries carry the
+# runtime state dir's paths, which won't match under CONTRIBUTE_STATE_DIR
+# overrides or a relocated state dir. Candidate basenames are unique by
+# construction (owner__repo__issueN.md).
 declare -A LAST_TRANSITION=()
 while IFS=$'\t' read -r ts cand; do
   [[ -n "$cand" ]] && LAST_TRANSITION["$cand"]="$ts"
 done < <(jq -r 'select(.event == "transition_committed")
-                | [.ts, .details.candidate] | @tsv' "$CLEAN_EVENTS_FILE" 2>/dev/null || true)
+                | [.ts, (.details.candidate | split("/") | last)] | @tsv' "$CLEAN_EVENTS_FILE" 2>/dev/null || true)
 
 fm() { # fm <file> <key> — frontmatter value (first block only)
   /usr/bin/awk -v k="$2" '
@@ -220,7 +225,7 @@ if [[ -d "$CAND_DIR" ]]; then
     esac
     case "$status" in
       claimed|working)
-        d=$(days_since "${LAST_TRANSITION[$c]:-}" "$c")
+        d=$(days_since "${LAST_TRANSITION[$base]:-}" "$c")
         IN_FLIGHT+="${base}"$'\t'"${status}"$'\t'"${d}d"$'\n'
         if [[ "$d" -ge "$CLAIM_STALE_DAYS" ]]; then
           STALE_CLAIMS=$((STALE_CLAIMS + 1))
