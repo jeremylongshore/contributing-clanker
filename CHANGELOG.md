@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+(none)
+
+## [0.3.0] - 2026-07-06
+
+Minor release. Twenty days of test-driven hardening since v0.2.0: full bats coverage surfaced 6 real gate-logic bugs (one fail-OPEN) and all are fixed red-tests-first; CI was rebuilt on CodeQL + a deterministic shellcheck/bats lane; Wasteland federation and the ASCII status dashboard landed; and the system grew its first observability layer — a deterministic daily recap email in the house HTML template, live on cron. No breaking changes.
+
 ### Added
 
 - **Wasteland federation support** — the `wl claim → PR → wl done` flow, board→repo mapping, A-phase gate adaptations for federated claims, the `[wendy:github-mirror]` staleness trap, and the collaboration-surface inversion; specified in `references/wasteland-federation.md` (#62).

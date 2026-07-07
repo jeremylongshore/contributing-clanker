@@ -1,11 +1,11 @@
-# contributing-clanker v0.2.0
+# contributing-clanker v0.3.0
 
 Make AI-assisted open-source contributions land cleanly — caught by deterministic gates before they reach maintainers as slop.
 
 A local-only Claude Code skill plus workspace for contributing to open-source projects you don't own. It runs 51 deterministic safety gates over every claim comment, design issue, and pull request, so AI-generated work never reaches an upstream maintainer as low-quality "slop." State is plain markdown — greppable, git-trackable, no database, no cloud calls.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/jeremylongshore/contributing-clanker/blob/master/LICENSE)
-[![Release](https://img.shields.io/badge/release-v0.2.0-green.svg)](https://github.com/jeremylongshore/contributing-clanker/releases/tag/v0.2.0)
+[![Release](https://img.shields.io/badge/release-v0.3.0-green.svg)](https://github.com/jeremylongshore/contributing-clanker/releases/tag/v0.3.0)
 
 **Links:** [GitHub](https://github.com/jeremylongshore/contributing-clanker) · [Gist One-Pager](https://gist.github.com/jeremylongshore/ff44ab81d255fd183c2f14bdfbad2c14)
 
