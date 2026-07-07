@@ -20,6 +20,10 @@
 | 009 | OD-PLAN | [Phase 2 — Plugin Distribution Plan](009-OD-PLAN-plugin-distribution-phase-2.md) | Draft |
 | 010 | OD-RISK | [Operations and Risk Register](010-OD-RISK-operations-and-risk.md) | Draft |
 | 011 | DR-TMPL | [Community failure-mode submission template](011-DR-TMPL-community-failure-mode-submission.md) | Stable |
+| 012 | RL-RSRC | [MCP server target list](012-RL-RSRC-mcp-server-targets.md) | Stable |
+| 013 | AT-DECR | [Paradigm/Centaur engagement strategy decision](013-AT-DECR-paradigm-centaur-engagement-strategy-2026-06-02.md) | Stable |
+| 014 | RL-REPT | [Release v0.2.0 after-action report](014-RL-REPT-release-v0.2.0.md) | Stable |
+| 015 | RL-REPT | [Release v0.3.0 after-action report](015-RL-REPT-release-v0.3.0.md) | Stable |
 
 ---
 
