@@ -80,6 +80,40 @@ teardown() {
   assert_severity "WARN"
 }
 
+# The four tests below pin the tokens that were DEAD before the parallel-array
+# fix: tokens 1-3 were truncated at their first '|' into unbalanced-paren
+# regexes (grep exit 2, silently swallowed → fail-open), and token 7's '^\+'
+# anchor could never match because the diff extraction strips the leading '+'.
+# All four asserted PASS-when-should-WARN on master pre-fix.
+
+@test "WARN when an added line carries an engagement-internal finding ID (F12 + audit)" {
+  printf 'Resolves F12 audit finding from the engagement review.\n' > "$CLONE_DIR/finding.md"
+  /usr/bin/git -C "$CLONE_DIR" add . && /usr/bin/git -C "$CLONE_DIR" commit -qm 'finding'
+  run_gate "$GATE" "$CANDIDATE" "$DOSSIER" "working→submitted"
+  assert_severity "WARN"
+}
+
+@test "WARN when an added line carries a review-phase label (R2 audit)" {
+  printf 'Addressed in the R2 audit round.\n' > "$CLONE_DIR/phase.md"
+  /usr/bin/git -C "$CLONE_DIR" add . && /usr/bin/git -C "$CLONE_DIR" commit -qm 'phase'
+  run_gate "$GATE" "$CANDIDATE" "$DOSSIER" "working→submitted"
+  assert_severity "WARN"
+}
+
+@test "WARN when an added line carries engagement provenance language (Intent Solutions pilot)" {
+  printf 'Delivered under the Intent Solutions pilot program.\n' > "$CLONE_DIR/prov.md"
+  /usr/bin/git -C "$CLONE_DIR" add . && /usr/bin/git -C "$CLONE_DIR" commit -qm 'prov'
+  run_gate "$GATE" "$CANDIDATE" "$DOSSIER" "working→submitted"
+  assert_severity "WARN"
+}
+
+@test "WARN when an added line is a standalone author footer" {
+  printf 'Explains the retry loop.\n- Jeremy Longshore\n' > "$CLONE_DIR/footer.md"
+  /usr/bin/git -C "$CLONE_DIR" add . && /usr/bin/git -C "$CLONE_DIR" commit -qm 'footer'
+  run_gate "$GATE" "$CANDIDATE" "$DOSSIER" "working→submitted"
+  assert_severity "WARN"
+}
+
 @test "PASS when added lines contain no engagement-frame tokens" {
   printf 'Fix null-pointer in the date parser.\nAdd a guard clause for empty input.\n' > "$CLONE_DIR/fix.md"
   /usr/bin/git -C "$CLONE_DIR" add . && /usr/bin/git -C "$CLONE_DIR" commit -qm 'fix'

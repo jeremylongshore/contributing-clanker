@@ -37,25 +37,48 @@ if [[ -z "$DIFF_ADDED" ]]; then
 fi
 
 # Tokens that signal engagement-internal content has leaked.
-#   Each entry: regex | severity-hint-text
-declare -a TOKENS=(
-  '\bF[0-9]{1,3}\b.{0,40}(finding|audit|issue|catalog)|((finding|audit|issue|catalog).{0,40}\bF[0-9]{1,3}\b)|engagement-internal finding ID label'
-  'R[123][[:space:]]+(audit|review|deliverable|finding|§)|review-phase label (R1/R2/R3)'
-  'Intent Solutions (pilot|engagement|delivery|side)|engagement provenance language'
-  'op-rule[[:space:]]*#?[0-9]+|internal op-rule citation'
-  'partner=intentsolutions|engagement-internal userIntent format'
-  '000-docs/[0-9]+-[A-Z]+-[A-Z]+|cross-ref to private engagement workspace path'
-  '^\+[[:space:]]*-[[:space:]]Jeremy Longshore[[:space:]]*$|author footer in committed file content (DCO is the signature)'
+# Parallel arrays, NOT "regex|hint" strings: several regexes contain '|'
+# alternations, so any delimiter-split silently truncates them into
+# unbalanced-paren patterns grep can't compile (fail-open — the worst
+# failure class for a safety gate).
+# Note: each scanned line is "file:content" (the diff extraction strips the
+# leading '+'), so the footer token anchors on ':', not on '^\+'.
+declare -a TOKEN_REGEXES=(
+  '\bF[0-9]{1,3}\b.{0,40}(finding|audit|issue|catalog)|(finding|audit|issue|catalog).{0,40}\bF[0-9]{1,3}\b'
+  'R[123][[:space:]]+(audit|review|deliverable|finding|§)'
+  'Intent Solutions (pilot|engagement|delivery|side)'
+  'op-rule[[:space:]]*#?[0-9]+'
+  'partner=intentsolutions'
+  '000-docs/[0-9]+-[A-Z]+-[A-Z]+'
+  ':[[:space:]]*-[[:space:]]Jeremy Longshore[[:space:]]*$'
+)
+declare -a TOKEN_HINTS=(
+  'engagement-internal finding ID label'
+  'review-phase label (R1/R2/R3)'
+  'engagement provenance language'
+  'internal op-rule citation'
+  'engagement-internal userIntent format'
+  'cross-ref to private engagement workspace path'
+  'author footer in committed file content (DCO is the signature)'
 )
 
 FINDINGS=""
 N=0
 
 while IFS= read -r line; do
-  for entry in "${TOKENS[@]}"; do
-    regex="${entry%%|*}"
-    hint="${entry##*|}"
-    if echo "$line" | /usr/bin/grep -qE "$regex" 2>/dev/null; then
+  for i in "${!TOKEN_REGEXES[@]}"; do
+    regex="${TOKEN_REGEXES[$i]}"
+    hint="${TOKEN_HINTS[$i]}"
+    rc=0
+    echo "$line" | /usr/bin/grep -qE "$regex" || rc=$?
+    if [[ $rc -ge 2 ]]; then
+      # A gate that cannot evaluate its own rule must go loud, never
+      # silently pass — same fail-closed contract as the ERR trap.
+      gate_block \
+        "gate bug: token regex for '$hint' failed to evaluate (grep exit $rc)" \
+        "fix the regex in TOKEN_REGEXES — the gate refuses to pass while blind to one of its own tokens"
+    fi
+    if [[ $rc -eq 0 ]]; then
       FINDINGS+="${line%%:*}: ${hint}"$'\n'
       N=$((N + 1))
       break
