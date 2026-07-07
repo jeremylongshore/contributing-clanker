@@ -172,14 +172,14 @@ CI (runs on every PR to `master` + pushes to `master`):
 
 | Workflow | Jobs | What it gates |
 |---|---|---|
-| `.github/workflows/ci.yml` | `shellcheck`, `bats` | static analysis of the gate scripts + the 274-case bats suite (51 gates + reporters) |
+| `.github/workflows/ci.yml` | `shellcheck`, `bats` | static analysis of the gate scripts + the 276-case bats suite (51 gates + reporters) |
 | `.github/workflows/codeql.yml` | CodeQL | security scanning |
 
 PR review is **CodeRabbit** (`.coderabbit.yaml`) — switched off Gemini Code Assist in PR #56. Estate-wide policy (2026-06-23) moved AI PR review to **Greptile**; `.coderabbit.yaml` gets removed when the GitHub App swap reaches this repo. Until then CodeRabbit still reviews PRs here. The deterministic gate is the two CI workflows above, unchanged by the bot transition.
 
 ```bash
-# Unit tests (bats — 274 cases = 260 gate cases [51 files, one per gate, phases A–G] + 14 reporter cases [dashboard, daily recap])
-bats tests/unit/gates/                       # all gate cases (260)
+# Unit tests (bats — 276 cases = 262 gate cases [51 files, one per gate, phases A–G] + 14 reporter cases [dashboard, daily recap])
+bats tests/unit/gates/                       # all gate cases (262)
 bats tests/unit/*.bats                       # reporter suites (dashboard.bats lives OUTSIDE gates/)
 bats tests/unit/gates/a01-already-assigned.bats  # one file
 bats --verbose-run tests/unit/gates/         # show JSON of every gate verdict

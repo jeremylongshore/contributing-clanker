@@ -7,7 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-(none)
+### Added
+
+- **Wasteland federation support** — the `wl claim → PR → wl done` flow, board→repo mapping, A-phase gate adaptations for federated claims, the `[wendy:github-mirror]` staleness trap, and the collaboration-surface inversion; specified in `references/wasteland-federation.md` (#62).
+- **`scripts/dashboard.sh`** — local-only ASCII status dashboard (pipeline funnel / in-flight / shipped / suggested-next / timeline), printed first by `/contribute` Step 0; +8 bats cases with an alignment invariant guarding multibyte-title border drift (#60).
+- **`scripts/contribute-daily-recap.sh`** — deterministic personal daily recap email in the Intent Solutions house HTML template (stat tiles, Action-needed card, pipeline funnel + in-flight tables, event badges, override-trend table). Heartbeat only on positive log-read proof; fixed 2-day event window, no watermark by design; zero LLM in the correctness path. Live on the dev-box crontab at `45 6 * * *`; weekly team mode ready behind `--window`/`--to` flags (#66).
+- **Full bats coverage for all 51 gates** — one `.bats` per gate, genuine (non-tautological) assertions; surfaced 5 real gate-logic bugs, all since fixed (#54).
+- **CI rebuilt** — CodeQL + deterministic shellcheck/bats gate workflow (#55); apt dropped from CI in favor of preinstalled shellcheck/jq + npm bats, with job timeouts (#57).
+
+### Changed
+
+- **PR-review workhorse switched Gemini Code Assist → CodeRabbit** (#56); estate-wide Greptile transition noted for when the GitHub App swap reaches this repo.
+- **README reshaped** to the versioned product-landing standard (#53).
+- CLAUDE.md drift corrected against the tree — script counts, release machinery, support subagents, Wasteland reference, review-bot transition, #60–#62 history (#63).
+- `audit-overrides.sh` honors `CONTRIBUTE_STATE_DIR` (parity with `dashboard.sh`, testability) (#66).
+
+### Fixed
+
+- **Gate c24 `engagement-frame-leakage` was fail-OPEN** — its `|`-split TOKENS table truncated 3 regexes into unparseable patterns (grep exit 2 silently swallowed) and the author-footer anchor could never match the extracted line shape. Fixed red-tests-first with parallel token arrays, a re-anchored footer token, and a loud BLOCK when the gate cannot evaluate one of its own rules (#64).
+- **Gate c22 `cross-cli-vocabulary` fail-closed under `set -e`** — `((x++))` from 0 tripped the ERR trap on the first signal (#59, #61).
+- **Gates c26/c11/f04 dead branches revived** (#65): c26's no-new-functions SKIP was unreachable under `pipefail`; c11 emitted `0\n0` arithmetic stderr noise on every fast-forward PASS (now `git rev-list --count`); f04's disclosure-verify paths were dead (PR-body capture stopped at the disclosure's own `## ` heading) and lowercase gate IDs crashed the gate — capture now stops only at known candidate sections, ID extraction is case-insensitive, unparseable override lines fail loud.
+- **Gate e02 `ai-strike-track` crashed fail-closed on every `shortlist→claimed`** — strict jq aborted (exit 5) on historical torn `hook_intercept` log lines; now a tolerant per-line parse that still counts strikes past torn lines. Caught by the daily recap's block-event table on its first live day (#66).
+- **`log.jsonl` appends fail loud, never silent** — `gate_log_run` and all four `transition.sh` appends print a visible stderr WARN on write failure instead of swallowing it; the unguarded `gate_override` append could previously torn-abort a committed transition under `set -e` (#65).
+- `scout --refresh` drops closed issues — `--jq` scalar output broke `json.loads` (#58).
+- `tools/`: cosmiconfig js-yaml patched to 4.2.0; gray-matter residual documented (#52).
 
 ## [0.2.0] - 2026-06-16
 
