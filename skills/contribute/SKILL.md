@@ -702,6 +702,27 @@ sorted by override_rate desc. Gates overridden ≥50% of the time get flagged fo
 investigation — either the gate is too strict (false-positive heavy) or it's
 catching real risk that's being consistently dismissed. Either way, surface it.
 
+### Daily recap email (cron-driven, deterministic)
+
+`scripts/contribute-daily-recap.sh` composes a personal daily recap from the
+existing reporters — no LLM anywhere in the correctness path. Body: a lead
+"Action needed (N)" block (stale claims, quiet PRs, overrides awaiting audit —
+each with a default next step), the `dashboard.sh --no-box` snapshot, a fixed
+2-day `log.jsonl` event window (1-day overlap cushion, no watermark file by
+design), and `audit-overrides.sh --since=7` as a trend footer. A quiet day
+collapses to a one-line heartbeat + pipeline count, valid ONLY on positive
+proof of a successful log read — a read failure is an alert, never a
+heartbeat.
+
+```bash
+${CLAUDE_SKILL_DIR}/scripts/contribute-daily-recap.sh --dry-run   # print HTML, send nothing
+${CLAUDE_SKILL_DIR}/scripts/contribute-daily-recap.sh             # compose + email (cron mode)
+${CLAUDE_SKILL_DIR}/scripts/contribute-daily-recap.sh --window=8 --to="$TEAM_EMAILS"  # weekly team mode
+```
+
+Runs from cron at 6:45am daily (after the 6:30 analytics email). Recipient
+defaults to jeremy@intentsolutions.io (`CONTRIBUTE_RECAP_TO` overrides).
+
 ## Error Handling
 
 | Symptom | Likely cause | Recovery |

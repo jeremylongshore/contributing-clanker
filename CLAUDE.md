@@ -10,7 +10,7 @@ This is an OSS contribution workspace at `https://github.com/jeremylongshore/con
 
 | Path | What |
 |---|---|
-| `skills/contribute/` | The skill (SKILL.md + 5 agents + 66 scripts [15 top-level + 51 gates] + 3 templates + 4 references). **Single source of truth.** |
+| `skills/contribute/` | The skill (SKILL.md + 5 agents + 67 scripts [16 top-level + 51 gates] + 3 templates + 4 references). **Single source of truth.** |
 | `bin/install.sh` | Installs the skill into `~/.claude/skills/contribute/` (symlink for devs, copy for users) |
 | `bin/release-plugin.sh` + `release/hooks/` | Phase 2 machinery: rsyncs `skills/contribute/` into the marketplace plugin repo on a semver release (`--dry-run` supported); `release/hooks/` = the plugin's install/uninstall hooks |
 | `000-docs/` | Spec — what the skill must do (epics 1–10) |
@@ -149,6 +149,8 @@ $SKILL_SCRIPTS/dashboard.sh                          # ASCII status dashboard (p
 $SKILL_SCRIPTS/dashboard.sh --no-box                 # same, frame stripped (for piping/grepping)
 $SKILL_SCRIPTS/audit-overrides.sh                    # per-gate override frequency
 $SKILL_SCRIPTS/audit-overrides.sh --since=30 --json  # filter + machine-readable
+$SKILL_SCRIPTS/contribute-daily-recap.sh --dry-run   # daily recap email, printed not sent (Action-needed + dashboard + 2d events + override trend)
+$SKILL_SCRIPTS/contribute-daily-recap.sh             # compose + email (cron: 45 6 * * *; recipient CONTRIBUTE_RECAP_TO)
 $SKILL_SCRIPTS/catalog-coverage.sh                   # 000-docs/007 catalog → gate coverage
 
 # Query the event log
@@ -170,13 +172,13 @@ CI (runs on every PR to `master` + pushes to `master`):
 
 | Workflow | Jobs | What it gates |
 |---|---|---|
-| `.github/workflows/ci.yml` | `shellcheck`, `bats` | static analysis of the gate scripts + the 268-case bats suite (51 gates + dashboard reporter) |
+| `.github/workflows/ci.yml` | `shellcheck`, `bats` | static analysis of the gate scripts + the 274-case bats suite (51 gates + reporters) |
 | `.github/workflows/codeql.yml` | CodeQL | security scanning |
 
 PR review is **CodeRabbit** (`.coderabbit.yaml`) — switched off Gemini Code Assist in PR #56. Estate-wide policy (2026-06-23) moved AI PR review to **Greptile**; `.coderabbit.yaml` gets removed when the GitHub App swap reaches this repo. Until then CodeRabbit still reviews PRs here. The deterministic gate is the two CI workflows above, unchanged by the bot transition.
 
 ```bash
-# Unit tests (bats — 268 cases = 260 gate cases [51 files, one per gate, phases A–G] + 8 dashboard.bats)
+# Unit tests (bats — 274 cases = 260 gate cases [51 files, one per gate, phases A–G] + 14 reporter cases [dashboard, daily recap])
 bats tests/unit/gates/                       # all gate cases (260)
 bats tests/unit/*.bats                       # reporter suites (dashboard.bats lives OUTSIDE gates/)
 bats tests/unit/gates/a01-already-assigned.bats  # one file
