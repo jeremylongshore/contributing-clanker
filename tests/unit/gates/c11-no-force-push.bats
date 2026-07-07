@@ -64,23 +64,12 @@ _init_clone() {
   git -C "$CLONE" update-ref "refs/remotes/origin/$BRANCH" HEAD
   # Local adds commits on top of origin -> ahead only, behind 0.
   echo d > "$CLONE/i"; git -C "$CLONE" add i; git -C "$CLONE" commit -qm "ahead commit"
-  # NOTE: the gate emits a benign stderr line on the behind==0 path (its `grep -c .
-  # || echo 0` yields a "0\n0" token that trips a `[[ -gt ]]` comparison; the ERR
-  # trap is not reached and the verdict is still a correct PASS on stdout). bats'
-  # `run` merges stderr+stdout, so we must isolate stdout here rather than use the
-  # shared run_gate helper, otherwise the stderr noise corrupts the JSON parse.
-  local input_json verdict
-  input_json=$(jq -nc \
-    --arg candidate "$CANDIDATE" \
-    --arg dossier "$DOSSIER" \
-    --arg action "working→submitted" \
-    --arg repo "example-org/$REPO_NAME" \
-    '{candidate: $candidate, dossier: $dossier, action: $action, env: {repo: $repo, branch: ""}}')
-  verdict=$(echo "$input_json" | "$GATE" 2>/dev/null | jq -r '.severity')
-  [[ "$verdict" == "PASS" ]] || {
-    echo "expected PASS, got: $verdict"
-    return 1
-  }
+  # Inverted pin: uses the shared run_gate helper, which merges stderr into
+  # $output — so this asserts the behind==0 path emits CLEAN JSON with no
+  # stderr noise. (The old `grep -c . || echo 0` idiom produced a "0\n0" token
+  # that tripped [[ -gt ]] and dumped a bash error to stderr.)
+  run_gate "$GATE" "$CANDIDATE" "$DOSSIER" "working→submitted" "example-org/$REPO_NAME"
+  assert_severity "PASS"
 }
 
 @test "SKIP when no origin/<branch> tracking ref exists (first push)" {

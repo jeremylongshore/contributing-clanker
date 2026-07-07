@@ -51,8 +51,10 @@ if [[ ! -s "$DIFF_FILE" ]]; then
   gate_skip "could not compute branch diff against ${UPSTREAM_DEFAULT}"
 fi
 
-# Count new non-test functions added.
-NEW_FUNCS=$(/usr/bin/grep -E '^\+func ' "$DIFF_FILE" | /usr/bin/grep -vE '_test\.go' | /usr/bin/wc -l)
+# Count new non-test functions added. `|| true`: under pipefail a zero-match
+# grep fails the whole pipeline, which used to trip the ERR trap (BLOCK) and
+# made the NEW_FUNCS==0 SKIP below unreachable. wc still prints 0 either way.
+NEW_FUNCS=$(/usr/bin/grep -E '^\+func ' "$DIFF_FILE" | /usr/bin/grep -vE '_test\.go' | /usr/bin/wc -l || true)
 if [[ "$NEW_FUNCS" -eq 0 ]]; then
   gate_skip "no new functions in patch — coverage blindspot N/A"
 fi

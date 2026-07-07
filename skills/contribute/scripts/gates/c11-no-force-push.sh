@@ -22,8 +22,12 @@ if ! /usr/bin/git -C "$CLONE" rev-parse --verify "origin/$BRANCH" >/dev/null 2>&
   gate_skip "no origin/$BRANCH tracking ref — first push, force not implied"
 fi
 
-AHEAD=$(/usr/bin/git -C "$CLONE" log "origin/$BRANCH..HEAD" --oneline 2>/dev/null | /usr/bin/grep -c . || /usr/bin/echo 0)
-BEHIND=$(/usr/bin/git -C "$CLONE" log "HEAD..origin/$BRANCH" --oneline 2>/dev/null | /usr/bin/grep -c . || /usr/bin/echo 0)
+# rev-list --count prints exactly one integer — the old `git log | grep -c .
+# || echo 0` idiom emitted "0\n0" on the zero path (grep -c prints 0 AND exits
+# 1, so the fallback echo appended a second 0), tripping [[ -gt ]] with
+# stderr noise.
+AHEAD=$(/usr/bin/git -C "$CLONE" rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || /usr/bin/echo 0)
+BEHIND=$(/usr/bin/git -C "$CLONE" rev-list --count "HEAD..origin/$BRANCH" 2>/dev/null || /usr/bin/echo 0)
 
 if [[ "$AHEAD" -gt 0 && "$BEHIND" -gt 0 ]]; then
   gate_warn "branch diverges from origin/$BRANCH — push will require force; ensure no other contributors have local refs to this branch" "push directly only if you're the sole owner of this branch"

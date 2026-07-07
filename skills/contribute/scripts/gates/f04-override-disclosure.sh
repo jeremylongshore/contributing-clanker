@@ -17,11 +17,20 @@ if [[ -z "$OVERRIDES" ]]; then
   gate_pass "no overrides used; nothing to disclose"
 fi
 
-# Count overrides
-OVERRIDE_COUNT=$(/usr/bin/printf '%s\n' "$OVERRIDES" | /usr/bin/grep -c 'gate:' || /usr/bin/echo 0)
+# Count overrides. `|| true` (NOT `|| echo 0`): grep -c already prints 0 on
+# the zero path while exiting 1 — a fallback echo would append a second 0.
+OVERRIDE_COUNT=$(/usr/bin/printf '%s\n' "$OVERRIDES" | /usr/bin/grep -c 'gate:' || true)
 
-# Read PR body draft from candidate (## PR body section)
-PR_BODY=$(/usr/bin/awk '/^## PR body/{flag=1;next} /^## /{flag=0} flag' "$GATE_CANDIDATE_PATH" 2>/dev/null || /usr/bin/echo "")
+# Read PR body draft from candidate (## PR body section). The capture stops
+# only at KNOWN candidate-file sections (per references/candidate-file-format.md),
+# NOT at every `## ` heading — the PR body is markdown with its own `## `
+# headings, including the `## Safety override disclosure` section this gate
+# exists to verify. Stopping at any `## ` line made the disclosure heading
+# terminate the capture, so the verify paths below were dead code.
+PR_BODY=$(/usr/bin/awk '
+  /^## PR body[[:space:]]*$/ {flag=1; next}
+  /^## (Scope|Files to touch|Claim comment draft|PR title|Test results)[[:space:]]*$/ {flag=0}
+  flag' "$GATE_CANDIDATE_PATH" 2>/dev/null || /usr/bin/echo "")
 
 if [[ -z "$PR_BODY" ]]; then
   gate_inform "$OVERRIDE_COUNT overrides used but no PR body drafted yet — re-run at open-pr"
@@ -29,12 +38,20 @@ fi
 
 # Look for the disclosure section in the PR body
 if /usr/bin/printf '%s' "$PR_BODY" | /usr/bin/grep -qiE '^## (Safety override|Override) disclosure'; then
-  # Check that each override gate ID is mentioned in the body
+  # Check that each override gate ID is mentioned in the body.
+  # Case-insensitive extraction: the old [A-Z0-9]-only class made a lowercase
+  # `gate: a05` crash the gate (grep exit 1 → ERR trap), and the tempting
+  # `|| true` patch alone would have silently skipped that override from the
+  # check (fail-open). An unparseable override line goes into MISSING — loud,
+  # never silently ignored.
   MISSING=()
   while IFS= read -r OG; do
-    GID=$(/usr/bin/printf '%s' "$OG" | /usr/bin/grep -oP 'gate:\s*\K[A-Z0-9]+')
-    [[ -z "$GID" ]] && continue
-    if ! /usr/bin/printf '%s' "$PR_BODY" | /usr/bin/grep -qE "\b$GID\b"; then
+    GID=$(/usr/bin/printf '%s' "$OG" | /usr/bin/grep -oiP 'gate:\s*\K[A-Za-z0-9]+' || true)
+    if [[ -z "$GID" ]]; then
+      MISSING+=("(unparseable override line: ${OG})")
+      continue
+    fi
+    if ! /usr/bin/printf '%s' "$PR_BODY" | /usr/bin/grep -qiE "\b$GID\b"; then
       MISSING+=("$GID")
     fi
   done < <(/usr/bin/printf '%s\n' "$OVERRIDES" | /usr/bin/grep 'gate:')
