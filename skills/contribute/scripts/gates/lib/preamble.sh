@@ -91,7 +91,10 @@ gh_safe() {
   return 1
 }
 
-# Helper: log a gate run for observability. Append-only.
+# Helper: log a gate run for observability. Append-only. log.jsonl feeds the
+# audit reporters and the daily recap, so a failed append must be VISIBLE
+# (stderr — never stdout, which carries the verdict JSON) while still never
+# blocking the gate itself.
 gate_log_run() {
   local verdict="$1"
   /usr/bin/printf '%s\n' "$(jq -nc \
@@ -101,5 +104,6 @@ gate_log_run() {
     --arg repo "$GATE_REPO" \
     --arg verdict "$verdict" \
     '{ts: $ts, event: "gate_run", details: {gate: $gate, action: $action, repo: $repo, verdict: $verdict}}')" \
-    >> ~/.contribute-system/log.jsonl 2>/dev/null || true
+    >> ~/.contribute-system/log.jsonl 2>/dev/null \
+    || /usr/bin/printf 'WARN: %s could not append gate_run to ~/.contribute-system/log.jsonl — audit trail incomplete (gate not blocked)\n' "$_GATE_ID" >&2
 }

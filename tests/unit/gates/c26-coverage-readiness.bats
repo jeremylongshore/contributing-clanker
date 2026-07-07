@@ -95,12 +95,16 @@ EOF
   assert_severity "SKIP"
 }
 
-# NOTE: the gate's "no new functions -> SKIP" branch (around line 55) is
-# effectively unreachable. Under `set -o pipefail`, the NEW_FUNCS pipeline
-# `grep '^\+func ' | grep -vE '_test\.go' | wc -l` fails closed (BLOCK) when
-# either grep yields no matching lines, so any diff that would reach
-# NEW_FUNCS==0 trips the ERR trap instead. Documented here rather than tested
-# with a tautology; flag for the gate author if that SKIP path matters.
+# Inverted pin: this branch used to be unreachable — under `set -o pipefail`
+# the NEW_FUNCS pipeline failed closed (ERR trap → BLOCK) whenever either grep
+# had zero matches, so a func-less diff could never reach the SKIP at line 56.
+@test "SKIP when the diff adds no new functions" {
+  make_dossier "Go"
+  echo "// doc-only change, no new func" >> "$CLONE/base.go"
+  commit_branch
+  run_gate "$GATE" "$CANDIDATE" "$DOSSIER" "open-pr"
+  assert_severity "SKIP"
+}
 
 @test "PASS when new func is covered by an ungated test" {
   make_dossier "Go"

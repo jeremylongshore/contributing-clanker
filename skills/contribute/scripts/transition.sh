@@ -167,8 +167,12 @@ PYEOF
       OG="${OVERRIDES_NEW[$i]}"
       OR="${OVERRIDES_NEW[$((i+1))]}"
       i=$((i+2))
+      # || WARN: unguarded, a failed append would abort under set -e AFTER the
+      # candidate was already rewritten above — torn state, and the lost event
+      # is the override audit trail itself. Loud on stderr, never aborting.
       jq -nc --arg ts "$NOW" --arg gate "$OG" --arg reason "$OR" --arg cand "$CANDIDATE" \
-        '{ts: $ts, event: "gate_override", details: {gate: $gate, reason: $reason, candidate: $cand}}' >> "$LOG"
+        '{ts: $ts, event: "gate_override", details: {gate: $gate, reason: $reason, candidate: $cand}}' >> "$LOG" 2>/dev/null \
+        || /usr/bin/printf '[transition] WARN: could not append gate_override (%s) to %s — audit trail incomplete\n' "$OG" "$LOG" >&2
     done
   fi
 fi
@@ -214,7 +218,8 @@ if [[ "${#MISSING_SECTIONS[@]}" -gt 0 ]]; then
         --argjson missing "$MISSING_JSON" \
     '{ts: $ts, event: "transition_section_warn",
       details: {candidate: $cand, target_status: $target, missing_sections: $missing}}' \
-    >> "$LOG" 2>/dev/null || true
+    >> "$LOG" 2>/dev/null \
+    || /usr/bin/printf '[transition] WARN: could not append transition_section_warn to %s — audit trail incomplete\n' "$LOG" >&2
 fi
 
 # Run gate-runner
@@ -234,7 +239,8 @@ echo "$GATE_VERDICT"
 
 # Log the transition attempt
 jq -nc --arg ts "$NOW" --arg action "$ACTION" --arg cand "$CANDIDATE" --arg exit "$GATE_EXIT" --arg verdict "$GATE_VERDICT" \
-  '{ts: $ts, event: "transition_attempt", details: {action: $action, candidate: $cand, gate_exit: $exit | tonumber, gate_verdict: ($verdict | fromjson? // {raw: $verdict})}}' >> "$LOG" 2>/dev/null || true
+  '{ts: $ts, event: "transition_attempt", details: {action: $action, candidate: $cand, gate_exit: $exit | tonumber, gate_verdict: ($verdict | fromjson? // {raw: $verdict})}}' >> "$LOG" 2>/dev/null \
+  || /usr/bin/printf '[transition] WARN: could not append transition_attempt to %s — audit trail incomplete\n' "$LOG" >&2
 
 if [[ "$GATE_EXIT" -ne 0 ]]; then
   /usr/bin/printf '\n[transition] BLOCKED. Resolve the BLOCKers above or use --override-gate.\n\n' >&2
@@ -253,7 +259,8 @@ if [[ "$DRY_RUN" -eq 0 ]]; then
 
     # Log success
     jq -nc --arg ts "$NOW" --arg action "$ACTION" --arg cand "$CANDIDATE" --arg new_state "$NEW_STATE" \
-      '{ts: $ts, event: "transition_committed", details: {action: $action, candidate: $cand, new_state: $new_state}}' >> "$LOG" 2>/dev/null || true
+      '{ts: $ts, event: "transition_committed", details: {action: $action, candidate: $cand, new_state: $new_state}}' >> "$LOG" 2>/dev/null \
+      || /usr/bin/printf '[transition] WARN: could not append transition_committed to %s — audit trail incomplete\n' "$LOG" >&2
   fi
 fi
 

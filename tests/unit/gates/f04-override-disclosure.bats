@@ -6,23 +6,23 @@
 # then is meant to enforce a `## Safety override disclosure` section naming every
 # overridden gate ID.
 #
-# Reachable verdicts (covered below):
+# Verdicts covered below:
 #   PASS   — no overrides used (nothing to disclose)
+#   PASS   — disclosure section names every overridden gate ID
 #   INFORM — overrides used but no `## PR body` content drafted yet
 #   BLOCK  — overrides used, PR body drafted, no disclosure section
+#   BLOCK  — disclosure section present but an override ID is missing from it
 #
-# KNOWN GATE BUG / unreachable branches (documented, not force-tested):
-#   The gate extracts PR_BODY as the lines strictly between `## PR body` and the
-#   NEXT `## ` heading (awk: /^## PR body/{flag=1;next} /^## /{flag=0} flag).
-#   It then greps PR_BODY for `^## (Safety override|Override) disclosure`. But a
-#   `## Safety override disclosure` heading is itself a `## ` line, so it always
-#   TERMINATES the PR_BODY capture and is never contained in PR_BODY. Placing the
-#   disclosure immediately after `## PR body` yields an EMPTY PR_BODY → the gate
-#   reports INFORM ("no PR body drafted yet"). Consequently the gate's
-#   "disclosure section present" code path — both the all-IDs-named PASS and the
-#   missing-ID BLOCK — cannot fire through any normal sectioned candidate file.
-#   These two branches are intentionally NOT asserted here; doing so would
-#   require a candidate the system never produces. Filed as a gate-logic finding.
+# History: the PASS-disclosed and missing-ID-BLOCK branches were dead code
+# until the capture fix — PR_BODY was extracted up to the NEXT `## ` heading,
+# and `## Safety override disclosure` is itself a `## ` line, so the disclosure
+# could never appear inside PR_BODY. The capture now stops only at KNOWN
+# candidate-file sections, treating everything else as PR-body content. The
+# gate ID extraction is also case-insensitive now: a lowercase `gate: a05`
+# used to crash the gate (uppercase-only \K class → grep exit 1 → ERR trap),
+# and the tempting `|| true` patch would have silently SKIPPED the override
+# from the check entirely (fail-open). The lowercase fixture below proves
+# lowercase overrides are still DETECTED, guarding against that flip.
 
 load '../test_helper'
 
@@ -129,4 +129,93 @@ EOF
   run_gate "$GATE" "$TMP_CAND" "" "working→submitted" "example-org/example-repo"
   assert_severity "BLOCK"
   echo "$output" | jq -e '.reason | test("2 safety overrides")' >/dev/null
+}
+
+@test "PASS when the disclosure section names every overridden gate ID" {
+  TMP_CAND=$(mktemp)
+  cat > "$TMP_CAND" <<'EOF'
+---
+repo: example-org/example-repo
+issue_number: 1
+status: submitted
+overrides:
+  - gate: A05 reason: issue reopened by maintainer
+status_note: ready
+---
+
+## PR title
+fix: thing
+
+## PR body
+This PR fixes a thing.
+
+## Safety override disclosure
+- A05: issue reopened by maintainer, confirmed in comment thread
+
+## Test results
+all pass
+EOF
+  run_gate "$GATE" "$TMP_CAND" "" "working→submitted" "example-org/example-repo"
+  assert_severity "PASS"
+}
+
+@test "BLOCK names the missing gate ID when the disclosure section omits one" {
+  TMP_CAND=$(mktemp)
+  cat > "$TMP_CAND" <<'EOF'
+---
+repo: example-org/example-repo
+issue_number: 1
+status: submitted
+overrides:
+  - gate: A05 reason: issue reopened by maintainer
+  - gate: B13 reason: scope pre-approved in design issue
+status_note: ready
+---
+
+## PR title
+fix: thing
+
+## PR body
+This PR fixes a thing.
+
+## Safety override disclosure
+- A05: issue reopened by maintainer
+
+## Test results
+all pass
+EOF
+  run_gate "$GATE" "$TMP_CAND" "" "working→submitted" "example-org/example-repo"
+  assert_severity "BLOCK"
+  echo "$output" | jq -e '.reason | test("B13")' >/dev/null
+}
+
+@test "lowercase gate IDs are still detected (guards the fail-open flip)" {
+  # A lowercase override that is NOT disclosed must BLOCK and name the ID —
+  # never crash, and never be silently skipped from the check.
+  TMP_CAND=$(mktemp)
+  cat > "$TMP_CAND" <<'EOF'
+---
+repo: example-org/example-repo
+issue_number: 1
+status: submitted
+overrides:
+  - gate: a05 reason: issue reopened by maintainer
+status_note: ready
+---
+
+## PR title
+fix: thing
+
+## PR body
+This PR fixes a thing.
+
+## Safety override disclosure
+- B99: some other override entirely
+
+## Test results
+all pass
+EOF
+  run_gate "$GATE" "$TMP_CAND" "" "working→submitted" "example-org/example-repo"
+  assert_severity "BLOCK"
+  echo "$output" | jq -e '.reason | test("a05")' >/dev/null
 }
