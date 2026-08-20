@@ -7,9 +7,9 @@
     "pdf": "node --env-file=.env generate-pdf.js"
   },
   "dependencies": {
-    "resend": "^4.0.0",
     "md-to-pdf": "^5.2.0",
-    "puppeteer": "^24.0.0"
+    "puppeteer": "^25.8.0",
+    "resend": "^4.0.0"
   },
   "comments": {
     "overrides": "GHSA-h67p-54hq-rp68 (js-yaml <=4.1.1 merge-key DoS). cosmiconfig's js-yaml is bumped to the patched 4.2.0. The OTHER instance (md-to-pdf -> gray-matter -> js-yaml@3.x) is NOT overridable: gray-matter (latest 4.0.3) calls the js-yaml 3.x safeLoad/safeDump API that 4.x removed, so forcing 4.x breaks frontmatter parsing, and npm's only audit-fix is a md-to-pdf 1.1.0 downgrade that breaks the PDF tool. That residual is accepted: dev-only tooling, gray-matter only parses our own authored markdown frontmatter (never untrusted input), and no upstream fix exists. See bead i4y.5."
