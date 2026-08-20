@@ -35,6 +35,10 @@ Examples:
     const pdf = await mdToPdf(
       { path: inputFile },
       {
+        // The dev box disables unprivileged user namespaces (AppArmor), so
+        // Chrome's sandbox cannot start. Safe here: this tool renders only
+        // our own authored markdown, never untrusted input.
+        launch_options: { args: ['--no-sandbox'] },
         pdf_options: {
           format: 'A4',
           margin: { top: '20mm', bottom: '20mm', left: '20mm', right: '20mm' },
