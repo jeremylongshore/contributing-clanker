@@ -68,6 +68,76 @@ fm_field() {
   ' "$file"
 }
 
+# Resolve the content tree a submission-content gate (c28+) should scan.
+# Two modes:
+#   full — the candidate path IS a repo directory (e.g. the omarchy-submit
+#          action passes the entry repo dir directly): scan the whole tree.
+#   diff — normal contribute flow: candidate is a markdown file; scan only
+#          the lines ADDED on the working branch vs the default branch in
+#          the local clone (never block on upstream's own prose).
+# Sets: GATE_TREE_DIR ('' if no tree), GATE_TREE_MODE ('full'|'diff'|''),
+#       GATE_TREE_BASE (diff-mode base branch).
+gate_resolve_tree() {
+  GATE_TREE_DIR="" ; GATE_TREE_MODE="" ; GATE_TREE_BASE="main"
+  if [[ -d "$GATE_CANDIDATE_PATH" ]]; then
+    GATE_TREE_DIR="$GATE_CANDIDATE_PATH"
+    GATE_TREE_MODE="full"
+  else
+    local repo_name="${GATE_REPO##*/}"
+    if [[ -n "$repo_name" && -d "$HOME/000-projects/contributing-clanker/$repo_name/.git" ]]; then
+      GATE_TREE_DIR="$HOME/000-projects/contributing-clanker/$repo_name"
+      GATE_TREE_MODE="diff"
+      local db=""
+      [[ -n "$GATE_DOSSIER_PATH" && -f "$GATE_DOSSIER_PATH" ]] && db=$(fm_field "$GATE_DOSSIER_PATH" "default_branch")
+      [[ -n "$db" ]] && GATE_TREE_BASE="$db"
+    fi
+  fi
+  export GATE_TREE_DIR GATE_TREE_MODE GATE_TREE_BASE
+}
+
+# List files to scan, relative to GATE_TREE_DIR, filtered by an egrep pattern
+# on the path. full mode: git-tracked files (fallback: find, .git excluded).
+# diff mode: files added or modified vs the base branch.
+# Usage: gate_tree_files '\.(md|json|svg)$'
+gate_tree_files() {
+  local pat="$1"
+  [[ -n "$GATE_TREE_DIR" ]] || return 0
+  if [[ "$GATE_TREE_MODE" == "full" ]]; then
+    if [[ -d "$GATE_TREE_DIR/.git" ]]; then
+      /usr/bin/git -C "$GATE_TREE_DIR" ls-files 2>/dev/null
+    else
+      ( cd "$GATE_TREE_DIR" && /usr/bin/find . -type f -not -path './.git/*' | /usr/bin/sed 's#^\./##' )
+    fi
+  else
+    /usr/bin/git -C "$GATE_TREE_DIR" diff "$GATE_TREE_BASE..HEAD" --name-only --diff-filter=AM 2>/dev/null
+  fi | /usr/bin/grep -E "$pat" || true
+}
+
+# Emit the scannable content of one tree file. full mode: the whole file.
+# diff mode: only the ADDED lines vs the base branch ('+' prefix stripped) —
+# a gate must never fire on lines the contributor didn't write.
+gate_file_content() {
+  local rel="$1"
+  [[ -n "$GATE_TREE_DIR" ]] || return 0
+  if [[ "$GATE_TREE_MODE" == "full" ]]; then
+    /usr/bin/cat "$GATE_TREE_DIR/$rel" 2>/dev/null || true
+  else
+    /usr/bin/git -C "$GATE_TREE_DIR" diff "$GATE_TREE_BASE..HEAD" -U0 -- "$rel" 2>/dev/null \
+      | /usr/bin/grep '^+' | /usr/bin/grep -v '^+++' | /usr/bin/cut -c2- || true
+  fi
+}
+
+# Extract the outbound draft sections of a candidate file (the text that will
+# actually be posted to a maintainer). Empty if candidate is not a file.
+gate_candidate_outbound() {
+  [[ -f "$GATE_CANDIDATE_PATH" ]] || return 0
+  /usr/bin/awk '
+    /^## (PR title|PR body|Issue title|Issue body|Claim comment draft|Maintainer notes)/ {flag=1; next}
+    /^## / {flag=0}
+    flag {print}
+  ' "$GATE_CANDIDATE_PATH" 2>/dev/null || true
+}
+
 # gh wrapper with bounded retry.
 #
 # Constraint: gate-runner enforces a 10s wall-clock timeout per gate. gh_safe

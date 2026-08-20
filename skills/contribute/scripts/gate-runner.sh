@@ -48,6 +48,10 @@ case "$ACTION" in
   "flip-to-ready")         PHASES="C" ;;
   "post-comment")          PHASES="D" ;;
   "open-issue")            PHASES="D" ;;
+  # Pre-submit sweep for an Omarchy marketplace entry. The candidate arg is
+  # the entry's REPO DIRECTORY (not a candidate .md): content gates (c28+)
+  # scan the whole tree; gates needing a candidate file or clone self-skip.
+  "omarchy-submit")        PHASES="C E F G" ;;
   *)                       PHASES="A B C D E F G" ;; # unknown: run everything
 esac
 
@@ -59,9 +63,19 @@ if [[ -n "$DOSSIER" && -f "$DOSSIER" ]]; then
   }' "$DOSSIER" 2>/dev/null || /usr/bin/echo "")
 fi
 
-# Read repo + branch from candidate frontmatter
-REPO=$(/usr/bin/awk '/^---$/{fm=!fm?1:2;next} fm==1 && /^repo:/{sub(/^repo:[[:space:]]*/,""); print; exit}' "$CANDIDATE" 2>/dev/null || /usr/bin/echo "")
-BRANCH=$(/usr/bin/awk '/^---$/{fm=!fm?1:2;next} fm==1 && /^branch:/{sub(/^branch:[[:space:]]*/,""); print; exit}' "$CANDIDATE" 2>/dev/null || /usr/bin/echo "")
+# Read repo + branch. Candidate is normally a markdown file with frontmatter;
+# for directory candidates (omarchy-submit) derive from the dir's git remote,
+# falling back to local/<basename> so clone-convention gates skip cleanly
+# instead of resolving an empty repo name to a bogus clone path.
+if [[ -d "$CANDIDATE" ]]; then
+  REPO=$(/usr/bin/git -C "$CANDIDATE" remote get-url origin 2>/dev/null \
+    | /usr/bin/sed -E 's#^(git@github\.com:|https://github\.com/)##; s#\.git$##' || /usr/bin/echo "")
+  [[ -z "$REPO" ]] && REPO="local/$(/usr/bin/basename "$CANDIDATE")"
+  BRANCH=$(/usr/bin/git -C "$CANDIDATE" rev-parse --abbrev-ref HEAD 2>/dev/null || /usr/bin/echo "")
+else
+  REPO=$(/usr/bin/awk '/^---$/{fm=!fm?1:2;next} fm==1 && /^repo:/{sub(/^repo:[[:space:]]*/,""); print; exit}' "$CANDIDATE" 2>/dev/null || /usr/bin/echo "")
+  BRANCH=$(/usr/bin/awk '/^---$/{fm=!fm?1:2;next} fm==1 && /^branch:/{sub(/^branch:[[:space:]]*/,""); print; exit}' "$CANDIDATE" 2>/dev/null || /usr/bin/echo "")
+fi
 
 # Build the input JSON once (passed to every gate)
 INPUT_JSON=$(jq -nc \

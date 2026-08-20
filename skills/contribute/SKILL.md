@@ -504,6 +504,35 @@ sed -i "s/^pr_number:.*/pr_number: <num>/; s|^pr_url:.*|pr_url: <url>|" \
   ~/.contribute-system/candidates/<owner>__<repo>__issue<N>.md
 ```
 
+**Omarchy submission lane (`omarchy-submit`)** — for a marketplace entry the
+user owns (a whole repo, not an upstream diff), the candidate argument is the
+entry's repo directory:
+
+```bash
+~/.contribute-system/bin/gate-runner.sh omarchy-submit ~/000-projects/<entry-repo>
+```
+
+This runs the C/E/F/G phases against the full tree. The submission-content
+gates (c28+) exist because these defects actually shipped in past entries and
+were only caught by hand or by a post-submit review panel:
+
+| Gate | Catches | Verdict |
+|---|---|---|
+| c28 voice-no-dashes | em/en dashes in shipped prose or outbound drafts | BLOCK |
+| c29 private-names | denylisted private names (`~/.contribute-system/private-names.txt`) in content or filenames | BLOCK |
+| c30 md-strikethrough | tilde pairs GitHub renders as strikethrough | WARN |
+| c31 omarchy-qml-security | `Text` binding data with no `textFormat` (AutoText sniffing); curl argv with no `--max-filesize` | BLOCK |
+| c32 omarchy-validate | `omarchy-plugin-validate` failure (self-skips if the binary is absent; run on the rig) | BLOCK |
+| c33 qmllint | qmllint errors (warnings advisory; self-skips if absent) | BLOCK on error |
+
+c28-c30 also run in the normal `working→submitted` flow, scanning only lines
+the contributor ADDED plus the drafted PR/issue body, so upstream's own prose
+never blocks. The run must be green before the submission issue is drafted;
+the honest boundary is that these gates catch the deterministic slice only —
+taste findings (over-configuration, dead-code altitude, AI-sounding copy)
+remain a review-agent judgment call. Regression suite:
+`scripts/test-submission-gates.sh`.
+
 ### Reconciliation
 
 Periodically (or on user request "reconcile candidates"), check candidates with a `pr_number:` field against live GitHub state:
