@@ -4,7 +4,10 @@
 # banner SVG shipped to a public repo, then swept by hand. The operator's
 # voice bans them; a maintainer reads them as AI slop.
 # Scope: .md / .json / .svg / .txt content the contributor authored (full tree
-# for dir candidates, added lines only for clone diffs) plus the outbound
+# for dir candidates, added lines only for clone diffs), plus the STRING
+# LITERALS of .qml / .js / .mjs files (a rendered tooltip shipped em dashes
+# through the original md-only scope — MLB Booth panel review, 2026-08-20;
+# code comments stay exempt, dashes are fine prose there), plus the outbound
 # draft sections of the candidate file.
 source "$(dirname "$0")/lib/preamble.sh"
 
@@ -22,6 +25,14 @@ if [[ -n "$GATE_TREE_DIR" ]]; then
       HITS="${HITS}${REL},"
     fi
   done < <(gate_tree_files '\.(md|json|svg|txt)$')
+
+  # Code files: only what a user can see — double-quoted string literals.
+  while IFS= read -r REL; do
+    [[ -n "$REL" ]] || continue
+    if gate_file_content "$REL" | /usr/bin/grep -o '"[^"]*"' | /usr/bin/grep -q -e "$EM" -e "$EN"; then
+      HITS="${HITS}${REL} (string literal),"
+    fi
+  done < <(gate_tree_files '\.(qml|js|mjs)$')
 fi
 
 if gate_candidate_outbound | /usr/bin/grep -q -e "$EM" -e "$EN"; then
