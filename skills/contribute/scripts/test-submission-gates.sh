@@ -78,6 +78,15 @@ T=$(make_tree c28-endash "manifest.json" '{"desc":"laps 1–5"}')
 assert_severity "  en dash in manifest.json MUST BLOCK" "BLOCK" "$(gate_severity c28-voice-no-dashes.sh "$T")"
 T=$(make_tree c28-clean "README.md" "A widget for the bar. Deep live data, plain voice." "assets/banner.svg" "<svg><text>PIT WALL</text></svg>")
 assert_severity "  clean prose MUST PASS" "PASS" "$(gate_severity c28-voice-no-dashes.sh "$T")"
+T=$(make_tree c28-qml-literal "Panel.qml" 'Item {
+  property string tooltip: "Widget — loading"
+}')
+assert_severity "  em dash in a QML string literal MUST BLOCK" "BLOCK" "$(gate_severity c28-voice-no-dashes.sh "$T")"
+T=$(make_tree c28-qml-comment "Panel.qml" '// data state — last-good values stay visible
+Item {
+  property string tooltip: "Widget: loading"
+}')
+assert_severity "  em dash only in a QML comment MUST PASS" "PASS" "$(gate_severity c28-voice-no-dashes.sh "$T")"
 
 # ---- C29: private names ----
 /usr/bin/printf 'C29 private-names\n'
