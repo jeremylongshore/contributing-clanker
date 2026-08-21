@@ -38,9 +38,13 @@ green()  { /usr/bin/printf '\033[32m%s\033[0m' "$1"; }
 # Run one gate with a directory candidate; echo its severity.
 gate_severity() {
   local gate="$1" tree="$2"
+  # Optional third argument overrides the action. Some gates are deliberately
+  # advisory outside submit time, and a helper that can only speak one action
+  # cannot express that difference.
+  local action="${3:-omarchy-submit}"
   local input
-  input=$(jq -nc --arg c "$tree" \
-    '{candidate: $c, dossier: "", action: "omarchy-submit", env: {repo: "test/synthetic-entry", branch: "main"}}')
+  input=$(jq -nc --arg c "$tree" --arg a "$action" \
+    '{candidate: $c, dossier: "", action: $a, env: {repo: "test/synthetic-entry", branch: "main"}}')
   local out
   out=$(/usr/bin/printf '%s' "$input" | "$GATES/$gate" 2>/dev/null)
   [[ "$VERBOSE" == "--verbose" ]] && /usr/bin/printf '    %s\n' "$out" >&2
@@ -286,6 +290,150 @@ else
 fi
 
 /usr/bin/echo
+# ---- Vendored gate lane must not scan its own detector sources ----
+# A candidate repo may vendor this lane so the checks run in its own CI
+# (enforcement travels with the code). That puts the detectors inside the tree
+# they scan, and c34's source necessarily contains an example of the injection
+# it hunts. Observed for real: omarchy-widget-template's first gated CI run
+# failed on gate source while every shipped plugin file was clean.
+/usr/bin/printf 'Vendored gate lane self-scan\n'
+T="$TMPDIR/vendored-gates"
+/usr/bin/mkdir -p "$T/scripts/gates/lib" "$T"
+/usr/bin/printf '{"entryPoints":{"barWidget":"BarWidget.qml"}}\n' > "$T/manifest.json"
+# clean shipped plugin code: the exec value is single quoted
+/usr/bin/printf 'Item { function n(u){ Util.execDetached(["x","--exec","xdg-open %s"+u+"%s"]) } }\n' "'" "'" > "$T/BarWidget.qml"
+# vendored detector source carrying the unquoted example it hunts for
+/usr/bin/printf '# example of the bad pattern: "--exec", "xdg-open " + it.url\n' > "$T/scripts/gates/c34-omarchy-exec-injection.sh"
+assert_severity "  clean plugin + vendored gate sources MUST PASS c34" "PASS" "$(gate_severity c34-omarchy-exec-injection.sh "$T")"
+# and the exclusion must not blind the gate to real shipped code
+/usr/bin/printf 'Item { function n(u){ Util.execDetached(["x","--exec","xdg-open " + u]) } }\n' > "$T/BarWidget.qml"
+assert_severity "  unquoted exec in SHIPPED code MUST still BLOCK c34" "BLOCK" "$(gate_severity c34-omarchy-exec-injection.sh "$T")"
+
+# ---- C36: QML text that renders past the edge of its panel ----
+# Caught three times by eye and never by a test, because the four plugins carry
+# 240 offline tests between them and not one exercises a .qml file. It reached a
+# marketplace preview.png whose footer reads "The spend meter is y".
+/usr/bin/printf 'C36 QML text overflow\n'
+T="$TMPDIR/c36"
+/usr/bin/mkdir -p "$T"
+/usr/bin/printf '{"entryPoints":{"barWidget":"BarWidget.qml"}}\n' > "$T/manifest.json"
+# an unbounded LONG LITERAL is the exact shape that shipped
+/usr/bin/printf 'Item { Text { text: "Buckets and quotes, never a sentiment score. The spend meter is your bill, live." } }\n' > "$T/Panel.qml"
+assert_severity "  long literal with no bound MUST BLOCK" "BLOCK" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+# an unbounded BOUND text: length is not under the author's control at all
+/usr/bin/printf 'Item { Text { text: modelData.title } }\n' > "$T/Panel.qml"
+assert_severity "  bound text with no bound MUST BLOCK" "BLOCK" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+# the three accepted bounds each clear it
+/usr/bin/printf 'Item { Text { text: modelData.title; elide: Text.ElideRight; width: 100 } }\n' > "$T/Panel.qml"
+assert_severity "  bound text WITH elide and width MUST PASS" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+/usr/bin/printf 'Item { Text { text: "Buckets and quotes, never a sentiment score. The spend meter is your bill."; wrapMode: Text.WordWrap } }\n' > "$T/Panel.qml"
+assert_severity "  long literal WITH wrapMode MUST PASS" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+# a short static label is not a defect and must not be flagged, or the gate is noise
+/usr/bin/printf 'Item { Text { text: "SCHEDULE" } }\n' > "$T/Panel.qml"
+assert_severity "  short static label MUST PASS (no false positive)" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+# and it must not fire outside an Omarchy plugin tree
+/usr/bin/rm -f "$T/manifest.json"
+assert_severity "  non-plugin tree MUST SKIP" "SKIP" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+
+# A bare identifier is still computed text. Matching only dotted paths missed
+# `text: someProperty` entirely, which is how an attacker-controlled author
+# login reached a row unbounded in the docket panel.
+/usr/bin/printf 'Item { readonly property string reasonText: "x"; Text { text: reasonText } }\n' > "$T/Panel.qml"
+/usr/bin/printf '{"entryPoints":{"barWidget":"BarWidget.qml"}}\n' > "$T/manifest.json"
+assert_severity "  bare-identifier bound text MUST BLOCK" "BLOCK" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+/usr/bin/printf 'Item { readonly property string reasonText: "x"; Text { text: reasonText; width: 80; elide: Text.ElideRight } }\n' > "$T/Panel.qml"
+assert_severity "  bare-identifier WITH bound MUST PASS" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+
+# A `text:` that opens a multi-line JavaScript BLOCK is computed text, but the
+# value captured on the `text:` line is only the brace, so the computed-text
+# test scored it as a bare literal and the entire block escaped C36. The Docket
+# hero subtitle used exactly this form, passed the gate, and rendered clipped in
+# the first live rig capture: "... 101 newer not fetched . c", with "checked
+# just now" sheared off at the panel edge.
+T="$TMPDIR/c36block"
+/usr/bin/mkdir -p "$T"
+/usr/bin/printf '{"entryPoints":{"barWidget":"BarWidget.qml"}}\n' > "$T/manifest.json"
+/usr/bin/cat > "$T/Panel.qml" <<'QML'
+import QtQuick
+Item {
+  Text {
+    text: {
+      var s = root.laneCounts.total + " on your docket"
+      if (root.fetchNotice) s += " - " + root.fetchNotice
+      return s
+    }
+    textFormat: Text.PlainText
+  }
+}
+QML
+assert_severity "  block-form computed text with no bound MUST BLOCK" "BLOCK" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+/usr/bin/cat > "$T/Panel.qml" <<'QML'
+import QtQuick
+Item {
+  Text {
+    width: heroCol.width
+    wrapMode: Text.WordWrap
+    text: {
+      var s = root.laneCounts.total + " on your docket"
+      if (root.fetchNotice) s += " - " + root.fetchNotice
+      return s
+    }
+    textFormat: Text.PlainText
+  }
+}
+QML
+assert_severity "  block-form computed text WITH width+wrapMode MUST PASS" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+
+# Historical regression: the real defect as it stood in omarchy-docket-entry at
+# abd3583, the commit whose preview.png capture exposed it. Skipped rather than
+# failed where that repo is not on the box, so the suite stays portable.
+DOCKET_REPO="/home/jeremy/000-projects/omarchy-docket-entry"
+DOCKET_SHA="abd3583"
+if [[ -d "$DOCKET_REPO/.git" ]] && git -C "$DOCKET_REPO" cat-file -e "$DOCKET_SHA^{commit}" 2>/dev/null; then
+  HIST="$TMPDIR/c36-hist"
+  if git -C "$DOCKET_REPO" worktree add -q --detach "$HIST" "$DOCKET_SHA" 2>/dev/null; then
+    assert_severity "  historical omarchy-docket-entry@$DOCKET_SHA MUST BLOCK" "BLOCK" "$(gate_severity c36-omarchy-qml-overflow.sh "$HIST")"
+    git -C "$DOCKET_REPO" worktree remove --force "$HIST" 2>/dev/null
+  else
+    /usr/bin/printf '  %-62s SKIP (worktree unavailable)\n' "historical omarchy-docket-entry@$DOCKET_SHA"
+  fi
+else
+  /usr/bin/printf '  %-62s SKIP (repo/sha absent)\n' "historical omarchy-docket-entry@$DOCKET_SHA"
+fi
+
+# ---- C37: a submission that never ran on a real Omarchy ----
+# C32 and C33 gate_skip when omarchy-plugin-validate and qmllint are missing,
+# and they always are off-rig, and the runner counts SKIP as pass. The lane
+# printed "verdict PASS, 0 BLOCK" for plugins that had never touched a rig.
+/usr/bin/printf 'C37 rig receipt\n'
+T="$TMPDIR/c37"
+/usr/bin/mkdir -p "$T"
+/usr/bin/printf '{"entryPoints":{"barWidget":"BarWidget.qml"}}\n' > "$T/manifest.json"
+/usr/bin/printf 'Item { Text { text: "x" } }\n' > "$T/Panel.qml"
+assert_severity "  no receipt at submit MUST BLOCK" "BLOCK" "$(gate_severity c37-omarchy-rig-proof.sh "$T" omarchy-submit)"
+assert_severity "  no receipt outside submit MUST SKIP" "SKIP" "$(gate_severity c37-omarchy-rig-proof.sh "$T" open-pr)"
+
+FP=$( ( cd "$T" && /usr/bin/find . -maxdepth 2 \( -name '*.qml' -o -name 'manifest.json' \) -not -path './.git/*' -not -path './tests/*' -print0 | LC_ALL=C /usr/bin/sort -z | /usr/bin/xargs -0 /usr/bin/cat | /usr/bin/sha256sum | /usr/bin/cut -d' ' -f1 ) )
+/usr/bin/jq -n --arg fp "$FP" --argjson at "$(/usr/bin/date +%s)" \
+  '{fingerprint:$fp, rig:"test", omarchyPluginValidate:0, qmllintErrors:0, validatedAtEpoch:$at}' > "$T/.rig-proof.json"
+assert_severity "  valid receipt MUST PASS" "PASS" "$(gate_severity c37-omarchy-rig-proof.sh "$T" omarchy-submit)"
+
+# The property that makes a receipt worth anything: it cannot certify code
+# nobody ran.
+/usr/bin/printf 'Item { Text { text: "changed" } }\n' > "$T/Panel.qml"
+assert_severity "  receipt for DIFFERENT qml MUST BLOCK" "BLOCK" "$(gate_severity c37-omarchy-rig-proof.sh "$T" omarchy-submit)"
+
+# A failing rig run must not look like never having run.
+/usr/bin/printf 'Item { Text { text: "x" } }\n' > "$T/Panel.qml"
+/usr/bin/jq -n --arg fp "$FP" --argjson at "$(/usr/bin/date +%s)" \
+  '{fingerprint:$fp, rig:"test", omarchyPluginValidate:1, qmllintErrors:0, validatedAtEpoch:$at}' > "$T/.rig-proof.json"
+assert_severity "  receipt recording a FAILED validate MUST BLOCK" "BLOCK" "$(gate_severity c37-omarchy-rig-proof.sh "$T" omarchy-submit)"
+
+# An old receipt describes a shell that has since moved.
+/usr/bin/jq -n --arg fp "$FP" --argjson at "$(( $(/usr/bin/date +%s) - 40*86400 ))" \
+  '{fingerprint:$fp, rig:"test", omarchyPluginValidate:0, qmllintErrors:0, validatedAtEpoch:$at}' > "$T/.rig-proof.json"
+assert_severity "  stale receipt MUST BLOCK" "BLOCK" "$(gate_severity c37-omarchy-rig-proof.sh "$T" omarchy-submit)"
+
 /usr/bin/printf '=== summary: %s passed · %s failed ===\n\n' \
   "$(green "$PASS")" "$([ "$FAIL" -gt 0 ] && red "$FAIL" || /usr/bin/echo 0)"
 
