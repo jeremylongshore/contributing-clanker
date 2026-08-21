@@ -54,6 +54,140 @@ parse_fm_field() {
   ' "$1"
 }
 
+# --- Omarchy marketplace submission guard ---------------------------------
+#
+# Why this exists: `gh issue create` was the one external action this hook
+# never saw, so a marketplace submission could be filed without the gate lane
+# ever running. Running it was a choice, not a gate.
+#
+# And a lane run alone is not enough. C32 (omarchy-plugin-validate) and C33
+# (qmllint) call gate_skip when those binaries are unresolvable, which they
+# always are off-rig because they live on the rig, and the runner counts SKIP
+# as pass. So the lane printed "verdict PASS, 0 BLOCK" for plugins that had
+# never run on Omarchy. C37 closes that by refusing a submission whose
+# .rig-proof.json receipt is missing, stale, failing, or written against
+# different code. Both must pass here.
+#
+# Posture: fail OPEN while the plugin tree is still unidentified (same as the
+# unmatched-candidate path below); fail CLOSED once a tree is identified.
+OMARCHY_MARKETPLACE_REPO="${OMARCHY_MARKETPLACE_REPO:-HANCORE-linux/omarchy-plugin-marketplace}"
+OMARCHY_CANONICAL_GATES="${OMARCHY_CANONICAL_GATES:-$HOME/000-projects/contributing-clanker/skills/contribute/scripts/gates}"
+
+# Run the canonical omarchy-relevant gates (c28-c37) against a plugin tree.
+# Used only when the repo has not vendored its own scripts/run-plugin-gates.sh.
+# Echoes one line per gate; returns 1 if any gate blocked or crashed.
+_omarchy_canonical_gates() {
+  local dir="$1" input verdict sev id reason blocked=0 gate
+  [[ -d "$OMARCHY_CANONICAL_GATES" ]] || { /usr/bin/printf '  (canonical gate lane not found at %s)\n' "$OMARCHY_CANONICAL_GATES"; return 0; }
+  input=$(jq -nc --arg c "$dir" '{candidate:$c, action:"omarchy-submit", env:{repo:""}}')
+  for gate in "$OMARCHY_CANONICAL_GATES"/c2[89]-*.sh "$OMARCHY_CANONICAL_GATES"/c3[0-9]-*.sh; do
+    [[ -f "$gate" ]] || continue
+    verdict=$(/usr/bin/printf '%s' "$input" | /usr/bin/timeout 20 bash "$gate" 2>/dev/null)
+    id=$(/usr/bin/basename "$gate" .sh)
+    if [[ -z "$verdict" ]]; then
+      /usr/bin/printf '  %-34s CRASH  no verdict emitted\n' "$id"
+      blocked=1; continue
+    fi
+    sev=$(/usr/bin/printf '%s' "$verdict" | jq -r '.severity // "CRASH"')
+    reason=$(/usr/bin/printf '%s' "$verdict" | jq -r '.reason // ""')
+    /usr/bin/printf '  %-34s %-6s %s\n' "$id" "$sev" "$reason"
+    case "$sev" in
+      BLOCK|CRASH)
+        blocked=1
+        hint=$(/usr/bin/printf '%s' "$verdict" | jq -r '.fix_hint // ""')
+        [[ -n "$hint" ]] && /usr/bin/printf '         fix: %s\n' "$hint"
+        ;;
+    esac
+  done
+  return "$blocked"
+}
+
+# Run C37 (rig receipt) against a plugin tree. Prefers the repo's vendored copy,
+# falls back to the canonical lane, because C37 is not vendored anywhere yet.
+# Returns 1 and echoes the verdict when the receipt does not certify this code.
+_omarchy_rig_receipt() {
+  local dir="$1" c37 verdict sev reason hint
+  c37="$dir/scripts/gates/c37-omarchy-rig-proof.sh"
+  [[ -f "$c37" ]] || c37="$OMARCHY_CANONICAL_GATES/c37-omarchy-rig-proof.sh"
+  if [[ ! -f "$c37" ]]; then
+    /usr/bin/printf '  C37 rig receipt gate not found — receipt UNVERIFIED\n'
+    return 1
+  fi
+  verdict=$(jq -nc --arg c "$dir" '{candidate:$c, action:"omarchy-submit", env:{repo:""}}' \
+    | /usr/bin/timeout 30 bash "$c37" 2>/dev/null)
+  if [[ -z "$verdict" ]]; then
+    /usr/bin/printf '  C37 crashed — no verdict emitted\n'
+    return 1
+  fi
+  sev=$(/usr/bin/printf '%s' "$verdict" | jq -r '.severity // "CRASH"')
+  reason=$(/usr/bin/printf '%s' "$verdict" | jq -r '.reason // ""')
+  hint=$(/usr/bin/printf '%s' "$verdict" | jq -r '.fix_hint // ""')
+  /usr/bin/printf '  %-34s %-6s %s\n' "c37-omarchy-rig-proof" "$sev" "$reason"
+  if [[ "$sev" != "PASS" ]]; then
+    [[ -n "$hint" ]] && /usr/bin/printf '         fix: %s\n' "$hint"
+    return 1
+  fi
+  return 0
+}
+
+# Main guard. Echoes nothing on allow; on block writes to stderr and exits 2.
+omarchy_submit_guard() {
+  local cmd="$1" body="" bodyfile="" url="" name="" dir="" out="" rc=0 fail=0
+
+  # Held in a variable: a bracket expression written inline here would have its
+  # backslash escapes taken literally and silently exclude digits from paths.
+  local bf_re='--body-file[=[:space:]]+([^[:space:]]+)'
+  if [[ "$cmd" =~ $bf_re ]]; then
+    bodyfile="${BASH_REMATCH[1]}"
+    bodyfile="${bodyfile%\'}"; bodyfile="${bodyfile#\'}"
+    bodyfile="${bodyfile%\"}"; bodyfile="${bodyfile#\"}"
+    [[ -f "$bodyfile" ]] && body=$(/usr/bin/cat "$bodyfile" 2>/dev/null)
+  fi
+  # An inline --body lands in the command text itself; scan that as a fallback.
+  [[ -z "$body" ]] && body="$cmd"
+
+  # The marketplace issue form puts the repo on the line after the heading.
+  url=$(/usr/bin/printf '%s' "$body" \
+    | /usr/bin/awk '/^###[[:space:]]*Repository URL/{f=1;next} f && /github\.com\//{print;exit}' \
+    | /usr/bin/grep -oE "https://github\\.com/[^[:space:]'\"]+" | /usr/bin/head -1)
+  [[ -z "$url" ]] && url=$(/usr/bin/printf '%s' "$body" \
+    | /usr/bin/grep -oE "https://github\\.com/[^[:space:]'\"]+" | /usr/bin/head -1)
+
+  if [[ -z "$url" ]]; then
+    /usr/bin/printf '\xe2\x9a\xa0 contribute-hook: marketplace submission with no resolvable Repository URL — plugin gates NOT enforced. Run scripts/run-plugin-gates.sh and scripts/rig-verify.sh by hand before filing.\n' >&2
+    return 0
+  fi
+
+  name="${url##*/}"; name="${name%.git}"
+  dir="$HOME/000-projects/$name"
+
+  if [[ ! -d "$dir" || ! -f "$dir/manifest.json" ]]; then
+    /usr/bin/printf '\xe2\x9a\xa0 contribute-hook: cannot resolve %s to a local plugin tree (looked in %s) — plugin gates NOT enforced. Run scripts/run-plugin-gates.sh and scripts/rig-verify.sh by hand before filing.\n' "$url" "$dir" >&2
+    return 0
+  fi
+
+  if [[ -f "$dir/scripts/run-plugin-gates.sh" ]]; then
+    out=$(/usr/bin/timeout 180 bash "$dir/scripts/run-plugin-gates.sh" "$dir" 2>&1) || rc=$?
+  else
+    out=$(_omarchy_canonical_gates "$dir" 2>&1) || rc=$?
+  fi
+  [[ "$rc" -ne 0 ]] && fail=1
+
+  # C37 always runs: it is not vendored into any plugin repo yet, so the
+  # repo-local lane above does not include it.
+  local proof_out=""
+  proof_out=$(_omarchy_rig_receipt "$dir" 2>&1) || fail=1
+
+  if [[ "$fail" -ne 0 ]]; then
+    /usr/bin/printf '\n\xe2\x9b\x94 contribute-hook BLOCKED marketplace submission for %s\n%s\n%s\n\nRemedy:\n  cd %s\n  scripts/run-plugin-gates.sh          # fix every BLOCK\n  scripts/rig-verify.sh                # prove it runs on the rig, refresh .rig-proof.json\n\nTo disable this hook entirely: touch ~/.contribute-system/.hook-disabled\n' \
+      "$name" "$out" "$proof_out" "$dir" >&2
+    exit 2
+  fi
+
+  /usr/bin/printf '\xe2\x9c\x93 contribute-hook: %s passed the plugin gate lane and carries a valid rig receipt\n' "$name" >&2
+  return 0
+}
+
 # Read hook input
 INPUT=$(/usr/bin/cat 2>/dev/null) || exit 0
 TOOL_NAME=$(/usr/bin/printf '%s' "$INPUT" | jq -r '.tool_name // ""' 2>/dev/null)
@@ -88,6 +222,10 @@ elif [[ "$CMD" =~ gh[[:space:]]+pr[[:space:]]+merge ]]; then
   if [[ "$CMD" =~ --repo[=[:space:]]+([^[:space:]]+) ]]; then
     REPO="${BASH_REMATCH[1]}"
   fi
+elif [[ "$CMD" =~ gh[[:space:]]+issue[[:space:]]+create ]] \
+  && /usr/bin/printf '%s' "$CMD" | /usr/bin/grep -qiF "$OMARCHY_MARKETPLACE_REPO"; then
+  ACTION="omarchy-submit"
+  REPO="$OMARCHY_MARKETPLACE_REPO"
 else
   # Not an OSS-contribution external action; pass through
   exit 0
@@ -99,6 +237,13 @@ NOW=$(/usr/bin/date -u +%Y-%m-%dT%H:%M:%SZ)
 jq -nc --arg ts "$NOW" --arg action "$ACTION" --arg repo "$REPO" --arg n "$ISSUE_OR_PR" --arg cmd "${CMD:0:200}" \
   '{ts: $ts, event: "hook_intercept", details: {action: $action, repo: $repo, issue_or_pr: $n, cmd_preview: $cmd}}' \
   >> "$LOG" 2>/dev/null || true
+
+# Marketplace submissions do not use the candidate/dossier flow — the gate lane
+# and the rig receipt live in the plugin repo itself.
+if [[ "$ACTION" == "omarchy-submit" ]]; then
+  omarchy_submit_guard "$CMD"
+  exit 0
+fi
 
 # Find the candidate file for this repo. Three-path lookup:
 #   1. Explicit issue/PR number (post-comment, flip-to-ready, merge — number is in CMD)
