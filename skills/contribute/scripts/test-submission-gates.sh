@@ -286,6 +286,25 @@ else
 fi
 
 /usr/bin/echo
+# ---- Vendored gate lane must not scan its own detector sources ----
+# A candidate repo may vendor this lane so the checks run in its own CI
+# (enforcement travels with the code). That puts the detectors inside the tree
+# they scan, and c34's source necessarily contains an example of the injection
+# it hunts. Observed for real: omarchy-widget-template's first gated CI run
+# failed on gate source while every shipped plugin file was clean.
+/usr/bin/printf 'Vendored gate lane self-scan\n'
+T="$TMPDIR/vendored-gates"
+/usr/bin/mkdir -p "$T/scripts/gates/lib" "$T"
+/usr/bin/printf '{"entryPoints":{"barWidget":"BarWidget.qml"}}\n' > "$T/manifest.json"
+# clean shipped plugin code: the exec value is single quoted
+/usr/bin/printf 'Item { function n(u){ Util.execDetached(["x","--exec","xdg-open %s"+u+"%s"]) } }\n' "'" "'" > "$T/BarWidget.qml"
+# vendored detector source carrying the unquoted example it hunts for
+/usr/bin/printf '# example of the bad pattern: "--exec", "xdg-open " + it.url\n' > "$T/scripts/gates/c34-omarchy-exec-injection.sh"
+assert_severity "  clean plugin + vendored gate sources MUST PASS c34" "PASS" "$(gate_severity c34-omarchy-exec-injection.sh "$T")"
+# and the exclusion must not blind the gate to real shipped code
+/usr/bin/printf 'Item { function n(u){ Util.execDetached(["x","--exec","xdg-open " + u]) } }\n' > "$T/BarWidget.qml"
+assert_severity "  unquoted exec in SHIPPED code MUST still BLOCK c34" "BLOCK" "$(gate_severity c34-omarchy-exec-injection.sh "$T")"
+
 /usr/bin/printf '=== summary: %s passed · %s failed ===\n\n' \
   "$(green "$PASS")" "$([ "$FAIL" -gt 0 ] && red "$FAIL" || /usr/bin/echo 0)"
 
