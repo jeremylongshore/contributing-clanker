@@ -305,6 +305,32 @@ assert_severity "  clean plugin + vendored gate sources MUST PASS c34" "PASS" "$
 /usr/bin/printf 'Item { function n(u){ Util.execDetached(["x","--exec","xdg-open " + u]) } }\n' > "$T/BarWidget.qml"
 assert_severity "  unquoted exec in SHIPPED code MUST still BLOCK c34" "BLOCK" "$(gate_severity c34-omarchy-exec-injection.sh "$T")"
 
+# ---- C36: QML text that renders past the edge of its panel ----
+# Caught three times by eye and never by a test, because the four plugins carry
+# 240 offline tests between them and not one exercises a .qml file. It reached a
+# marketplace preview.png whose footer reads "The spend meter is y".
+/usr/bin/printf 'C36 QML text overflow\n'
+T="$TMPDIR/c36"
+/usr/bin/mkdir -p "$T"
+/usr/bin/printf '{"entryPoints":{"barWidget":"BarWidget.qml"}}\n' > "$T/manifest.json"
+# an unbounded LONG LITERAL is the exact shape that shipped
+/usr/bin/printf 'Item { Text { text: "Buckets and quotes, never a sentiment score. The spend meter is your bill, live." } }\n' > "$T/Panel.qml"
+assert_severity "  long literal with no bound MUST BLOCK" "BLOCK" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+# an unbounded BOUND text: length is not under the author's control at all
+/usr/bin/printf 'Item { Text { text: modelData.title } }\n' > "$T/Panel.qml"
+assert_severity "  bound text with no bound MUST BLOCK" "BLOCK" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+# the three accepted bounds each clear it
+/usr/bin/printf 'Item { Text { text: modelData.title; elide: Text.ElideRight; width: 100 } }\n' > "$T/Panel.qml"
+assert_severity "  bound text WITH elide and width MUST PASS" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+/usr/bin/printf 'Item { Text { text: "Buckets and quotes, never a sentiment score. The spend meter is your bill."; wrapMode: Text.WordWrap } }\n' > "$T/Panel.qml"
+assert_severity "  long literal WITH wrapMode MUST PASS" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+# a short static label is not a defect and must not be flagged, or the gate is noise
+/usr/bin/printf 'Item { Text { text: "SCHEDULE" } }\n' > "$T/Panel.qml"
+assert_severity "  short static label MUST PASS (no false positive)" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+# and it must not fire outside an Omarchy plugin tree
+/usr/bin/rm -f "$T/manifest.json"
+assert_severity "  non-plugin tree MUST SKIP" "SKIP" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+
 /usr/bin/printf '=== summary: %s passed · %s failed ===\n\n' \
   "$(green "$PASS")" "$([ "$FAIL" -gt 0 ] && red "$FAIL" || /usr/bin/echo 0)"
 
