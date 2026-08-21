@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # test-submission-gates.sh — regression tests for the submission-content gates
-# (c28-c34) added after the Pit Wall / Crew Chief submissions shipped with
+# (c28-c35) added after the Pit Wall / Crew Chief submissions shipped with
 # defects that only a hand sweep or a four-agent review panel caught:
 #   - em dashes across README/docs/banner (c28)
 #   - real private names in demo seed / fixtures, scrubbed via history rewrite (c29)
@@ -8,6 +8,11 @@
 #   - Text rendering untrusted API strings as AutoText; curl with no
 #     --max-filesize (c31)
 #   - validator / lint issues caught late (c32, c33)
+#   - an --exec action built from unquoted data, which Omarchy dispatches
+#     through `bash -lc` (c34)
+#   - a plugin depending on a runtime (node/python) that a stock Omarchy
+#     install does not put on the graphical session PATH, so it installs
+#     cleanly and then silently never populates (c35)
 #
 # Each test builds a synthetic tree that trips the gate and a sibling that
 # passes, then asserts the exact severity. Sibling to test-known-traps.sh.
@@ -68,7 +73,7 @@ make_tree() {
   /usr/bin/printf '%s' "$dir"
 }
 
-/usr/bin/printf '\n=== submission-content gate regression tests (c28-c34) ===\n\n'
+/usr/bin/printf '\n=== submission-content gate regression tests (c28-c35) ===\n\n'
 
 # ---- C28: em/en dashes ----
 /usr/bin/printf 'C28 voice-no-dashes\n'
@@ -202,6 +207,48 @@ var x = "safe";')
 assert_severity "  comment mentioning --exec MUST PASS" "PASS" "$(gate_severity c34-omarchy-exec-injection.sh "$T")"
 T=$(make_tree c34-nocode "README.md" "docs only, no exec")
 assert_severity "  tree without code files MUST SKIP" "SKIP" "$(gate_severity c34-omarchy-exec-injection.sh "$T")"
+
+
+# ---- C35: runtime dependency a stock Omarchy install lacks ----
+/usr/bin/printf 'C35 omarchy-runtime-dependency\n'
+MANIFEST='{"id":"io.test.p","entryPoints":{"barWidget":"BarWidget.qml"}}'
+T=$(make_tree c35-node "manifest.json" "$MANIFEST" "bin/p-poll" '#!/usr/bin/env node
+console.log(1)')
+assert_severity "  shipped node script MUST BLOCK" "BLOCK" "$(gate_severity c35-omarchy-runtime-dependency.sh "$T")"
+T=$(make_tree c35-python "manifest.json" "$MANIFEST" "helper" '#!/usr/bin/env python3
+print(1)')
+assert_severity "  shipped python script MUST BLOCK" "BLOCK" "$(gate_severity c35-omarchy-runtime-dependency.sh "$T")"
+T=$(make_tree c35-bash "manifest.json" "$MANIFEST" "bin/p-login" '#!/usr/bin/env bash
+echo hi')
+assert_severity "  shipped bash script MUST PASS" "PASS" "$(gate_severity c35-omarchy-runtime-dependency.sh "$T")"
+T=$(make_tree c35-qmlnode "manifest.json" "$MANIFEST" "Service.qml" 'Process { command: ["node", "x.js"] }')
+assert_severity "  QML spawning node MUST BLOCK" "BLOCK" "$(gate_severity c35-omarchy-runtime-dependency.sh "$T")"
+T=$(make_tree c35-qmlcurl "manifest.json" "$MANIFEST" "Service.qml" 'Process { command: ["curl", "-fsS", "--", url] }')
+assert_severity "  QML spawning curl MUST PASS" "PASS" "$(gate_severity c35-omarchy-runtime-dependency.sh "$T")"
+T=$(make_tree c35-qmlcomment "manifest.json" "$MANIFEST" "Service.qml" '// not node: command: ["node"]
+Process { command: ["curl"] }')
+assert_severity "  QML comment naming node MUST PASS" "PASS" "$(gate_severity c35-omarchy-runtime-dependency.sh "$T")"
+T=$(make_tree c35-testsonly "manifest.json" "$MANIFEST" "tests/run.js" '#!/usr/bin/env node')
+assert_severity "  node under tests/ MUST PASS (dev-only)" "PASS" "$(gate_severity c35-omarchy-runtime-dependency.sh "$T")"
+T=$(make_tree c35-notplugin "README.md" "not a plugin")
+assert_severity "  tree without a manifest MUST SKIP" "SKIP" "$(gate_severity c35-omarchy-runtime-dependency.sh "$T")"
+
+# ---- Historical regression: the real pre-fix node-poller trees ----
+# Both entries shipped a bin/<name>-poll running under `#!/usr/bin/env node`,
+# which a stock Omarchy install cannot execute from the graphical session.
+for PAIR in "omarchy-listening-post-entry:fad97bf" "omarchy-x-files-entry:2829b83"; do
+  REPO="$HOME/000-projects/${PAIR%%:*}"
+  SHA="${PAIR##*:}"
+  if [[ -d "$REPO/.git" ]] && /usr/bin/git -C "$REPO" cat-file -e "$SHA" 2>/dev/null; then
+    /usr/bin/printf 'Historical (c35): %s @ %s\n' "${PAIR%%:*}" "$SHA"
+    /usr/bin/git -C "$REPO" worktree add "$TMPDIR/c35-${SHA}" "$SHA" >/dev/null 2>&1
+    assert_severity "  pre-fix node-poller tree MUST BLOCK on c35" "BLOCK" "$(gate_severity c35-omarchy-runtime-dependency.sh "$TMPDIR/c35-${SHA}")"
+    assert_severity "  current (node-free) tree MUST PASS c35" "PASS" "$(gate_severity c35-omarchy-runtime-dependency.sh "$REPO")"
+    /usr/bin/git -C "$REPO" worktree remove --force "$TMPDIR/c35-${SHA}" >/dev/null 2>&1
+  else
+    /usr/bin/printf 'Historical (c35): SKIP (%s @ %s unavailable)\n' "${PAIR%%:*}" "$SHA"
+  fi
+done
 
 # ---- Historical regression: the real pre-fix Pit Wall states ----
 # Proves the gates would have blocked what actually shipped. Conditional on
