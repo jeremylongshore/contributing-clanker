@@ -55,3 +55,7 @@ claude-cookbooks/
 # Dolt database files (added by bd init)
 .dolt/
 *.db
+
+# stray local scratch clones, not part of this repo
+buzz/
+uizze/

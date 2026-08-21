@@ -38,9 +38,13 @@ green()  { /usr/bin/printf '\033[32m%s\033[0m' "$1"; }
 # Run one gate with a directory candidate; echo its severity.
 gate_severity() {
   local gate="$1" tree="$2"
+  # Optional third argument overrides the action. Some gates are deliberately
+  # advisory outside submit time, and a helper that can only speak one action
+  # cannot express that difference.
+  local action="${3:-omarchy-submit}"
   local input
-  input=$(jq -nc --arg c "$tree" \
-    '{candidate: $c, dossier: "", action: "omarchy-submit", env: {repo: "test/synthetic-entry", branch: "main"}}')
+  input=$(jq -nc --arg c "$tree" --arg a "$action" \
+    '{candidate: $c, dossier: "", action: $a, env: {repo: "test/synthetic-entry", branch: "main"}}')
   local out
   out=$(/usr/bin/printf '%s' "$input" | "$GATES/$gate" 2>/dev/null)
   [[ "$VERBOSE" == "--verbose" ]] && /usr/bin/printf '    %s\n' "$out" >&2
@@ -339,6 +343,96 @@ assert_severity "  non-plugin tree MUST SKIP" "SKIP" "$(gate_severity c36-omarch
 assert_severity "  bare-identifier bound text MUST BLOCK" "BLOCK" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
 /usr/bin/printf 'Item { readonly property string reasonText: "x"; Text { text: reasonText; width: 80; elide: Text.ElideRight } }\n' > "$T/Panel.qml"
 assert_severity "  bare-identifier WITH bound MUST PASS" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+
+# A `text:` that opens a multi-line JavaScript BLOCK is computed text, but the
+# value captured on the `text:` line is only the brace, so the computed-text
+# test scored it as a bare literal and the entire block escaped C36. The Docket
+# hero subtitle used exactly this form, passed the gate, and rendered clipped in
+# the first live rig capture: "... 101 newer not fetched . c", with "checked
+# just now" sheared off at the panel edge.
+T="$TMPDIR/c36block"
+/usr/bin/mkdir -p "$T"
+/usr/bin/printf '{"entryPoints":{"barWidget":"BarWidget.qml"}}\n' > "$T/manifest.json"
+/usr/bin/cat > "$T/Panel.qml" <<'QML'
+import QtQuick
+Item {
+  Text {
+    text: {
+      var s = root.laneCounts.total + " on your docket"
+      if (root.fetchNotice) s += " - " + root.fetchNotice
+      return s
+    }
+    textFormat: Text.PlainText
+  }
+}
+QML
+assert_severity "  block-form computed text with no bound MUST BLOCK" "BLOCK" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+/usr/bin/cat > "$T/Panel.qml" <<'QML'
+import QtQuick
+Item {
+  Text {
+    width: heroCol.width
+    wrapMode: Text.WordWrap
+    text: {
+      var s = root.laneCounts.total + " on your docket"
+      if (root.fetchNotice) s += " - " + root.fetchNotice
+      return s
+    }
+    textFormat: Text.PlainText
+  }
+}
+QML
+assert_severity "  block-form computed text WITH width+wrapMode MUST PASS" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+
+# Historical regression: the real defect as it stood in omarchy-docket-entry at
+# abd3583, the commit whose preview.png capture exposed it. Skipped rather than
+# failed where that repo is not on the box, so the suite stays portable.
+DOCKET_REPO="/home/jeremy/000-projects/omarchy-docket-entry"
+DOCKET_SHA="abd3583"
+if [[ -d "$DOCKET_REPO/.git" ]] && git -C "$DOCKET_REPO" cat-file -e "$DOCKET_SHA^{commit}" 2>/dev/null; then
+  HIST="$TMPDIR/c36-hist"
+  if git -C "$DOCKET_REPO" worktree add -q --detach "$HIST" "$DOCKET_SHA" 2>/dev/null; then
+    assert_severity "  historical omarchy-docket-entry@$DOCKET_SHA MUST BLOCK" "BLOCK" "$(gate_severity c36-omarchy-qml-overflow.sh "$HIST")"
+    git -C "$DOCKET_REPO" worktree remove --force "$HIST" 2>/dev/null
+  else
+    /usr/bin/printf '  %-62s SKIP (worktree unavailable)\n' "historical omarchy-docket-entry@$DOCKET_SHA"
+  fi
+else
+  /usr/bin/printf '  %-62s SKIP (repo/sha absent)\n' "historical omarchy-docket-entry@$DOCKET_SHA"
+fi
+
+# ---- C37: a submission that never ran on a real Omarchy ----
+# C32 and C33 gate_skip when omarchy-plugin-validate and qmllint are missing,
+# and they always are off-rig, and the runner counts SKIP as pass. The lane
+# printed "verdict PASS, 0 BLOCK" for plugins that had never touched a rig.
+/usr/bin/printf 'C37 rig receipt\n'
+T="$TMPDIR/c37"
+/usr/bin/mkdir -p "$T"
+/usr/bin/printf '{"entryPoints":{"barWidget":"BarWidget.qml"}}\n' > "$T/manifest.json"
+/usr/bin/printf 'Item { Text { text: "x" } }\n' > "$T/Panel.qml"
+assert_severity "  no receipt at submit MUST BLOCK" "BLOCK" "$(gate_severity c37-omarchy-rig-proof.sh "$T" omarchy-submit)"
+assert_severity "  no receipt outside submit MUST SKIP" "SKIP" "$(gate_severity c37-omarchy-rig-proof.sh "$T" open-pr)"
+
+FP=$( ( cd "$T" && /usr/bin/find . -maxdepth 2 \( -name '*.qml' -o -name 'manifest.json' \) -not -path './.git/*' -not -path './tests/*' -print0 | LC_ALL=C /usr/bin/sort -z | /usr/bin/xargs -0 /usr/bin/cat | /usr/bin/sha256sum | /usr/bin/cut -d' ' -f1 ) )
+/usr/bin/jq -n --arg fp "$FP" --argjson at "$(/usr/bin/date +%s)" \
+  '{fingerprint:$fp, rig:"test", omarchyPluginValidate:0, qmllintErrors:0, validatedAtEpoch:$at}' > "$T/.rig-proof.json"
+assert_severity "  valid receipt MUST PASS" "PASS" "$(gate_severity c37-omarchy-rig-proof.sh "$T" omarchy-submit)"
+
+# The property that makes a receipt worth anything: it cannot certify code
+# nobody ran.
+/usr/bin/printf 'Item { Text { text: "changed" } }\n' > "$T/Panel.qml"
+assert_severity "  receipt for DIFFERENT qml MUST BLOCK" "BLOCK" "$(gate_severity c37-omarchy-rig-proof.sh "$T" omarchy-submit)"
+
+# A failing rig run must not look like never having run.
+/usr/bin/printf 'Item { Text { text: "x" } }\n' > "$T/Panel.qml"
+/usr/bin/jq -n --arg fp "$FP" --argjson at "$(/usr/bin/date +%s)" \
+  '{fingerprint:$fp, rig:"test", omarchyPluginValidate:1, qmllintErrors:0, validatedAtEpoch:$at}' > "$T/.rig-proof.json"
+assert_severity "  receipt recording a FAILED validate MUST BLOCK" "BLOCK" "$(gate_severity c37-omarchy-rig-proof.sh "$T" omarchy-submit)"
+
+# An old receipt describes a shell that has since moved.
+/usr/bin/jq -n --arg fp "$FP" --argjson at "$(( $(/usr/bin/date +%s) - 40*86400 ))" \
+  '{fingerprint:$fp, rig:"test", omarchyPluginValidate:0, qmllintErrors:0, validatedAtEpoch:$at}' > "$T/.rig-proof.json"
+assert_severity "  stale receipt MUST BLOCK" "BLOCK" "$(gate_severity c37-omarchy-rig-proof.sh "$T" omarchy-submit)"
 
 /usr/bin/printf '=== summary: %s passed · %s failed ===\n\n' \
   "$(green "$PASS")" "$([ "$FAIL" -gt 0 ] && red "$FAIL" || /usr/bin/echo 0)"

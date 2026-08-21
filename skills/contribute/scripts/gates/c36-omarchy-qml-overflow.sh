@@ -62,6 +62,16 @@ for m in re.finditer(r"\bText\s*\{", src):
         continue
     value = tm.group(1).strip()
     lineno = src[:i].count("\n") + 1
+    # `text: {` opens a multi-line JavaScript block whose result is computed,
+    # so the value captured on THIS line is just the brace. Stripping literals
+    # from "{" leaves no identifier, so the computed-text test below scored it
+    # as a bare literal and the whole block escaped the gate. That is not
+    # hypothetical: the Docket hero subtitle used this exact form, passed C36,
+    # and rendered clipped at the panel edge in the first live capture
+    # ("... 101 newer not fetched . c"). A block is always computed.
+    if value.startswith("{"):
+        out.append(f"{rel}:{lineno} bound text with no width/elide/wrapMode")
+        continue
     # Shape 1: the text is computed, so its length is not authored.
     # Anything that is not purely quoted literal text is computed, and its
     # length is therefore not under the author's control. Strip the string
