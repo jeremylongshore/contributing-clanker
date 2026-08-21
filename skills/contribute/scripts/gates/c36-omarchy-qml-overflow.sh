@@ -63,7 +63,13 @@ for m in re.finditer(r"\bText\s*\{", src):
     value = tm.group(1).strip()
     lineno = src[:i].count("\n") + 1
     # Shape 1: the text is computed, so its length is not authored.
-    bound = bool(re.search(r"[+]|\b[A-Za-z_]\w*\.\w+|\bmodelData\b|\broot\.\w+", value))
+    # Anything that is not purely quoted literal text is computed, and its
+    # length is therefore not under the author's control. Strip the string
+    # literals and see whether an identifier remains. Matching only dotted
+    # paths missed the common `text: someProperty` form entirely.
+    residue = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"', "", value)
+    residue = re.sub(r"'[^'\\]*(?:\\.[^'\\]*)*'", "", residue)
+    bound = bool(re.search(r"[A-Za-z_]\w*", residue))
     if bound:
         out.append(f"{rel}:{lineno} bound text with no width/elide/wrapMode")
         continue

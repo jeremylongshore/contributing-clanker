@@ -331,6 +331,15 @@ assert_severity "  short static label MUST PASS (no false positive)" "PASS" "$(g
 /usr/bin/rm -f "$T/manifest.json"
 assert_severity "  non-plugin tree MUST SKIP" "SKIP" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
 
+# A bare identifier is still computed text. Matching only dotted paths missed
+# `text: someProperty` entirely, which is how an attacker-controlled author
+# login reached a row unbounded in the docket panel.
+/usr/bin/printf 'Item { readonly property string reasonText: "x"; Text { text: reasonText } }\n' > "$T/Panel.qml"
+/usr/bin/printf '{"entryPoints":{"barWidget":"BarWidget.qml"}}\n' > "$T/manifest.json"
+assert_severity "  bare-identifier bound text MUST BLOCK" "BLOCK" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+/usr/bin/printf 'Item { readonly property string reasonText: "x"; Text { text: reasonText; width: 80; elide: Text.ElideRight } }\n' > "$T/Panel.qml"
+assert_severity "  bare-identifier WITH bound MUST PASS" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+
 /usr/bin/printf '=== summary: %s passed · %s failed ===\n\n' \
   "$(green "$PASS")" "$([ "$FAIL" -gt 0 ] && red "$FAIL" || /usr/bin/echo 0)"
 
