@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # test-submission-gates.sh — regression tests for the submission-content gates
-# (c28-c33) added after the Pit Wall / Crew Chief submissions shipped with
+# (c28-c34) added after the Pit Wall / Crew Chief submissions shipped with
 # defects that only a hand sweep or a four-agent review panel caught:
 #   - em dashes across README/docs/banner (c28)
 #   - real private names in demo seed / fixtures, scrubbed via history rewrite (c29)
@@ -68,7 +68,7 @@ make_tree() {
   /usr/bin/printf '%s' "$dir"
 }
 
-/usr/bin/printf '\n=== submission-content gate regression tests (c28-c33) ===\n\n'
+/usr/bin/printf '\n=== submission-content gate regression tests (c28-c34) ===\n\n'
 
 # ---- C28: em/en dashes ----
 /usr/bin/printf 'C28 voice-no-dashes\n'
@@ -183,6 +183,26 @@ export QMLLINT="$TMPDIR/no-such-qmllint"
 assert_severity "  qmllint missing MUST SKIP" "SKIP" "$(gate_severity c33-qmllint.sh "$T")"
 unset QMLLINT
 
+# ---- C34: exec/notification command injection ----
+/usr/bin/printf 'C34 omarchy-exec-injection\n'
+T=$(make_tree c34-bare "bin/poll.js" 'var flags = ["-u", "low"];
+if (it.url) flags.push("--exec", "xdg-open " + it.url);')
+assert_severity "  --exec value built by bare concat MUST BLOCK" "BLOCK" "$(gate_severity c34-omarchy-exec-injection.sh "$T")"
+T=$(make_tree c34-wrapped "bin/poll.js" 'var flags = ["-u", "low"];
+if (it.url) flags.push("--exec", "xdg-open '"'"'" + it.url + "'"'"'");')
+assert_severity "  --exec value single-quote-wrapped MUST PASS" "PASS" "$(gate_severity c34-omarchy-exec-injection.sh "$T")"
+T=$(make_tree c34-literal "bin/poll.js" 'flags.push("--exec", "xdg-open https://x.test/thread")')
+assert_severity "  --exec pure-literal value MUST PASS" "PASS" "$(gate_severity c34-omarchy-exec-injection.sh "$T")"
+T=$(make_tree c34-tmpl "bin/poll.mjs" 'Util.execDetached(`xdg-open ${url}`)')
+assert_severity "  execDetached unquoted template MUST BLOCK" "BLOCK" "$(gate_severity c34-omarchy-exec-injection.sh "$T")"
+T=$(make_tree c34-tmpl-ok "bin/poll.mjs" 'Util.execDetached(`xdg-open '"'"'${url}'"'"'`)')
+assert_severity "  execDetached single-quoted template MUST PASS" "PASS" "$(gate_severity c34-omarchy-exec-injection.sh "$T")"
+T=$(make_tree c34-comment "bin/poll.js" '// the --exec value runs as bash -lc "cmd " + so we quote it
+var x = "safe";')
+assert_severity "  comment mentioning --exec MUST PASS" "PASS" "$(gate_severity c34-omarchy-exec-injection.sh "$T")"
+T=$(make_tree c34-nocode "README.md" "docs only, no exec")
+assert_severity "  tree without code files MUST SKIP" "SKIP" "$(gate_severity c34-omarchy-exec-injection.sh "$T")"
+
 # ---- Historical regression: the real pre-fix Pit Wall states ----
 # Proves the gates would have blocked what actually shipped. Conditional on
 # the entry repo being present (like B13's clone-conditional tests).
@@ -201,6 +221,21 @@ if [[ -d "$PITWALL/.git" ]] \
   /usr/bin/git -C "$PITWALL" worktree remove --force "$TMPDIR/pw-pre-security" >/dev/null 2>&1
 else
   /usr/bin/printf 'Historical: SKIP (no local omarchy-pit-wall-entry with known commits)\n'
+fi
+
+# ---- Historical regression: the real pre-fix Listening Post exec RCE ----
+# b8316bb shipped `flags.push("--exec", "xdg-open " + it.url)` before the
+# review panel caught it; d37a20a hardened it. Proves c34 would have blocked
+# the RCE the moment it was written.
+LP="$HOME/000-projects/omarchy-listening-post-entry"
+if [[ -d "$LP/.git" ]] && /usr/bin/git -C "$LP" cat-file -e b8316bb 2>/dev/null; then
+  /usr/bin/printf 'Historical: real pre-fix Listening Post exec RCE\n'
+  /usr/bin/git -C "$LP" worktree add "$TMPDIR/lp-pre-exec" b8316bb >/dev/null 2>&1
+  assert_severity "  pre-fix Listening Post tree MUST BLOCK on c34" "BLOCK" "$(gate_severity c34-omarchy-exec-injection.sh "$TMPDIR/lp-pre-exec")"
+  assert_severity "  current (hardened) tree MUST PASS c34" "PASS" "$(gate_severity c34-omarchy-exec-injection.sh "$LP")"
+  /usr/bin/git -C "$LP" worktree remove --force "$TMPDIR/lp-pre-exec" >/dev/null 2>&1
+else
+  /usr/bin/printf 'Historical (c34): SKIP (no local omarchy-listening-post-entry at b8316bb)\n'
 fi
 
 /usr/bin/echo
