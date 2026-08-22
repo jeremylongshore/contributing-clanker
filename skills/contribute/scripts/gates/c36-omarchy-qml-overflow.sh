@@ -33,10 +33,10 @@ fi
 HITS=""
 while IFS= read -r REL; do
   [[ -n "$REL" ]] || continue
-  FINDINGS=$(GATE_FILE="$GATE_TREE_DIR/$REL" REL="$REL" /usr/bin/python3 <<'PY'
+  FINDINGS=$(GATE_FILE="$GATE_TREE_DIR/$REL" GATE_REL="$REL" /usr/bin/python3 <<'PY'
 import os, re
 path = os.environ["GATE_FILE"]
-rel = os.environ["REL"]
+rel = os.environ["GATE_REL"]
 try:
     src = open(path, encoding="utf-8", errors="replace").read()
 except OSError:
@@ -44,6 +44,13 @@ except OSError:
 
 lines = src.count("\n")
 out = []
+
+def _missing(has_width, has_rule):
+    if not has_width and not has_rule:
+        return "has neither a width constraint nor elide/wrapMode"
+    if not has_width:
+        return "declares elide/wrapMode but nothing constrains its width, so it is a no-op"
+    return "constrains its width but declares no elide/wrapMode, so it paints past the boundary"
 for m in re.finditer(r"\bText\s*\{", src):
     i = m.end(); depth = 1; j = i
     while j < len(src) and depth:
@@ -54,11 +61,39 @@ for m in re.finditer(r"\bText\s*\{", src):
     tm = re.search(r"^\s*text\s*:\s*(.+)$", block, re.M)
     if not tm:
         continue
-    # A bound is any of these: an explicit width, an elide mode, or a wrap mode.
-    # A bound may be declared at the start of a line or after a semicolon or
-    # brace on a single-line element, which is valid QML. Anchoring only to
-    # start-of-line falsely blocks correctly bounded one-liners.
-    if re.search(r"(?:^|[;{])\s*(width|elide|wrapMode)\s*:", block, re.M):
+    # A bound needs BOTH halves, and this gate used to accept either one alone.
+    #
+    # That was wrong on QML semantics, and this file's own fix_hint already
+    # said so ("elide ... WITH a width"): the check was looser than the advice
+    # it printed. In QML,
+    #   elide    with no width constraint is a NO-OP: elision is computed
+    #            against the element width, and without one the element sizes
+    #            to its content, so there is nothing to elide against.
+    #   wrapMode with no width constraint is likewise a no-op: there is no
+    #            boundary to wrap at.
+    #   width    with no elide and no wrapMode does not clip. A Text paints at
+    #            its implicitWidth regardless of the width property unless
+    #            clip is set, so the overrun still happens.
+    # Caught on crew-chief: four rows were repaired by adding width AND elide,
+    # but adding a bare elide would have greened the gate and fixed nothing.
+    #
+    # So: bounded iff (something constrains the width) AND (elide or wrapMode
+    # says what to do when the content exceeds it).
+    def declared(prop):
+        return re.search(r"(?:^|[;{])\s*" + prop + r"\s*:", block, re.M)
+
+    # A width constraint is an explicit width, a fill, a Layout fill, or a
+    # left+right anchor pair, which together determine width.
+    has_width = bool(
+        declared("width")
+        or declared(r"anchors\.fill")
+        or declared(r"Layout\.fillWidth")
+        or declared(r"Layout\.preferredWidth")
+        or declared(r"Layout\.maximumWidth")
+        or (declared(r"anchors\.left") and declared(r"anchors\.right"))
+    )
+    has_overflow_rule = bool(declared("elide") or declared("wrapMode"))
+    if has_width and has_overflow_rule:
         continue
     value = tm.group(1).strip()
     lineno = src[:i].count("\n") + 1
@@ -70,7 +105,7 @@ for m in re.finditer(r"\bText\s*\{", src):
     # and rendered clipped at the panel edge in the first live capture
     # ("... 101 newer not fetched . c"). A block is always computed.
     if value.startswith("{"):
-        out.append(f"{rel}:{lineno} bound text with no width/elide/wrapMode")
+        out.append(f"{rel}:{lineno} bound text {_missing(has_width, has_overflow_rule)}")
         continue
     # Shape 1: the text is computed, so its length is not authored.
     # Anything that is not purely quoted literal text is computed, and its
@@ -81,12 +116,12 @@ for m in re.finditer(r"\bText\s*\{", src):
     residue = re.sub(r"'[^'\\]*(?:\\.[^'\\]*)*'", "", residue)
     bound = bool(re.search(r"[A-Za-z_]\w*", residue))
     if bound:
-        out.append(f"{rel}:{lineno} bound text with no width/elide/wrapMode")
+        out.append(f"{rel}:{lineno} bound text {_missing(has_width, has_overflow_rule)}")
         continue
     # Shape 2: a literal long enough to overrun a panel.
     lits = re.findall(r'"([^"\\]*(?:\\.[^"\\]*)*)"', value)
     if lits and sum(len(x) for x in lits) > 40:
-        out.append(f"{rel}:{lineno} long literal ({sum(len(x) for x in lits)} chars) with no wrapMode/elide")
+        out.append(f"{rel}:{lineno} long literal ({sum(len(x) for x in lits)} chars) {_missing(has_width, has_overflow_rule)}")
 print("\n".join(out))
 PY
 )

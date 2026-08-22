@@ -41,12 +41,40 @@ if [[ ! -f "$PROOF" ]]; then
     "run scripts/rig-verify.sh in the plugin repo. it installs the tree into the omarchy rig container, runs omarchy-plugin-validate and qmllint, and writes .rig-proof.json. C32 and C33 skip silently off-rig, so without this receipt a PASS verdict means nothing."
 fi
 
-# Fingerprint exactly what the rig actually checks: the manifest and every QML
-# file. If either changes, the receipt no longer describes the shipped code.
+# Fingerprint every file whose contents decide what the plugin DOES: the
+# manifest, every QML file, and every shipped .js.
+#
+# The .js was missing until 2026-08-21 and that was a hole. The rig itself only
+# runs omarchy-plugin-validate and qmllint, which read manifest and QML, so the
+# fingerprint was scoped to match them. But the receipt does not claim "these
+# two tools were happy" — it claims THIS CODE was proven to run. These plugins
+# put their parsing, their host filters and their state handling in a Model.js
+# that QML imports, so a receipt scoped to QML alone certified a tree whose
+# entire behaviour could change underneath it. Caught while fixing an SSRF in
+# Listening Post's Model.js: the receipt still read PASS afterwards.
+# Everything the plugin SHIPS that decides what it does, at any depth.
+#
+# This scope has now been wrong twice, both times the same way: it was written
+# to match what the rig's two tools read rather than what the receipt claims.
+# The receipt claims THIS CODE was proven to run.
+#   - .js was added 2026-08-21 after an SSRF fix in Listening Post's Model.js
+#     left the receipt reading PASS.
+#   - executables and depth were added in the same sweep: crew-chief ships
+#     hooks/crew-chief-event, bin/crew-chief-report and adapters/*, which are
+#     executed on a user's machine, carry no extension, and sat below a
+#     maxdepth of 2. All of them could be rewritten without disturbing the
+#     receipt.
+#
+# scripts/ is excluded on purpose: that is the vendored gate lane, not the
+# plugin. It changes whenever the lane is synced, and letting that invalidate a
+# rig receipt would force a round trip for a change the rig never sees.
 fingerprint() {
   ( cd "$GATE_TREE_DIR" && \
-    /usr/bin/find . -maxdepth 2 \( -name '*.qml' -o -name 'manifest.json' \) \
-      -not -path './.git/*' -not -path './tests/*' -print0 2>/dev/null \
+    /usr/bin/find . -type f \
+      -not -path './.git/*' -not -path './tests/*' \
+      -not -path './scripts/*' -not -path './node_modules/*' \
+      \( -name '*.qml' -o -name '*.js' -o -name 'manifest.json' -o -perm -u+x \) \
+      -print0 2>/dev/null \
     | LC_ALL=C /usr/bin/sort -z \
     | /usr/bin/xargs -0 /usr/bin/cat 2>/dev/null \
     | /usr/bin/sha256sum | /usr/bin/cut -d' ' -f1 )
@@ -65,7 +93,7 @@ fi
 
 CURRENT_FP=$(fingerprint)
 if [[ "$RECORDED_FP" != "$CURRENT_FP" ]]; then
-  gate_block "rig receipt is for different code: the manifest or a .qml file changed since it was written" \
+  gate_block "rig receipt is for different code: a shipped file (manifest, .qml, .js or an executable) changed since it was written" \
     "re-run scripts/rig-verify.sh. a receipt that does not match the shipped QML is worse than none, because it certifies code nobody ran."
 fi
 
