@@ -38,10 +38,10 @@ fi
 HITS=""
 while IFS= read -r REL; do
   [[ -n "$REL" ]] || continue
-  FINDINGS=$(GATE_FILE="$GATE_TREE_DIR/$REL" REL="$REL" /usr/bin/python3 <<'PY'
+  FINDINGS=$(GATE_FILE="$GATE_TREE_DIR/$REL" GATE_REL="$REL" /usr/bin/python3 <<'PY'
 import os, re
 path = os.environ["GATE_FILE"]
-rel = os.environ["REL"]
+rel = os.environ["GATE_REL"]
 try:
     src = open(path, encoding="utf-8", errors="replace").read()
 except OSError:
