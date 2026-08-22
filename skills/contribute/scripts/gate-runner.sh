@@ -134,7 +134,15 @@ for GATE in "${GATES[@]}" ; do
   fi
 
   # Run the gate with timeout. Capture stdout. Exit non-zero = treat as BLOCK.
-  if VERDICT_JSON=$(/usr/bin/timeout 10 bash -c "/usr/bin/printf '%s' '$INPUT_JSON' | '$GATE'" 2>/dev/null); then
+  # Feed the contract on stdin through a real pipe. It used to go through
+  # `bash -c "printf '%s' '$INPUT_JSON' | '$GATE'"`, which re-parses the JSON as
+  # shell source: INPUT_JSON carries `repo` (from git remote get-url) and
+  # `branch` (from rev-parse), git permits ' $ ( ) in ref names, and ${IFS}
+  # defeats a no-space rule. A branch named  feat/x'"'"'$(...)'"'"'  therefore executed
+  # arbitrary code on the reviewer's workstation and inside CI with its token,
+  # BEFORE any gate rendered a verdict. Every c3x gate defends against RCE in a
+  # submitted plugin while the runner hosting them had one.
+  if VERDICT_JSON=$(/usr/bin/printf '%s' "$INPUT_JSON" | /usr/bin/timeout 10 "$GATE" 2>/dev/null); then
     : # ok, parse verdict
   else
     VERDICT_JSON=$(jq -nc --arg gid "$GATE_ID" '{severity:"BLOCK", gate:$gid, reason:"gate timed out or crashed (>10s or non-zero exit) — fail-closed", fix_hint:"check the gate script for bugs; preamble.sh should have caught it"}')

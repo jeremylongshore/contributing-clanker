@@ -31,8 +31,10 @@ if [[ ! -f "$GATE_TREE_DIR/manifest.json" ]]; then
 fi
 
 HITS=""
+SCANNED=0
 while IFS= read -r REL; do
   [[ -n "$REL" ]] || continue
+  SCANNED=$(( SCANNED + 1 ))
   FINDINGS=$(GATE_FILE="$GATE_TREE_DIR/$REL" GATE_REL="$REL" /usr/bin/python3 <<'PY'
 import os, re
 path = os.environ["GATE_FILE"]
@@ -134,6 +136,16 @@ if [[ -n "$HITS" ]]; then
   SUMMARY=$(printf '%s\n' "$HITS" | /usr/bin/head -6 | /usr/bin/tr '\n' ';')
   gate_block "QML text overflow risk ($COUNT): $SUMMARY" \
     "a Text with no width, elide or wrapMode is clipped by its container and the last words disappear. Add 'wrapMode: Text.WordWrap' with a width for prose, or 'elide: Text.ElideRight' with a width for one-line rows. Verify by rendering the panel, not by reading the diff."
+fi
+
+# A gate that scanned nothing has not established that nothing is wrong.
+# c36 used to answer PASS on a tree with no QML in it at all, asserting "no QML
+# text can overflow" over an empty corpus, while its siblings c31 and c34
+# correctly reported SKIP. Found by this gate's first unit test. PASS means
+# checked-and-clean; SKIP means there was nothing to check, and collapsing the
+# two is the defect this lane exists to catch.
+if [[ "$SCANNED" -eq 0 ]]; then
+  gate_skip "no .qml files in scope"
 fi
 
 gate_pass "no QML text can overflow its container unbounded"

@@ -38,7 +38,7 @@ The runtime is deliberately boring: Bash + `gh` + `jq`, with markdown and JSONL 
 | Supported | Not Yet |
 |-----------|---------|
 | Filesystem-only (Phase 1), single-user | MCP service (Phase 3) |
-| 51 gates across phases A–G | the remaining planned catalog gates (62-mode catalog) |
+| 63 gates across phases A–G | the remaining planned catalog gates (62-mode catalog) |
 | Local Claude Code skill | marketplace plugin packaging (Phase 2, epic 25c) |
 | `gh`-driven live GitHub state | cross-machine / multi-user coordination |
 
@@ -91,7 +91,7 @@ Three layers, gates in the middle:
         │
         │ every external action
         ▼
-   transition.sh ──→ gate-runner.sh ──→ 51 gates (phases A–G)   ──BLOCK/WARN/PASS (logged)
+   transition.sh ──→ gate-runner.sh ──→ 63 gates (phases A–G)   ──BLOCK/WARN/PASS (logged)
         │
         ▼
    ~/.contribute-system/  (markdown state: candidates · research/dossiers · log.jsonl · profile.md)

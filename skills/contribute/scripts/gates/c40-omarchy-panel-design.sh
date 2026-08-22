@@ -78,7 +78,13 @@ def repeater_bodies(text):
         bodies.append(text[i:j])
     return bodies
 
-COLOUR = r"\b(urgent|accent|Qt\.hsla|Qt\.hsva|accentHue|teamHue|hueFor)\b"
+# Theme-derived STATE fills count as hierarchy too. Style.selectedFill and its
+# siblings are how the first-party shell shows selection and hover, and a chip
+# row that switches between them is carrying state visually just as much as a
+# hue does. The first cut only matched hues, so it flagged a correctly-built
+# filter-chip row as colourless.
+COLOUR = (r"\b(urgent|accent|Qt\.hsla|Qt\.hsva|accentHue|teamHue|hueFor"
+          r"|selectedFill|hoverFill|pressedFill|selectionFill|focusFill)\b")
 #    And it is a MAJORITY test, not an any() test. The second cut of this gate
 #    still passed Pit Wall: one of its four repeaters coloured a LIVE badge, so
 #    any() went green while the three list tables that mattered stayed grey.

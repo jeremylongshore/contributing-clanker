@@ -49,7 +49,14 @@ except OSError:
 
 # Only files that actually reach the network can have this bug. A test file
 # that PINS the bad forms as regressions is the fix, not the defect.
-if not re.search(r"\bcurl\b|XMLHttpRequest|\bfetch\s*\(|Process\s*\{", src):
+# ...or a file that VALIDATES a host without fetching itself. The recommended
+# architecture (see fix_hint) puts isPublicHost in a pure module and the fetch
+# in the Service, so keying only on network tokens would skip the validator on
+# exactly the plugins that separated their concerns properly. Caught when the
+# gate's own unit test could not make it fire on a standalone host check.
+NETWORK = r"\bcurl\b|XMLHttpRequest|\bfetch\s*\(|Process\s*\{"
+VALIDATOR = r"isPublicHost|allowedHost|hostAllow|\bhostname\b|\bhost\s*\)"
+if not (re.search(NETWORK, src) or re.search(VALIDATOR, src)):
     raise SystemExit(0)
 
 out = []
