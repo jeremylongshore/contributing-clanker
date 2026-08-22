@@ -20,8 +20,16 @@ load '../test_helper'
 
 setup() {
   TREE=$(mktemp -d)
+  # Identity is passed inline rather than assumed. A CI runner has no global
+  # git identity, so a bare `git commit` exits 128 with "Author identity
+  # unknown" -- these fifteen cases passed on the author's box and failed on
+  # every clean runner. The repo IS needed: the first case asserts that an
+  # UNTRACKED file is still visible to the gates, and "untracked" only means
+  # something inside a real repository.
   /usr/bin/git -C "$TREE" init -q .
-  /usr/bin/git -C "$TREE" commit -q --allow-empty -m init
+  /usr/bin/git -C "$TREE" \
+    -c user.email=test@example.com -c user.name=test \
+    commit -q --allow-empty -m init
   # Without a manifest.json the gates answer "not an Omarchy plugin tree" and
   # SKIP. The first cut of this file omitted it, so all fourteen tests passed
   # while exercising nothing -- the same shape as the bug under test.
