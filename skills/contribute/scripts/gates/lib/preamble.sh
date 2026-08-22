@@ -109,11 +109,19 @@ gate_tree_files() {
   local pat="$1"
   [[ -n "$GATE_TREE_DIR" ]] || return 0
   if [[ "$GATE_TREE_MODE" == "full" ]]; then
-    if [[ -d "$GATE_TREE_DIR/.git" ]]; then
-      /usr/bin/git -C "$GATE_TREE_DIR" ls-files 2>/dev/null
-    else
-      ( cd "$GATE_TREE_DIR" && /usr/bin/find . -type f -not -path './.git/*' | /usr/bin/sed 's#^\./##' )
-    fi
+    # ALWAYS walk the filesystem in full mode; never `git ls-files`.
+    # ls-files enumerates TRACKED files only, so anything not yet `git add`ed
+    # was invisible to every content gate. That is not a correctness nit, it is
+    # the accept-rule being narrower than the claim: with an untracked hostile
+    # file present, c31 and c34 abstained and c38 returned
+    #   PASS - no narrow-dotted-quad host filter found
+    # about a file it had never opened. A hostile submitter set the forgery cost
+    # to zero by not running `git add`, and tracked-ness is not a security
+    # boundary anywhere in this pipeline. It also produced three false-cleans on
+    # this operator's own trees.
+    #
+    # c37's fingerprint() already had the right primitive; this adopts it.
+    ( cd "$GATE_TREE_DIR" && /usr/bin/find . -type f -not -path './.git/*' | /usr/bin/sed 's#^\./##' )
   else
     /usr/bin/git -C "$GATE_TREE_DIR" diff "$GATE_TREE_BASE..HEAD" --name-only --diff-filter=AM 2>/dev/null
   fi | /usr/bin/grep -E "$pat" \
