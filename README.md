@@ -7,6 +7,8 @@ A local-only Claude Code skill plus workspace for contributing to open-source pr
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/jeremylongshore/contributing-clanker/blob/master/LICENSE)
 [![Release](https://img.shields.io/badge/release-v0.3.0-green.svg)](https://github.com/jeremylongshore/contributing-clanker/releases/tag/v0.3.0)
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/U5S225PTME)
+
 **Links:** [GitHub](https://github.com/jeremylongshore/contributing-clanker) · [Gist One-Pager](https://gist.github.com/jeremylongshore/ff44ab81d255fd183c2f14bdfbad2c14)
 
 ## What Is This?
