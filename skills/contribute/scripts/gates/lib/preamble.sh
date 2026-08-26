@@ -124,12 +124,19 @@ gate_tree_files() {
     # tracked-ness. After npm install, third-party README prose must not become
     # a plugin-author finding; an unignored source file still must.
     if /usr/bin/git -C "$GATE_TREE_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-      /usr/bin/find "$GATE_TREE_DIR" -type f -not -path "$GATE_TREE_DIR/.git/*" -print0 |
-        while IFS= read -r -d '' abs; do
-          rel="${abs#"$GATE_TREE_DIR"/}"
-          /usr/bin/git -C "$GATE_TREE_DIR" check-ignore -q -- "$rel" && continue
-          printf '%s\n' "$rel"
-        done
+      # One Git query for the whole tree. Calling check-ignore once per file
+      # turns a normal npm dependency tree into thousands of Git processes and
+      # makes every gate too slow to use. The sorted set difference preserves
+      # the exact same boundary while keeping the full suite practical.
+      local all ignored
+      all=$(mktemp -t gate-tree-all-XXXXXX)
+      ignored=$(mktemp -t gate-tree-ignored-XXXXXX)
+      /usr/bin/find "$GATE_TREE_DIR" -type f -not -path "$GATE_TREE_DIR/.git/*" \
+        -printf '%P\n' | LC_ALL=C /usr/bin/sort > "$all"
+      /usr/bin/git -C "$GATE_TREE_DIR" check-ignore --stdin < "$all" 2>/dev/null \
+        | LC_ALL=C /usr/bin/sort > "$ignored" || true
+      /usr/bin/comm -23 "$all" "$ignored"
+      rm -f "$all" "$ignored"
     else
       ( cd "$GATE_TREE_DIR" && /usr/bin/find . -type f -not -path './.git/*' | /usr/bin/sed 's#^\./##' )
     fi
