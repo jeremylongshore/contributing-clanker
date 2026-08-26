@@ -56,7 +56,7 @@ while IFS= read -r REL; do
   # tests/ and docs/ are developer-only: a node unit suite is fine, it never
   # runs on the user's machine.
   case "$REL" in
-    tests/*|test/*|docs/*|*.md|node_modules/*) continue ;;
+    tests/*|test/*|docs/*|scripts/*|*.md|node_modules/*) continue ;;
   esac
   FILE="$GATE_TREE_DIR/$REL"
   [[ -f "$FILE" ]] || continue

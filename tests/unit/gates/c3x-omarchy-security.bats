@@ -178,6 +178,17 @@ EOF
   [ "$(sev)" = "PASS" ]
 }
 
+@test "c35 ignores a developer-only script but still scans shipped bin code" {
+  mkdir -p "$TREE/scripts" "$TREE/bin"
+  printf '#!/usr/bin/env python3\nprint(1)\n' > "$TREE/scripts/release-helper"
+  printf '#!/usr/bin/env node\nconsole.log(1)\n' > "$TREE/bin/shipped-tool"
+  run_tree_gate c35-omarchy-runtime-dependency.sh
+  [ "$(sev)" = "BLOCK" ] || [ "$(sev)" = "WARN" ]
+  rm "$TREE/bin/shipped-tool"
+  run_tree_gate c35-omarchy-runtime-dependency.sh
+  [ "$(sev)" = "PASS" ]
+}
+
 # ------------------------------------------------------------------------ c38
 
 @test "c38 flags a host filter that only rejects the canonical dotted quad" {
