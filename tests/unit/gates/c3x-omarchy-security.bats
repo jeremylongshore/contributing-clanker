@@ -80,6 +80,19 @@ EOF
   [ "$(sev)" = "BLOCK" ] || [ "$(sev)" = "WARN" ]
 }
 
+@test "ignored dependency prose is not treated as candidate content" {
+  # The gate must still inspect untracked source, but node_modules is an
+  # ignored dependency cache. Before the git-ignore boundary, c28 blocked any
+  # plugin immediately after npm install because third-party READMEs contain
+  # em dashes. This test is intentionally a real ignored file, not a mocked
+  # path filter, so the predicate matches normal developer state.
+  printf 'node_modules/\n' > "$TREE/.gitignore"
+  mkdir -p "$TREE/node_modules/example"
+  printf 'third-party prose — not authored plugin content\n' > "$TREE/node_modules/example/README.md"
+  run_tree_gate c28-voice-no-dashes.sh
+  [ "$(sev)" = "PASS" ]
+}
+
 # ------------------------------------------------------------------ c31 / c36
 
 @test "c31 flags network text rendered without PlainText" {

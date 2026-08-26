@@ -96,7 +96,7 @@ gate_resolve_tree() {
 }
 
 # List files to scan, relative to GATE_TREE_DIR, filtered by an egrep pattern
-# on the path. full mode: git-tracked files (fallback: find, .git excluded).
+# on the path. Full mode scans untracked, unignored files too.
 # diff mode: files added or modified vs the base branch.
 # Usage: gate_tree_files '\.(md|json|svg)$'
 # scripts/gates/** is excluded: a candidate repo may vendor this gate lane so
@@ -120,8 +120,19 @@ gate_tree_files() {
     # boundary anywhere in this pipeline. It also produced three false-cleans on
     # this operator's own trees.
     #
-    # c37's fingerprint() already had the right primitive; this adopts it.
-    ( cd "$GATE_TREE_DIR" && /usr/bin/find . -type f -not -path './.git/*' | /usr/bin/sed 's#^\./##' )
+    # Git-ignore is the boundary for generated/dependency content, not
+    # tracked-ness. After npm install, third-party README prose must not become
+    # a plugin-author finding; an unignored source file still must.
+    if /usr/bin/git -C "$GATE_TREE_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      /usr/bin/find "$GATE_TREE_DIR" -type f -not -path "$GATE_TREE_DIR/.git/*" -print0 |
+        while IFS= read -r -d '' abs; do
+          rel="${abs#"$GATE_TREE_DIR"/}"
+          /usr/bin/git -C "$GATE_TREE_DIR" check-ignore -q -- "$rel" && continue
+          printf '%s\n' "$rel"
+        done
+    else
+      ( cd "$GATE_TREE_DIR" && /usr/bin/find . -type f -not -path './.git/*' | /usr/bin/sed 's#^\./##' )
+    fi
   else
     /usr/bin/git -C "$GATE_TREE_DIR" diff "$GATE_TREE_BASE..HEAD" --name-only --diff-filter=AM 2>/dev/null
   fi | /usr/bin/grep -E "$pat" \
