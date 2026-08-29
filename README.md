@@ -40,7 +40,7 @@ The runtime is deliberately boring: Bash + `gh` + `jq`, with markdown and JSONL 
 | Supported | Not Yet |
 |-----------|---------|
 | Filesystem-only (Phase 1), single-user | MCP service (Phase 3) |
-| 65 gates across phases A–G | remaining catalog modes are built only after empirical triage |
+| 66 gates across phases A–G | remaining catalog modes are built only after empirical triage |
 | Local Claude Code skill | marketplace plugin packaging (Phase 2, epic 25c) |
 | `gh`-driven live GitHub state | cross-machine / multi-user coordination |
 
@@ -68,7 +68,7 @@ Both modes also deploy the runtime mirror to `~/.contribute-system/bin/`. After 
 
 ### Run Tests
 ```bash
-bats tests/unit/gates/            # unit tests (48 cases across the gates)
+bats tests/unit/gates/            # unit tests (305 cases across gates and reporters)
 skills/contribute/scripts/test-known-traps.sh        # regression suite (5 total: test-*.sh)
 skills/contribute/scripts/doctor.sh                  # verify the deployed runtime mirror matches the repo
 skills/contribute/scripts/lint-bash.sh               # shellcheck the gate scripts
@@ -93,7 +93,7 @@ Three layers, gates in the middle:
         │
         │ every external action
         ▼
-   transition.sh ──→ gate-runner.sh ──→ 65 gates (phases A–G)   ──BLOCK/WARN/PASS (logged)
+   transition.sh ──→ gate-runner.sh ──→ 66 gates (phases A–G)   ──BLOCK/WARN/PASS (logged)
         │
         ▼
    ~/.contribute-system/  (markdown state: candidates · research/dossiers · log.jsonl · profile.md)

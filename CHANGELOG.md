@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-(none)
+### Added
+
+- C43 fail-closed Omarchy marketplace presentation gate: full 500-character
+  copy, plugin-specific SVG banner, and exact-run/hash-bound live preview proof.
 
 ## [0.3.0] - 2026-07-06
 

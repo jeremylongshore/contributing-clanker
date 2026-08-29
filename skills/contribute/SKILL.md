@@ -524,14 +524,24 @@ were only caught by hand or by a post-submit review panel:
 | c31 omarchy-qml-security | `Text` binding data with no `textFormat` (AutoText sniffing); curl argv with no `--max-filesize` | BLOCK |
 | c32 omarchy-validate | `omarchy-plugin-validate` failure (self-skips if the binary is absent; run on the rig) | BLOCK |
 | c33 qmllint | qmllint errors (warnings advisory; self-skips if absent) | BLOCK on error |
+| c34 omarchy-exec-injection | shell or notification execution assembled from untrusted data | BLOCK |
+| c35 omarchy-runtime-dependency | runtime interpreters unavailable in a stock graphical Omarchy session | BLOCK |
+| c36 omarchy-qml-overflow | dynamic QML text with no effective width and elision bound | BLOCK |
+| c37 omarchy-rig-proof | missing, stale, failing, or source-mismatched Buzz validation receipt | BLOCK at `omarchy-submit` |
+| c38 omarchy-ssrf-host-allowlist | narrow dotted-quad filters that miss alternate local-address forms | BLOCK |
+| c40 omarchy-panel-design | flat panels with no hierarchy, visible affordance, or row structure | WARN |
+| c41 omarchy-state-file-hygiene | mutable state lifecycles that trust replaceable pathnames | BLOCK |
+| c42 omarchy-local-resource-budget | recurring local scans that buffer or sort before a hard bound | BLOCK |
+| c43 omarchy-marketplace-presentation | short copy, missing/generic banner, or blank/stale/unproven preview evidence | BLOCK |
 
 c28-c30 also run in the normal `working→submitted` flow, scanning only lines
 the contributor ADDED plus the drafted PR/issue body, so upstream's own prose
 never blocks. The run must be green before the submission issue is drafted;
 the honest boundary is that these gates catch the deterministic slice only —
 taste findings (over-configuration, dead-code altitude, AI-sounding copy)
-remain a review-agent judgment call. Regression suite:
-`scripts/test-submission-gates.sh`.
+remain a review-agent judgment call. Regression suites:
+`scripts/test-submission-gates.sh` plus the c3x and c43 bats files under
+`tests/unit/gates/`.
 
 ### Reconciliation
 

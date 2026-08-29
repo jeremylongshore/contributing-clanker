@@ -3,7 +3,7 @@ name: ci
 # Deterministic correctness gates — the lane the AI PR reviewer (CodeRabbit
 # today; Greptile once the estate-wide App swap reaches this repo)
 # and CodeQL (security/SAST) do NOT cover. shellcheck lints all bash; bats runs
-# the repo's 65-gate unit suite (284 cases). This closes the "no CI" gap from
+# the repo's 66-gate unit suite (305 cases). This closes the "no CI" gap from
 # the 2026-06-17 /audit-tests. (The L4 regression suites are dev-env integration
 # tests run via pre-commit/local — see the note below the bats job.)
 #
@@ -34,7 +34,7 @@ jobs:
         run: scripts/lint-bash.sh
 
   bats:
-    name: bats unit — 65 gates + dashboard (L3)
+    name: bats unit — 66 gates + dashboard (L3)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -54,6 +54,6 @@ jobs:
   # deployed user-override gate dir (~/.contribute-system/gates/ with its own
   # lib/preamble.sh). Per tests/TESTING.md they run as the pre-commit gate +
   # locally, where that environment exists. The portable correctness signal in
-  # CI is the bats unit suite over all 65 gates above; security is
+  # CI is the bats unit suite over all 66 gates above; security is
   # CodeQL; review is the AI PR reviewer. Re-add a regression job only after the suites are
   # refactored to provision their own clones/override-dir in a clean runner.
