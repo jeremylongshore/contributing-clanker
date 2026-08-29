@@ -2,7 +2,7 @@
 
 Make AI-assisted open-source contributions land cleanly — caught by deterministic gates before they reach maintainers as slop.
 
-A local-only Claude Code skill plus workspace for contributing to open-source projects you don't own. It runs 51 deterministic safety gates over every claim comment, design issue, and pull request, so AI-generated work never reaches an upstream maintainer as low-quality "slop." State is plain markdown — greppable, git-trackable, no database, no cloud calls.
+A local-only Claude Code skill plus workspace for contributing to open-source projects you don't own. It runs 65 deterministic safety gates over every claim comment, design issue, and pull request, so AI-generated work never reaches an upstream maintainer as low-quality "slop." State is plain markdown — greppable, git-trackable, no database, no cloud calls.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/jeremylongshore/contributing-clanker/blob/master/LICENSE)
 [![Release](https://img.shields.io/badge/release-v0.3.0-green.svg)](https://github.com/jeremylongshore/contributing-clanker/releases/tag/v0.3.0)
@@ -13,7 +13,7 @@ A local-only Claude Code skill plus workspace for contributing to open-source pr
 
 ## What Is This?
 
-`contributing-clanker` is a workspace repo plus a vendored Claude Code skill (`/contribute`). The skill orchestrates discovery, per-repo research, drafting, and testing for upstream OSS contributions; the workspace holds the skill's source, its spec, its tests, and the upstream clones you contribute to. Every externally-visible action (claim, design issue, PR) is routed through a gate-runner that blocks anything failing one of 51 deterministic checks — with the reason written to an append-only log.
+`contributing-clanker` is a workspace repo plus a vendored Claude Code skill (`/contribute`). The skill orchestrates discovery, per-repo research, drafting, and testing for upstream OSS contributions; the workspace holds the skill's source, its spec, its tests, and the upstream clones you contribute to. Every externally-visible action (claim, design issue, PR) is routed through a gate-runner that blocks anything failing one of 65 deterministic checks — with the reason written to an append-only log.
 
 The runtime is deliberately boring: Bash + `gh` + `jq`, with markdown and JSONL as the only persistence. No server, no database, no cloud — the whole system is inspectable by hand and recoverable from git.
 
@@ -23,7 +23,7 @@ The runtime is deliberately boring: Bash + `gh` + `jq`, with markdown and JSONL 
 |------------|-------------|
 | Discovery | `@scout` finds + ranks upstream issues by star-tier; `--repos` for surgical targeting |
 | Research | `@researcher` builds per-repo dossiers (CLA / DCO / AI-policy / commit format / templates) |
-| Gating | 51 deterministic gates (phases A–G) block AI-slop before it ships; verdicts logged |
+| Gating | 65 deterministic gates (phases A–G) block AI-slop before it ships; verdicts logged |
 | Trust ladder | a contributor's (N+1)th PR scope is governed by N prior merges at that repo (gates A07 + B13) |
 | Lifecycle | `transition.sh` walks each candidate `open → shortlist → claimed → working → submitted → merged` |
 | Runtime mirror | `install.sh` deploys `scripts/` → `~/.contribute-system/bin/`; `doctor.sh` verifies no drift |
@@ -40,7 +40,7 @@ The runtime is deliberately boring: Bash + `gh` + `jq`, with markdown and JSONL 
 | Supported | Not Yet |
 |-----------|---------|
 | Filesystem-only (Phase 1), single-user | MCP service (Phase 3) |
-| 63 gates across phases A–G | the remaining planned catalog gates (62-mode catalog) |
+| 65 gates across phases A–G | remaining catalog modes are built only after empirical triage |
 | Local Claude Code skill | marketplace plugin packaging (Phase 2, epic 25c) |
 | `gh`-driven live GitHub state | cross-machine / multi-user coordination |
 
@@ -93,7 +93,7 @@ Three layers, gates in the middle:
         │
         │ every external action
         ▼
-   transition.sh ──→ gate-runner.sh ──→ 63 gates (phases A–G)   ──BLOCK/WARN/PASS (logged)
+   transition.sh ──→ gate-runner.sh ──→ 65 gates (phases A–G)   ──BLOCK/WARN/PASS (logged)
         │
         ▼
    ~/.contribute-system/  (markdown state: candidates · research/dossiers · log.jsonl · profile.md)
@@ -113,7 +113,7 @@ contributing-clanker/
 ├── skills/contribute/        # the skill — single source of truth
 │   ├── SKILL.md              # /contribute orchestrator
 │   ├── agents/               # 5 subagents
-│   ├── scripts/              # 17 top-level + gates/ (51) + gates/lib/
+│   ├── scripts/              # workflow scripts + gates/ (65) + gates/lib/
 │   ├── references/           # candidate / dossier / workflow specs
 │   └── assets/               # 3 generic templates (claim / pr / evidence)
 ├── bin/install.sh            # deploys skill + runtime mirror (with doctor smoke-check)

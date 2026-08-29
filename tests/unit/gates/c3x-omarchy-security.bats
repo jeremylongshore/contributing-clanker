@@ -17,12 +17,13 @@
 # had never opened.
 
 load '../test_helper'
+bats_require_minimum_version 1.5.0
 
 setup() {
   TREE=$(mktemp -d)
   # Identity is passed inline rather than assumed. A CI runner has no global
   # git identity, so a bare `git commit` exits 128 with "Author identity
-  # unknown" -- these fifteen cases passed on the author's box and failed on
+  # unknown" -- these cases passed on the author's box and failed on
   # every clean runner. The repo IS needed: the first case asserts that an
   # UNTRACKED file is still visible to the gates, and "untracked" only means
   # something inside a real repository.
@@ -31,7 +32,7 @@ setup() {
     -c user.email=test@example.com -c user.name=test \
     commit -q --allow-empty -m init
   # Without a manifest.json the gates answer "not an Omarchy plugin tree" and
-  # SKIP. The first cut of this file omitted it, so all fourteen tests passed
+  # SKIP. The first cut of this file omitted it, so all tests passed
   # while exercising nothing -- the same shape as the bug under test.
   printf '{"name":"t","version":"1.0.0","entryPoints":{"bar":"Bar.qml"}}' > "$TREE/manifest.json"
 }
@@ -89,6 +90,18 @@ EOF
   printf 'node_modules/\n' > "$TREE/.gitignore"
   mkdir -p "$TREE/node_modules/example"
   printf 'third-party prose — not authored plugin content\n' > "$TREE/node_modules/example/README.md"
+  run_tree_gate c28-voice-no-dashes.sh
+  [ "$(sev)" = "PASS" ]
+}
+
+@test "unignored generated evidence trees are not treated as plugin source" {
+  # A missing .gitignore entry must not make a mutation sandbox or generated
+  # report part of the source corpus. This reproduced a run that walked roughly
+  # 600 Stryker copies and buried the one actionable finding in synthetic noise.
+  for dir in .stryker-tmp/mutant coverage/html reports/mutation .nyc_output; do
+    mkdir -p "$TREE/$dir"
+    printf 'generated prose — detector fixture, not plugin source\n' > "$TREE/$dir/generated.md"
+  done
   run_tree_gate c28-voice-no-dashes.sh
   [ "$(sev)" = "PASS" ]
 }

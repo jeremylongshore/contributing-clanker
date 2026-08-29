@@ -326,8 +326,8 @@ assert_severity "  bound text with no bound MUST BLOCK" "BLOCK" "$(gate_severity
 # the three accepted bounds each clear it
 /usr/bin/printf 'Item { Text { text: modelData.title; elide: Text.ElideRight; width: 100 } }\n' > "$T/Panel.qml"
 assert_severity "  bound text WITH elide and width MUST PASS" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
-/usr/bin/printf 'Item { Text { text: "Buckets and quotes, never a sentiment score. The spend meter is your bill."; wrapMode: Text.WordWrap } }\n' > "$T/Panel.qml"
-assert_severity "  long literal WITH wrapMode MUST PASS" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
+/usr/bin/printf 'Item { Text { text: "Buckets and quotes, never a sentiment score. The spend meter is your bill."; width: 320; wrapMode: Text.WordWrap } }\n' > "$T/Panel.qml"
+assert_severity "  long literal WITH width+wrapMode MUST PASS" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"
 # a short static label is not a defect and must not be flagged, or the gate is noise
 /usr/bin/printf 'Item { Text { text: "SCHEDULE" } }\n' > "$T/Panel.qml"
 assert_severity "  short static label MUST PASS (no false positive)" "PASS" "$(gate_severity c36-omarchy-qml-overflow.sh "$T")"

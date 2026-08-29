@@ -131,14 +131,31 @@ gate_tree_files() {
       local all ignored
       all=$(mktemp -t gate-tree-all-XXXXXX)
       ignored=$(mktemp -t gate-tree-ignored-XXXXXX)
-      /usr/bin/find "$GATE_TREE_DIR" -type f -not -path "$GATE_TREE_DIR/.git/*" \
-        -printf '%P\n' | LC_ALL=C /usr/bin/sort > "$all"
+      # Root-level coverage, mutation, and report trees are generated evidence,
+      # not authored plugin source. They are excluded even when a tool forgot
+      # to add them to .gitignore: Stryker copies the whole repository beneath
+      # .stryker-tmp and can multiply one finding into hundreds of synthetic
+      # blockers, while coverage/report HTML contains detector examples. Keep
+      # the prune list narrow and root-relative so an authored source directory
+      # with the same basename deeper in the tree is still scanned.
+      /usr/bin/find "$GATE_TREE_DIR" \
+        \( -path "$GATE_TREE_DIR/.git" \
+        -o -path "$GATE_TREE_DIR/node_modules" \
+        -o -path "$GATE_TREE_DIR/.stryker-tmp" \
+        -o -path "$GATE_TREE_DIR/coverage" \
+        -o -path "$GATE_TREE_DIR/reports" \
+        -o -path "$GATE_TREE_DIR/.nyc_output" \) -prune \
+        -o -type f -printf '%P\n' | LC_ALL=C /usr/bin/sort > "$all"
       /usr/bin/git -C "$GATE_TREE_DIR" check-ignore --stdin < "$all" 2>/dev/null \
         | LC_ALL=C /usr/bin/sort > "$ignored" || true
       /usr/bin/comm -23 "$all" "$ignored"
       rm -f "$all" "$ignored"
     else
-      ( cd "$GATE_TREE_DIR" && /usr/bin/find . -type f -not -path './.git/*' | /usr/bin/sed 's#^\./##' )
+      ( cd "$GATE_TREE_DIR" && /usr/bin/find . \
+          \( -path './.git' -o -path './node_modules' \
+          -o -path './.stryker-tmp' -o -path './coverage' \
+          -o -path './reports' -o -path './.nyc_output' \) -prune \
+          -o -type f -print | /usr/bin/sed 's#^\./##' )
     fi
   else
     /usr/bin/git -C "$GATE_TREE_DIR" diff "$GATE_TREE_BASE..HEAD" --name-only --diff-filter=AM 2>/dev/null
