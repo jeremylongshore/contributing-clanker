@@ -225,6 +225,32 @@ EOF
   [ "$(sev)" = "WARN" ] || [ "$(sev)" = "PASS" ]
 }
 
+# ------------------------------------------------------------------------ c41
+
+@test "c41 blocks a state helper that trusts mutable pathnames after mktemp" {
+  mkdir -p "$TREE/bin"
+  cat > "$TREE/bin/stateful" <<'EOF'
+#!/usr/bin/env bash
+root="${XDG_STATE_HOME:-$HOME/.local/state}/sample"
+mkdir -p "$root"
+tmp="$(mktemp "$root/.state.XXXXXX")"
+printf '%s\n' '{"ok":true}' > "$tmp"
+mv -f "$tmp" "$root/state.json"
+EOF
+  chmod +x "$TREE/bin/stateful"
+  run_tree_gate c41-omarchy-state-file-hygiene.sh
+  [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *"descriptor-bound lifecycle"* ]]
+}
+
+@test "c41 passes when no shipped runtime helper persists local state" {
+  mkdir -p "$TREE/bin"
+  printf '#!/usr/bin/env bash\nprintf hello\\n\n' > "$TREE/bin/stateless"
+  chmod +x "$TREE/bin/stateless"
+  run_tree_gate c41-omarchy-state-file-hygiene.sh
+  [ "$(sev)" = "PASS" ]
+}
+
 # ----------------------------------------------------------- empty-corpus rule
 
 @test "a gate over an EMPTY corpus reports SKIP, never PASS" {
