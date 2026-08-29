@@ -3,7 +3,7 @@ name: ci
 # Deterministic correctness gates — the lane the AI PR reviewer (CodeRabbit
 # today; Greptile once the estate-wide App swap reaches this repo)
 # and CodeQL (security/SAST) do NOT cover. shellcheck lints all bash; bats runs
-# the repo's 66-gate unit suite (305 cases). This closes the "no CI" gap from
+# the repo's 66-gate unit suite (306 cases). This closes the "no CI" gap from
 # the 2026-06-17 /audit-tests. (The L4 regression suites are dev-env integration
 # tests run via pre-commit/local — see the note below the bats job.)
 #

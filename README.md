@@ -68,7 +68,7 @@ Both modes also deploy the runtime mirror to `~/.contribute-system/bin/`. After 
 
 ### Run Tests
 ```bash
-bats tests/unit/gates/            # unit tests (305 cases across gates and reporters)
+bats tests/unit/gates/            # unit tests (306 cases across gates and reporters)
 skills/contribute/scripts/test-known-traps.sh        # regression suite (5 total: test-*.sh)
 skills/contribute/scripts/doctor.sh                  # verify the deployed runtime mirror matches the repo
 skills/contribute/scripts/lint-bash.sh               # shellcheck the gate scripts

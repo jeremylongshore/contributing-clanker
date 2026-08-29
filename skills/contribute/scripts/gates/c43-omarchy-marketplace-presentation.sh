@@ -24,6 +24,7 @@ fi
 
 MANIFEST="$GATE_TREE_DIR/manifest.json"
 NAME=$(/usr/bin/jq -r '.name // ""' "$MANIFEST" 2>/dev/null)
+PLUGIN_ID=$(/usr/bin/jq -r '.id // ""' "$MANIFEST" 2>/dev/null)
 DESCRIPTION=$(/usr/bin/jq -r '.description // ""' "$MANIFEST" 2>/dev/null)
 DESC_LENGTH=$(/usr/bin/python3 - "$DESCRIPTION" <<'PY'
 import sys
@@ -93,6 +94,15 @@ if len(colors) < 3:
 PY
 )
   [[ -n "$BANNER_RESULT" ]] && FINDINGS+=("$BANNER_RESULT")
+fi
+
+# The repository template is intentionally not a marketplace submission. It
+# carries one exact, invalid-for-publication placeholder identity so its own CI
+# can prove the authored copy/banner scaffold without manufacturing a fake live
+# product preview. Any generated plugin changes the id/name and immediately
+# falls through to the full submit-time preview proof below.
+if [[ "$PLUGIN_ID" == "io.github.YOURNAME.widget-name" && "$NAME" == "Widget Name" && ${#FINDINGS[@]} -eq 0 ]]; then
+  gate_pass "marketplace presentation scaffold is complete; exact template identity is not a submit candidate"
 fi
 
 if [[ "$GATE_ACTION" == "omarchy-submit" ]]; then

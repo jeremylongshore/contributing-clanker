@@ -117,3 +117,20 @@ sev() { printf '%s' "$output" | /usr/bin/jq -r '.severity'; }
   [ "$status" -eq 0 ]
   [ "$(sev)" = "PASS" ]
 }
+
+@test "c43 exempts only the exact non-publishable template identity from live proof" {
+  /usr/bin/jq '.id="io.github.YOURNAME.widget-name" | .name="Widget Name"' \
+    "$TREE/manifest.json" > "$TREE/manifest.next"
+  mv -f "$TREE/manifest.next" "$TREE/manifest.json"
+  sed -i 's/Test Plugin/Widget Name/g; s/TEST PLUGIN/WIDGET NAME/g; s/test-plugin/widget-name/g' \
+    "$TREE/assets/banner.svg"
+  rm -f "$TREE/preview.png" "$TREE/.render-proof.json"
+  run_gate
+  [ "$status" -eq 0 ]
+  [ "$(sev)" = "PASS" ]
+
+  /usr/bin/jq '.id="io.github.someone.real-plugin"' "$TREE/manifest.json" > "$TREE/manifest.next"
+  mv -f "$TREE/manifest.next" "$TREE/manifest.json"
+  run_gate
+  [ "$(sev)" = "BLOCK" ]
+}
