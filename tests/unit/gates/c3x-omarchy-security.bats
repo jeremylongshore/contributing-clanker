@@ -258,6 +258,26 @@ EOF
   [ "$(sev)" = "PASS" ]
 }
 
+@test "c41 does not mistake a Perl fat comma for shell redirection" {
+  mkdir -p "$TREE/bin" "$TREE/tests"
+  cat > "$TREE/bin/descriptor-reader" <<'EOF'
+#!/usr/bin/perl
+use Fcntl qw(O_NOFOLLOW O_NONBLOCK O_RDONLY);
+my $root = $ENV{XDG_CONFIG_HOME};
+sysopen(my $fh, "$root/state", O_RDONLY | O_NONBLOCK | O_NOFOLLOW);
+my %payload = (
+  directory => $root,
+  truncated => 0,
+);
+EOF
+  chmod +x "$TREE/bin/descriptor-reader"
+  cat > "$TREE/tests/state.test.js" <<'EOF'
+// Hostile lifecycle evidence: final, temp, parent, FIFO, oversized.
+EOF
+  run_tree_gate c41-omarchy-state-file-hygiene.sh
+  [ "$(sev)" = "PASS" ]
+}
+
 # ----------------------------------------------------------- empty-corpus rule
 
 @test "a gate over an EMPTY corpus reports SKIP, never PASS" {

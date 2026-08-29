@@ -127,7 +127,10 @@ has_atomic = (
 if not has_atomic:
     for i, ln in code_lines():
         # a redirect whose target is a $-variable or a .tmp of one
-        if re.search(r'>>?\s*"?\$\w+', ln) and 'mktemp' not in ln:
+        # Perl's hash constructor uses `key => $value`; the `>` is punctuation,
+        # not a shell redirection. Require the redirect token not to be the
+        # right half of a fat comma before classifying a variable-path write.
+        if re.search(r'(?<!=)>>?\s*"?\$\w+', ln) and 'mktemp' not in ln:
             out.append(f"{rel}:{i} writes through a variable path with `>`/`>>` (follows a planted symlink; use mktemp inside the private dir + mv)")
             break
 
