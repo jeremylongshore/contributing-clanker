@@ -59,7 +59,7 @@ gate_shell_runtime_files() {
     gate_tree_files '(^|/)[^./]+$' | while IFS= read -r rel; do
       [[ -n "$rel" ]] || continue
       first=$(/usr/bin/head -n1 "$GATE_TREE_DIR/$rel" 2>/dev/null || true)
-      case "$first" in \#\!*sh*) printf '%s\n' "$rel" ;; esac
+      case "$first" in \#\!*sh*|\#\!*/usr/bin/perl) printf '%s\n' "$rel" ;; esac
     done
   } | while IFS= read -r rel; do
     [[ -n "$rel" ]] || continue
@@ -87,9 +87,9 @@ except OSError:
 # mutable again. Loose Ends reached review through the latter shape, so a
 # runtime helper using mktemp is in scope even when it does not use XDG state.
 STATE_ROOT = re.compile(r'XDG_STATE_HOME|XDG_CONFIG_HOME|\.local/state|\.config/')
-WRITES     = re.compile(r'>>?\s*"?\$|mkdir\b|\btee\b|jq[^|]*>\s*"?\$')
+WRITES     = re.compile(r'>>?\s*"?\$|mkdir\b|\btee\b|jq[^|]*>\s*"?\$|\bsysopen\b|\bmake_path\b')
 USES_TEMP  = re.compile(r'\bmktemp\b')
-if not ((STATE_ROOT.search(src) and WRITES.search(src)) or USES_TEMP.search(src)):
+if not (STATE_ROOT.search(src) or USES_TEMP.search(src)):
     raise SystemExit(0)
 
 lines = src.split("\n")
@@ -120,7 +120,10 @@ if creates_state and not (has_umask or has_mode):
 #    a pre-existing symlink at the target. `mktemp + mv` is necessary first
 #    mitigation, but not sufficient proof: reopening the temp by name or
 #    resolving the parent again reintroduces the race.
-has_atomic = re.search(r'mktemp\b[^\n]*\$', src) and re.search(r'\bmv\b\s+(-f\s+)?"?\$', src)
+has_atomic = (
+    (re.search(r'mktemp\b[^\n]*\$', src) and re.search(r'\bmv\b\s+(-f\s+)?"?\$', src))
+    or (re.search(r'\bO_CREAT\b', src) and re.search(r'\bO_EXCL\b', src) and re.search(r'\brename\b', src))
+)
 if not has_atomic:
     for i, ln in code_lines():
         # a redirect whose target is a $-variable or a .tmp of one
@@ -201,4 +204,7 @@ if [[ -n "$HITS" ]]; then
     "State paths are mutable between checks. A clean lane requires a descriptor-bound helper that pins the parent, opens reads once with no-follow/nonblocking semantics, keeps the exclusive temporary descriptor through bounded write+fsync, and uses descriptor-relative replacement/cleanup. Add red proofs for same-UID final-entry, temporary-entry, parent-directory swap, and FIFO/oversized-read cases. mktemp + mv and pathname -f checks alone do not close this finding."
 fi
 
+if [[ "$STATEFUL" -eq 1 ]]; then
+  gate_pass "mutable local state uses descriptor lifecycle primitives with hostile-race evidence"
+fi
 gate_pass "no shipped runtime helper persists mutable local state"

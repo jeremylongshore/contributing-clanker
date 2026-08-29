@@ -45,7 +45,10 @@ if ! jq -e '.entryPoints' "$GATE_TREE_DIR/manifest.json" >/dev/null 2>&1; then
 fi
 
 # Interpreters a stock Omarchy install does NOT guarantee on the session PATH.
-BANNED_RE='^#!.*(node|deno|bun|python[0-9.]*|ruby|perl)([[:space:]]|$)'
+# Perl is a base dependency on the proven Buzz/Omarchy image and supports the
+# descriptor primitives required for a safe local-state helper. It must use an
+# absolute system shebang, never `env`, so session PATH cannot change it.
+BANNED_RE='^#!.*(node|deno|bun|python[0-9.]*|ruby)([[:space:]]|$)'
 
 VIOLATIONS=""
 
@@ -77,7 +80,7 @@ while IFS= read -r REL; do
   # how Quickshell's Process takes an argv. Comment lines are stripped so a
   # doc line naming node never trips the gate.
   HIT=$(/usr/bin/sed 's://.*::' "$FILE" \
-    | /usr/bin/grep -nE '(command|Detached)[^"]*\[[[:space:]]*"(node|deno|bun|python[0-9.]*|ruby|perl)"' \
+    | /usr/bin/grep -nE '(command|Detached)[^"]*\[[[:space:]]*"(node|deno|bun|python[0-9.]*|ruby)"' \
     | /usr/bin/head -3 || true)
   if [[ -n "$HIT" ]]; then
     LINES=$(/usr/bin/printf '%s' "$HIT" | /usr/bin/cut -d: -f1 | /usr/bin/tr '\n' ',')

@@ -178,6 +178,13 @@ EOF
   [ "$(sev)" = "PASS" ]
 }
 
+@test "c35 accepts the stock absolute Perl runtime used by descriptor helpers" {
+  printf '#!/usr/bin/perl\nprint qq(ok\\n);\n' > "$TREE/tool"
+  chmod +x "$TREE/tool"
+  run_tree_gate c35-omarchy-runtime-dependency.sh
+  [ "$(sev)" = "PASS" ]
+}
+
 @test "c35 ignores a developer-only script but still scans shipped bin code" {
   mkdir -p "$TREE/scripts" "$TREE/bin"
   printf '#!/usr/bin/env python3\nprint(1)\n' > "$TREE/scripts/release-helper"
