@@ -93,6 +93,7 @@ if not (STATE_ROOT.search(src) or USES_TEMP.search(src)):
     raise SystemExit(0)
 
 lines = src.split("\n")
+is_perl = bool(lines and lines[0].startswith("#!/usr/bin/perl"))
 def code_lines():
     for i, line in enumerate(lines, 1):
         s = line.lstrip()
@@ -124,12 +125,12 @@ has_atomic = (
     (re.search(r'mktemp\b[^\n]*\$', src) and re.search(r'\bmv\b\s+(-f\s+)?"?\$', src))
     or (re.search(r'\bO_CREAT\b', src) and re.search(r'\bO_EXCL\b', src) and re.search(r'\brename\b', src))
 )
-if not has_atomic:
+if not has_atomic and not is_perl:
     for i, ln in code_lines():
         # a redirect whose target is a $-variable or a .tmp of one
-        # Perl's hash constructor uses `key => $value`; the `>` is punctuation,
-        # not a shell redirection. Require the redirect token not to be the
-        # right half of a fat comma before classifying a variable-path write.
+        # This heuristic is intentionally shell-only. In Perl both `=> $value`
+        # and `@items > $limit` use the same punctuation without redirecting a
+        # path; Perl lifecycle safety is established by the descriptor checks.
         if re.search(r'(?<!=)>>?\s*"?\$\w+', ln) and 'mktemp' not in ln:
             out.append(f"{rel}:{i} writes through a variable path with `>`/`>>` (follows a planted symlink; use mktemp inside the private dir + mv)")
             break

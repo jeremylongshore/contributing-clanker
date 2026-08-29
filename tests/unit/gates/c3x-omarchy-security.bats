@@ -269,6 +269,8 @@ my %payload = (
   directory => $root,
   truncated => 0,
 );
+my @captures = (1, 2);
+my $over_limit = @captures > $payload{truncated};
 EOF
   chmod +x "$TREE/bin/descriptor-reader"
   cat > "$TREE/tests/state.test.js" <<'EOF'
