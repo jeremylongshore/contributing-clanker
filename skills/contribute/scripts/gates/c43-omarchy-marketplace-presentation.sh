@@ -125,6 +125,9 @@ if [[ "$GATE_ACTION" == "omarchy-submit" ]]; then
     LOG_SHA=$(/usr/bin/jq -r '.rawShellLogSha256 // ""' "$PROOF" 2>/dev/null)
     COVERAGE=$(/usr/bin/jq -r '.nonblackCoverage // 0' "$PROOF" 2>/dev/null)
     BOUNDARY=$(/usr/bin/jq -r '.evidenceBoundary // ""' "$PROOF" 2>/dev/null)
+    INSPECTION_STATUS=$(/usr/bin/jq -r '.visualInspection.status // ""' "$PROOF" 2>/dev/null)
+    INSPECTION_SHA=$(/usr/bin/jq -r '.visualInspection.previewSha256 // ""' "$PROOF" 2>/dev/null)
+    INSPECTION_CHECKS=$(/usr/bin/jq -r '(.visualInspection.checks // []) | join("|")' "$PROOF" 2>/dev/null)
     RECORDED_DIMS=$(/usr/bin/jq -r '.dimensions // ""' "$PROOF" 2>/dev/null | /usr/bin/tr -d ' ')
     ACTUAL_DIMS=$(/usr/bin/python3 - "$PREVIEW" <<'PY'
 import struct, sys
@@ -157,6 +160,12 @@ PY
     case "$BOUNDARY" in
       *"real Omarchy shell"*"direct full-frame"*"no crop"*) ;;
       *) FINDINGS+=("render receipt does not prove a direct, uncropped real-shell capture") ;;
+    esac
+    [[ "$INSPECTION_STATUS" == "approved" && "$INSPECTION_SHA" == "$PREVIEW_SHA" ]] || \
+      FINDINGS+=("preview lacks a hash-bound approved visual inspection")
+    case "$INSPECTION_CHECKS" in
+      *"product value visible at marketplace scale"*"no primary content clipped"*"plugin-specific visual identity"*) ;;
+      *) FINDINGS+=("visual inspection checklist is incomplete") ;;
     esac
   fi
 fi
