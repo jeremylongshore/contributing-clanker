@@ -50,7 +50,7 @@ open(sys.argv[1], "wb").write(png)
 PY
   SHA=$(/usr/bin/sha256sum "$TREE/preview.png" | /usr/bin/cut -d' ' -f1)
   /usr/bin/jq -n --arg sha "$SHA" \
-    '{sourceDirty:false,sourcePackageSha256:"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",remotePackageSha256:"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",runId:"test-plugin-123",rawShellLogSha256:"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",previewSha256:$sha,dimensions:"1280 x 720",nonblackCoverage:0.8,evidenceBoundary:"isolated real Omarchy shell; direct full-frame capture with no crop or post-processing"}' \
+    '{sourceDirty:false,sourcePackageSha256:"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",remotePackageSha256:"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",runId:"test-plugin-123",rawShellLogSha256:"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",previewSha256:$sha,dimensions:"1280 x 720",nonblackCoverage:0.8,evidenceBoundary:"isolated real Omarchy shell; direct full-frame capture with no crop or post-processing",visualInspection:{status:"approved",previewSha256:$sha,checks:["product value visible at marketplace scale","no primary content clipped","plugin-specific visual identity"]}}' \
     > "$TREE/.render-proof.json"
 }
 
