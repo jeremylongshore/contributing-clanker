@@ -19,13 +19,7 @@ teardown() { rm -rf "$TREE"; }
 
 make_valid_presentation() {
   mkdir -p "$TREE/assets"
-  DESC=$(/usr/bin/python3 - <<'PY'
-base = "Mark a focused boundary, see the recent timeline, and keep the complete workflow private on this Omarchy machine. "
-detail = "Use the visible controls to close one context before opening another, preserve bounded local history across shell restarts, and understand exactly what the widget reads, stores, and never sends. No account, cloud sync, telemetry, calendar access, hidden helper, or network request is required. "
-text = (base + detail + "Designed for keyboard-first operators who want deliberate transitions without surveillance. ")
-print((text + "Local, clear, reversible. " * 20)[:500], end="")
-PY
-)
+  DESC='Test Plugin turns context changes into a visible Omarchy workflow so work does not blur into the next task. The bar shows whether you are inside or outside a boundary; open the panel to mark Arrive or Leave and review the eight newest transitions with readable ages. It refreshes every 30 seconds and retains only 32 timestamped events in private local state. It reads no calendar, application, project, or notification data, makes no network requests, needs no account, and never changes workspaces.'
   /usr/bin/jq -n --arg d "$DESC" \
     '{name:"Test Plugin",version:"1.0.0",description:$d,kinds:["bar-widget"],
       entryPoints:{bar:"Bar.qml"},barWidget:{description:$d}}' \
@@ -91,6 +85,51 @@ sev() { printf '%s' "$output" | /usr/bin/jq -r '.severity'; }
   [[ "$output" == *"characters"* ]]
 }
 
+@test "c43 blocks two different 500-character product stories" {
+  /usr/bin/jq '.barWidget.description=(.description | sub("context"; "purpose"))' \
+    "$TREE/manifest.json" > "$TREE/manifest.next"
+  mv -f "$TREE/manifest.next" "$TREE/manifest.json"
+  run_gate pr_open
+  [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *"different product stories"* ]]
+}
+
+@test "c43 blocks full-length generic marketing filler" {
+  /usr/bin/jq '.description=(.description | sub("context changes"; "robust solution")) | .barWidget.description=.description' \
+    "$TREE/manifest.json" > "$TREE/manifest.next"
+  mv -f "$TREE/manifest.next" "$TREE/manifest.json"
+  run_gate pr_open
+  [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *"generic marketing filler"* ]]
+}
+
+@test "c43 blocks full-length copy that never explains the visible product" {
+  /usr/bin/jq '.description=(.description | sub("The bar"; "The hub") | sub("the panel"; "the inbox")) | .barWidget.description=.description' \
+    "$TREE/manifest.json" > "$TREE/manifest.next"
+  mv -f "$TREE/manifest.next" "$TREE/manifest.json"
+  run_gate pr_open
+  [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *"visible bar, panel, pill, or widget"* ]]
+}
+
+@test "c43 blocks full-length copy with no concrete interaction" {
+  /usr/bin/jq '.description=(.description | sub("shows"; "holds") | sub("open"; "view") | sub("mark"; "note") | sub("reads"; "takes") | sub("refreshes"; "continues")) | .barWidget.description=.description' \
+    "$TREE/manifest.json" > "$TREE/manifest.next"
+  mv -f "$TREE/manifest.next" "$TREE/manifest.json"
+  run_gate pr_open
+  [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *"concrete user interaction or visible behavior"* ]]
+}
+
+@test "c43 blocks full-length copy with no trust boundary" {
+  /usr/bin/jq '.description=(.description | gsub(" only "; " just ") | gsub(" private "; " bounded ") | gsub(" local "; " saved ") | gsub("no "; "an ") | gsub("never "; "keeps ")) | .barWidget.description=.description' \
+    "$TREE/manifest.json" > "$TREE/manifest.next"
+  mv -f "$TREE/manifest.next" "$TREE/manifest.json"
+  run_gate pr_open
+  [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *"privacy, network, data, or write boundary"* ]]
+}
+
 @test "c43 blocks a missing or cloned placeholder banner" {
   rm -f "$TREE/assets/banner.svg"
   run_gate
@@ -130,7 +169,7 @@ sev() { printf '%s' "$output" | /usr/bin/jq -r '.severity'; }
 }
 
 @test "c43 exempts only the exact non-publishable template identity from live proof" {
-  /usr/bin/jq '.id="io.github.YOURNAME.widget-name" | .name="Widget Name"' \
+  /usr/bin/jq '.id="io.github.YOURNAME.widget-name" | .name="Widget Name" | .description=(.description | sub("Test Plugin"; "Widget Name")) | .barWidget.description=.description' \
     "$TREE/manifest.json" > "$TREE/manifest.next"
   mv -f "$TREE/manifest.next" "$TREE/manifest.json"
   sed -i 's/Test Plugin/Widget Name/g; s/TEST PLUGIN/WIDGET NAME/g; s/test-plugin/widget-name/g' \
