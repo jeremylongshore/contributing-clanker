@@ -26,7 +26,14 @@ MANIFEST="$GATE_TREE_DIR/manifest.json"
 NAME=$(/usr/bin/jq -r '.name // ""' "$MANIFEST" 2>/dev/null)
 PLUGIN_ID=$(/usr/bin/jq -r '.id // ""' "$MANIFEST" 2>/dev/null)
 DESCRIPTION=$(/usr/bin/jq -r '.description // ""' "$MANIFEST" 2>/dev/null)
+BAR_DESCRIPTION=$(/usr/bin/jq -r '.barWidget.description // ""' "$MANIFEST" 2>/dev/null)
+HAS_BAR_WIDGET=$(/usr/bin/jq -r 'has("barWidget") and (.barWidget | type == "object")' "$MANIFEST" 2>/dev/null)
 DESC_LENGTH=$(/usr/bin/python3 - "$DESCRIPTION" <<'PY'
+import sys
+print(len(sys.argv[1]))
+PY
+)
+BAR_DESC_LENGTH=$(/usr/bin/python3 - "$BAR_DESCRIPTION" <<'PY'
 import sys
 print(len(sys.argv[1]))
 PY
@@ -40,6 +47,9 @@ FINDINGS=()
 # persistence/privacy boundary, and exclusions a user actually evaluates.
 if [[ "$DESC_LENGTH" != "500" ]]; then
   FINDINGS+=("manifest description uses $DESC_LENGTH/500 characters")
+fi
+if [[ "$HAS_BAR_WIDGET" == "true" && "$BAR_DESC_LENGTH" != "500" ]]; then
+  FINDINGS+=("barWidget description uses $BAR_DESC_LENGTH/500 characters")
 fi
 
 BANNER="$GATE_TREE_DIR/assets/banner.svg"

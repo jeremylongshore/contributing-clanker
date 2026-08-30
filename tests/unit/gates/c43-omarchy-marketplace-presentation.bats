@@ -27,7 +27,8 @@ print((text + "Local, clear, reversible. " * 20)[:500], end="")
 PY
 )
   /usr/bin/jq -n --arg d "$DESC" \
-    '{name:"Test Plugin",version:"1.0.0",description:$d,entryPoints:{bar:"Bar.qml"}}' \
+    '{name:"Test Plugin",version:"1.0.0",description:$d,kinds:["bar-widget"],
+      entryPoints:{bar:"Bar.qml"},barWidget:{description:$d}}' \
     > "$TREE/manifest.json"
   cat > "$TREE/assets/banner.svg" <<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 360">
@@ -77,6 +78,16 @@ sev() { printf '%s' "$output" | /usr/bin/jq -r '.severity'; }
   mv -f "$TREE/manifest.next" "$TREE/manifest.json"
   run_gate
   [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *"characters"* ]]
+}
+
+@test "c43 blocks a vague short bar-widget catalog description" {
+  /usr/bin/jq '.barWidget.description="Open the panel and see local status."' \
+    "$TREE/manifest.json" > "$TREE/manifest.next"
+  mv -f "$TREE/manifest.next" "$TREE/manifest.json"
+  run_gate
+  [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *"barWidget description"* ]]
   [[ "$output" == *"characters"* ]]
 }
 
