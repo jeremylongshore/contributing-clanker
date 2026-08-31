@@ -175,15 +175,17 @@ if [[ "$GATE_ACTION" == "omarchy-submit" ]]; then
   PROOF="$GATE_TREE_DIR/.render-proof.json"
 
   # A render receipt must certify the tree being submitted, not merely agree
-  # with its own preview hash. Keep this scope identical to rig-render.sh and
-  # C37: manifest, QML, JavaScript, and every executable shipped by the plugin.
+  # with its own preview hash. Keep this scope identical to rig-render.sh:
+  # manifest, QML, JavaScript, every executable shipped by the plugin, and all
+  # deterministic render controls under e2e/. C37 deliberately covers runtime
+  # only; presentation proof must also change when its fixture or framing does.
   # scripts/ is the vendored gate lane and is intentionally excluded.
   presentation_fingerprint() {
     ( cd "$GATE_TREE_DIR" && \
       /usr/bin/find . -type f \
         -not -path './.git/*' -not -path './tests/*' \
         -not -path './scripts/*' -not -path './node_modules/*' \
-        \( -name '*.qml' -o -name '*.js' -o -name 'manifest.json' -o -perm -u+x \) \
+        \( -path './e2e/*' -o -name '*.qml' -o -name '*.js' -o -name 'manifest.json' -o -perm -u+x \) \
         -print0 2>/dev/null \
       | LC_ALL=C /usr/bin/sort -z \
       | /usr/bin/xargs -0 /usr/bin/cat 2>/dev/null \

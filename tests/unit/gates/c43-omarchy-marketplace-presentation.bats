@@ -22,7 +22,7 @@ presentation_fingerprint() {
     /usr/bin/find . -type f \
       -not -path './.git/*' -not -path './tests/*' \
       -not -path './scripts/*' -not -path './node_modules/*' \
-      \( -name '*.qml' -o -name '*.js' -o -name 'manifest.json' -o -perm -u+x \) \
+      \( -path './e2e/*' -o -name '*.qml' -o -name '*.js' -o -name 'manifest.json' -o -perm -u+x \) \
       -print0 2>/dev/null \
     | LC_ALL=C /usr/bin/sort -z \
     | /usr/bin/xargs -0 /usr/bin/cat 2>/dev/null \
@@ -166,6 +166,16 @@ sev() { printf '%s' "$output" | /usr/bin/jq -r '.severity'; }
 @test "c43 blocks a render receipt from an older plugin tree" {
   /usr/bin/jq '.version="1.0.1"' "$TREE/manifest.json" > "$TREE/manifest.next"
   mv -f "$TREE/manifest.next" "$TREE/manifest.json"
+  run_gate
+  [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *"current plugin tree"* ]]
+}
+
+@test "c43 blocks a render receipt after its deterministic fixture changes" {
+  mkdir -p "$TREE/e2e"
+  printf '%s\n' '{"story":"old"}' > "$TREE/e2e/render-settings.json"
+  make_valid_presentation
+  printf '%s\n' '{"story":"new"}' > "$TREE/e2e/render-settings.json"
   run_gate
   [ "$(sev)" = "BLOCK" ]
   [[ "$output" == *"current plugin tree"* ]]
