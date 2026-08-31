@@ -45,8 +45,9 @@ fi
 # never runs on an end user's machine (rig-render.sh, gen-changelog.sh, the
 # vendored gate lane); holding it to the runtime's local-input threat model
 # produced false positives on every plugin. Keep bin/ and any helper the
-# manifest's entryPoints/barWidget reference; drop scripts/, tests/, and the
-# gate lane itself.
+# manifest's entryPoints/barWidget reference; drop scripts/, tests/, e2e/, and
+# the gate lane itself. e2e hooks run only in the isolated proof rig; C43 still
+# fingerprints them because they control the screenshot.
 # Every SHIPPED shell runtime file, whether or not it carries a .sh extension.
 # The runtime helpers (bin/quiet-queue, bin/loose-ends-scan) are extensionless,
 # so an extension-only selector silently scanned nothing and the gate passed
@@ -64,7 +65,7 @@ gate_shell_runtime_files() {
   } | while IFS= read -r rel; do
     [[ -n "$rel" ]] || continue
     case "$rel" in
-      scripts/*|tests/*|.github/*) continue ;;
+      scripts/*|tests/*|e2e/*|.github/*) continue ;;
     esac
     printf '%s\n' "$rel"
   done | LC_ALL=C sort -u

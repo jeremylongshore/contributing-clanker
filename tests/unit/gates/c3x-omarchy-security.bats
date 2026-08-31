@@ -293,6 +293,30 @@ EOF
   [ "$(sev)" = "PASS" ]
 }
 
+@test "c41 excludes isolated e2e fixture hooks from shipped runtime" {
+  mkdir -p "$TREE/e2e"
+  cat > "$TREE/e2e/rig-before-shell.sh" <<'EOF'
+#!/usr/bin/env bash
+root="${XDG_STATE_HOME:-$HOME/.local/state}/sample"
+mkdir -p "$root"
+printf '%s\n' '{"fixture":true}' > "$root/state.json"
+EOF
+  chmod +x "$TREE/e2e/rig-before-shell.sh"
+  run_tree_gate c41-omarchy-state-file-hygiene.sh
+  [ "$(sev)" = "PASS" ]
+}
+
+@test "c42 excludes isolated e2e fixture hooks from shipped runtime" {
+  mkdir -p "$TREE/e2e"
+  cat > "$TREE/e2e/rig-before-shell.sh" <<'EOF'
+#!/usr/bin/env bash
+find "$HOME" -type f | sort | head -10
+EOF
+  chmod +x "$TREE/e2e/rig-before-shell.sh"
+  run_tree_gate c42-omarchy-local-resource-budget.sh
+  [ "$(sev)" = "PASS" ]
+}
+
 # ----------------------------------------------------------- empty-corpus rule
 
 @test "a gate over an EMPTY corpus reports SKIP, never PASS" {
