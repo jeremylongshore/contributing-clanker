@@ -17,6 +17,18 @@ setup() {
 
 teardown() { rm -rf "$TREE"; }
 
+presentation_fingerprint() {
+  ( cd "$TREE" && \
+    /usr/bin/find . -type f \
+      -not -path './.git/*' -not -path './tests/*' \
+      -not -path './scripts/*' -not -path './node_modules/*' \
+      \( -name '*.qml' -o -name '*.js' -o -name 'manifest.json' -o -perm -u+x \) \
+      -print0 2>/dev/null \
+    | LC_ALL=C /usr/bin/sort -z \
+    | /usr/bin/xargs -0 /usr/bin/cat 2>/dev/null \
+    | /usr/bin/sha256sum | /usr/bin/cut -d' ' -f1 )
+}
+
 make_valid_presentation() {
   mkdir -p "$TREE/assets"
   DESC='Test Plugin turns context changes into a visible Omarchy workflow so work does not blur into the next task. The bar shows whether you are inside or outside a boundary; open the panel to mark Arrive or Leave and review the eight newest transitions with readable ages. It refreshes every 30 seconds and retains only 32 timestamped events in private local state. It reads no calendar, application, project, or notification data, makes no network requests, needs no account, and never changes workspaces.'
@@ -44,8 +56,9 @@ png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 
 open(sys.argv[1], "wb").write(png)
 PY
   SHA=$(/usr/bin/sha256sum "$TREE/preview.png" | /usr/bin/cut -d' ' -f1)
-  /usr/bin/jq -n --arg sha "$SHA" \
-    '{sourceDirty:false,sourcePackageSha256:"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",remotePackageSha256:"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",runId:"test-plugin-123",rawShellLogSha256:"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",previewSha256:$sha,dimensions:"1280 x 720",nonblackCoverage:0.8,evidenceBoundary:"isolated real Omarchy shell; direct full-frame capture with no crop or post-processing",visualInspection:{status:"approved",previewSha256:$sha,checks:["product value visible at marketplace scale","no primary content clipped","plugin-specific visual identity"]}}' \
+  FINGERPRINT=$(presentation_fingerprint)
+  /usr/bin/jq -n --arg sha "$SHA" --arg fingerprint "$FINGERPRINT" \
+    '{fingerprint:$fingerprint,sourceDirty:false,sourcePackageSha256:"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",remotePackageSha256:"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",runId:"test-plugin-123",rawShellLogSha256:"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",previewSha256:$sha,dimensions:"1280 x 720",nonblackCoverage:0.8,evidenceBoundary:"isolated real Omarchy shell; direct full-frame capture with no crop or post-processing",visualInspection:{status:"approved",previewSha256:$sha,checks:["product value visible at marketplace scale","no primary content clipped","plugin-specific visual identity"]}}' \
     > "$TREE/.render-proof.json"
 }
 
@@ -148,6 +161,14 @@ sev() { printf '%s' "$output" | /usr/bin/jq -r '.severity'; }
   run_gate
   [ "$(sev)" = "BLOCK" ]
   [[ "$output" == *"preview hash"* ]]
+}
+
+@test "c43 blocks a render receipt from an older plugin tree" {
+  /usr/bin/jq '.version="1.0.1"' "$TREE/manifest.json" > "$TREE/manifest.next"
+  mv -f "$TREE/manifest.next" "$TREE/manifest.json"
+  run_gate
+  [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *"current plugin tree"* ]]
 }
 
 @test "c43 blocks dirty, provenance-free, distant render evidence" {

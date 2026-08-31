@@ -173,6 +173,23 @@ fi
 if [[ "$GATE_ACTION" == "omarchy-submit" ]]; then
   PREVIEW="$GATE_TREE_DIR/preview.png"
   PROOF="$GATE_TREE_DIR/.render-proof.json"
+
+  # A render receipt must certify the tree being submitted, not merely agree
+  # with its own preview hash. Keep this scope identical to rig-render.sh and
+  # C37: manifest, QML, JavaScript, and every executable shipped by the plugin.
+  # scripts/ is the vendored gate lane and is intentionally excluded.
+  presentation_fingerprint() {
+    ( cd "$GATE_TREE_DIR" && \
+      /usr/bin/find . -type f \
+        -not -path './.git/*' -not -path './tests/*' \
+        -not -path './scripts/*' -not -path './node_modules/*' \
+        \( -name '*.qml' -o -name '*.js' -o -name 'manifest.json' -o -perm -u+x \) \
+        -print0 2>/dev/null \
+      | LC_ALL=C /usr/bin/sort -z \
+      | /usr/bin/xargs -0 /usr/bin/cat 2>/dev/null \
+      | /usr/bin/sha256sum | /usr/bin/cut -d' ' -f1 )
+  }
+
   if [[ ! -f "$PREVIEW" ]]; then
     FINDINGS+=("preview.png is missing")
   fi
@@ -183,6 +200,8 @@ if [[ "$GATE_ACTION" == "omarchy-submit" ]]; then
   if [[ -f "$PREVIEW" && -f "$PROOF" ]]; then
     PREVIEW_SHA=$(/usr/bin/sha256sum "$PREVIEW" | /usr/bin/cut -d' ' -f1)
     RECORDED_SHA=$(/usr/bin/jq -r '.previewSha256 // ""' "$PROOF" 2>/dev/null)
+    RECORDED_FINGERPRINT=$(/usr/bin/jq -r '.fingerprint // ""' "$PROOF" 2>/dev/null)
+    CURRENT_FINGERPRINT=$(presentation_fingerprint)
     SOURCE_DIRTY=$(/usr/bin/jq -r 'if has("sourceDirty") then .sourceDirty else true end' "$PROOF" 2>/dev/null)
     SOURCE_PACKAGE=$(/usr/bin/jq -r '.sourcePackageSha256 // ""' "$PROOF" 2>/dev/null)
     REMOTE_PACKAGE=$(/usr/bin/jq -r '.remotePackageSha256 // ""' "$PROOF" 2>/dev/null)
@@ -207,6 +226,8 @@ PY
 )
 
     [[ "$PREVIEW_SHA" == "$RECORDED_SHA" ]] || FINDINGS+=("preview hash does not match the render receipt")
+    [[ -n "$RECORDED_FINGERPRINT" && "$RECORDED_FINGERPRINT" == "$CURRENT_FINGERPRINT" ]] || \
+      FINDINGS+=("render receipt does not match the current plugin tree")
     [[ "$SOURCE_DIRTY" == "false" ]] || FINDINGS+=("render receipt was produced from a dirty source tree")
     [[ -n "$SOURCE_PACKAGE" && "$SOURCE_PACKAGE" == "$REMOTE_PACKAGE" ]] || FINDINGS+=("source and remote render-package hashes do not match")
     [[ "$RUN_ID" =~ ^[a-z0-9][a-z0-9-]+$ ]] || FINDINGS+=("render receipt has no exact rig run ID")
