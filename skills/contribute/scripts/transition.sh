@@ -53,7 +53,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-LOG="$HOME/.contribute-system/log.jsonl"
+STATE_DIR="${CONTRIBUTE_STATE_DIR:-$HOME/.contribute-system}"
+LOG="$STATE_DIR/log.jsonl"
 NOW=$(/usr/bin/date -u +%Y-%m-%dT%H:%M:%SZ)
 
 # Derive dossier path from candidate's repo if not supplied
@@ -62,7 +63,7 @@ if [[ -z "$DOSSIER" ]]; then
   if [[ -n "$REPO" ]]; then
     SLUG=$(/usr/bin/echo "$REPO" | /usr/bin/tr '/' '_')_; SLUG="${SLUG%_}"  # placeholder; researcher uses double-underscore
     SLUG=$(/usr/bin/echo "$REPO" | /usr/bin/sed 's,/,__,')
-    CAND_DOSSIER="$HOME/.contribute-system/research/${SLUG}.md"
+    CAND_DOSSIER="$STATE_DIR/research/${SLUG}.md"
     [[ -f "$CAND_DOSSIER" ]] && DOSSIER="$CAND_DOSSIER"
   fi
 fi

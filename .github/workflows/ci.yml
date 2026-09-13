@@ -47,6 +47,8 @@ jobs:
         run: bats tests/unit/gates/
       - name: run reporter unit tests (dashboard, etc.)
         run: bats tests/unit/*.bats
+      - name: run hermetic state and audit regressions
+        run: python3 -m unittest discover -s tests/integration -p 'test_*.py' -v
 
   # NOTE: the L4 regression suites (skills/contribute/scripts/test-*.sh) are
   # intentionally NOT a clean-room CI job. They are dev-environment INTEGRATION

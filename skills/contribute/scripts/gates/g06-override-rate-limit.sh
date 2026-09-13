@@ -12,7 +12,7 @@ if [[ -z "$GATE_REPO" ]]; then
   gate_skip "no repo in candidate"
 fi
 
-LOG="$HOME/.contribute-system/log.jsonl"
+LOG="${CONTRIBUTE_STATE_DIR:-$HOME/.contribute-system}/log.jsonl"
 [[ ! -f "$LOG" ]] && gate_pass "no log.jsonl yet"
 
 # Count override events in last 30 days at this repo

@@ -16,9 +16,11 @@
 set -uo pipefail
 
 VERBOSE="${1:-}"
-SYS="$HOME/.contribute-system"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TMPDIR=$(/usr/bin/mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
+source "$SCRIPT_DIR/lib-regression-state.sh"
+contribute_regression_state "$TMPDIR" "$SCRIPT_DIR"
 
 PASS=0
 FAIL=0

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Contribution regression tests now use private state, including transition,
+  runner, gate-log and override discovery paths. The old override test wrote a
+  synthetic A05 event into the operator's live log on September 9; the daily
+  recap subsequently requested review of that fixture. The pre-commit hook
+  and unit suite now test the checked-out source instead of an older install.
+- Daily recaps retain and disclose exact hash-bound reviews of proven test
+  artifacts while continuing to alert on other overrides. Raw audit history
+  is unchanged. The override trend now tolerates historical torn lines using
+  the same event reader as the recap, instead of silently returning no data.
+- Added hermetic writer-isolation and audit-review regressions to CI. Four
+  isolation assertions fail against the previous source in a protected
+  canary environment; all five writer checks pass after the correction.
+
 ### Added
 
 - C43 fail-closed Omarchy marketplace presentation gate: full 500-character

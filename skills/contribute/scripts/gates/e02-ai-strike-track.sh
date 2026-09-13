@@ -21,7 +21,7 @@ if [[ -n "$GATE_DOSSIER_PATH" && -f "$GATE_DOSSIER_PATH" ]]; then
 fi
 
 OWNER="${GATE_REPO%%/*}"
-LOG="$HOME/.contribute-system/log.jsonl"
+LOG="${CONTRIBUTE_STATE_DIR:-$HOME/.contribute-system}/log.jsonl"
 
 if [[ ! -f "$LOG" ]]; then
   gate_pass "no log.jsonl yet (no prior strikes possible)"

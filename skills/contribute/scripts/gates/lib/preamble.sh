@@ -224,6 +224,6 @@ gate_log_run() {
     --arg repo "$GATE_REPO" \
     --arg verdict "$verdict" \
     '{ts: $ts, event: "gate_run", details: {gate: $gate, action: $action, repo: $repo, verdict: $verdict}}')" \
-    >> ~/.contribute-system/log.jsonl 2>/dev/null \
-    || /usr/bin/printf 'WARN: %s could not append gate_run to ~/.contribute-system/log.jsonl — audit trail incomplete (gate not blocked)\n' "$_GATE_ID" >&2
+    >> "${CONTRIBUTE_STATE_DIR:-$HOME/.contribute-system}/log.jsonl" 2>/dev/null \
+    || /usr/bin/printf 'WARN: %s could not append gate_run to %s/log.jsonl — audit trail incomplete (gate not blocked)\n' "$_GATE_ID" "${CONTRIBUTE_STATE_DIR:-$HOME/.contribute-system}" >&2
 }

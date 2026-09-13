@@ -12,7 +12,7 @@
 #   - assert_severity <expected> — asserts the gate's verdict severity matches
 
 # shellcheck disable=SC2034
-GATES_DIR="${HOME}/.claude/skills/contribute/scripts/gates"
+GATES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../skills/contribute/scripts/gates" && pwd)"
 FIXTURES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../fixtures" && pwd)"
 
 # Run a gate with the standard stdin JSON contract.

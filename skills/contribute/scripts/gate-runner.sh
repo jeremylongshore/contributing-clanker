@@ -33,8 +33,9 @@ fi
 # add custom gates or fork existing ones without modifying the skill package.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUNDLED_GATE_DIR="${SCRIPT_DIR}/gates"
-USER_GATE_DIR="$HOME/.contribute-system/gates"
-LOG="$HOME/.contribute-system/log.jsonl"
+STATE_DIR="${CONTRIBUTE_STATE_DIR:-$HOME/.contribute-system}"
+USER_GATE_DIR="$STATE_DIR/gates"
+LOG="$STATE_DIR/log.jsonl"
 NOW=$(/usr/bin/date -u +%Y-%m-%dT%H:%M:%SZ)
 
 # Map action → relevant gate phases. Gates are filtered by phase letter
