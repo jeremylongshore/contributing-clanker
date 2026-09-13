@@ -136,8 +136,8 @@ LINES_SCANNED=$(/usr/bin/wc -l < "$LOG_JSONL")
 # SKIPPED and the skip count is printed in every recap as part of the
 # positive proof. Alert only when jq itself fails or NOTHING parses.
 CLEAN_EVENTS_FILE=$(/usr/bin/mktemp -t contribute-recap-events-XXXXXX)
-jq -cR 'fromjson? | objects' "$LOG_JSONL" > "$CLEAN_EVENTS_FILE" 2>>"$RUN_LOG" \
-  || read_failure "jq failed reading $LOG_JSONL (see run log)"
+python3 "$SCRIPT_DIR/reviewed-events.py" "$LOG_JSONL" > "$CLEAN_EVENTS_FILE" 2>>"$RUN_LOG" \
+  || read_failure "event reader failed reading $LOG_JSONL (see run log)"
 PARSEABLE=$(/usr/bin/wc -l < "$CLEAN_EVENTS_FILE")
 MALFORMED=$(( LINES_SCANNED - PARSEABLE ))
 if [[ "$LINES_SCANNED" -gt 0 && "$PARSEABLE" -eq 0 ]]; then
@@ -151,7 +151,7 @@ fi
 # heavy window). TSV rows: ts <TAB> kind <TAB> detail.
 MEANINGFUL=$(jq -r --arg since "$WINDOW_START" '
   select(.ts? >= $since)
-  | select(.event == "transition_committed" or .event == "gate_override"
+  | select(.event == "transition_committed" or (.event == "gate_override" and .reviewed_test_fixture != true)
          or (.event == "gate_run" and (.details.severity? // "") == "BLOCK"))
   | (if .event == "transition_committed" then
       [.ts, "state-change", "\(.details.candidate | split("/") | last) → \(.details.new_state)"]
@@ -245,7 +245,7 @@ fi
 [[ "$QUIET_PRS"   -gt 5 ]] && action "Quiet PRs"$'\t'"+$((QUIET_PRS - 5)) more"$'\t'"—"$'\t'"Run dashboard.sh for the full list"
 
 RECENT_OVERRIDES=$(jq -r --arg since "$(/usr/bin/date -u -d "@$(( NOW_EPOCH - 7 * 86400 ))" +%Y-%m-%dT%H:%M:%SZ)" \
-  '[inputs] | map(select(.event == "gate_override" and (.ts? >= $since))) | length' \
+  '[inputs] | map(select(.event == "gate_override" and .reviewed_test_fixture != true and (.ts? >= $since))) | length' \
   -n "$CLEAN_EVENTS_FILE" 2>/dev/null || echo 0)
 if [[ "$RECENT_OVERRIDES" -gt 0 ]]; then
   action "Overrides"$'\t'"${RECENT_OVERRIDES} gate override(s) in 7d"$'\t'"—"$'\t'"Review the trend table below / audit-overrides.sh --since=7"
@@ -268,6 +268,8 @@ fi
 esc() { /usr/bin/printf '%s' "$1" | /usr/bin/sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
 
 PROOF="${PARSEABLE}/${LINES_SCANNED} log lines parsed OK"
+REVIEWED_TESTS=$(jq -s '[.[] | select(.reviewed_test_fixture == true)] | length' "$CLEAN_EVENTS_FILE")
+[[ "$REVIEWED_TESTS" -gt 0 ]] && PROOF+="; ${REVIEWED_TESTS} reviewed test fixture(s) retained in audit history, excluded from operator overrides"
 [[ "$MALFORMED" -gt 0 ]] && PROOF+=" (${MALFORMED} malformed lines skipped — historical torn entries)"
 
 # Shared inline styles (email clients ignore <style> blocks — inline only).

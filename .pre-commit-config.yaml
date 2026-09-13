@@ -16,7 +16,7 @@ repos:
 
       - id: test-known-traps
         name: regression suite (4 known traps)
-        entry: bash -c 'if [ -f ~/.claude/skills/contribute/scripts/test-known-traps.sh ]; then ~/.claude/skills/contribute/scripts/test-known-traps.sh; else echo "skipped: skill not installed"; fi'
+        entry: skills/contribute/scripts/test-known-traps.sh
         language: system
         pass_filenames: false
         always_run: true

@@ -111,3 +111,34 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"1 malformed lines skipped"* ]]
 }
+
+@test "reviewed fixture is disclosed while a separate identical-reason override still alerts" {
+  python3 - "$STATE/log.jsonl" "$GATES_DIR/../reviewed-events.py" <<'PY'
+import importlib.util, json, sys
+from datetime import datetime, timezone
+spec = importlib.util.spec_from_file_location("reviewed", sys.argv[2])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+event = {"ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "event": "gate_override", "details": {"gate": "A05", "reason": "test 2: real override audit", "candidate": "/tmp/known-fixture.md"}}
+other = dict(event, details=dict(event["details"], candidate="/tmp/real-work.md"))
+review = {"event": "test_event_reviewed", "details": {"classification": "regression_fixture", "target_sha256": module.event_hash(event), "reason": "matched test receipt", "evidence": "hermetic regression"}}
+with open(sys.argv[1], "w") as out:
+    for entry in [event, other, review]:
+        out.write(json.dumps(entry) + "\n")
+PY
+  run "$RECAP" --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"1 gate override(s) in 7d"* ]]
+  [[ "$output" == *"1 reviewed test fixture(s) retained in audit history"* ]]
+  run "$GATES_DIR/../audit-overrides.sh" --since=7 --json
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq '.[0].overrides')" -eq 1 ]
+  [ "$(wc -l < "$STATE/log.jsonl")" -eq 3 ]
+}
+
+@test "override trend keeps real overrides after a torn historical log line" {
+  printf 'old torn line\n{"ts":"%s","event":"gate_override","details":{"gate":"A05","reason":"real override","candidate":"/tmp/real.md"}}\n' "$(iso '-1 day')" > "$STATE/log.jsonl"
+  run "$GATES_DIR/../audit-overrides.sh" --since=7 --json
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq '.[0].overrides')" -eq 1 ]
+}

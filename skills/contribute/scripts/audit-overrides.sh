@@ -28,6 +28,7 @@ set -uo pipefail
 # CONTRIBUTE_STATE_DIR override matches dashboard.sh — lets tests point the
 # reporter at a fixture state dir.
 LOG="${CONTRIBUTE_STATE_DIR:-${HOME}/.contribute-system}/log.jsonl"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SINCE_DAYS=""
 SCOPE=""
 GATE_FILTER=""
@@ -54,6 +55,16 @@ done
 if [[ ! -f "$LOG" ]]; then
   /usr/bin/printf 'no log file at %s — run a transition first\n' "$LOG" >&2
   exit 0
+fi
+
+# Use the same reviewed, tolerant event stream as the daily recap. Previously
+# a single torn historical line made strict jq fall back to an empty report.
+RAW_LOG="$LOG"
+LOG=$(mktemp -t contribute-override-events-XXXXXX)
+trap 'rm -f "$LOG"' EXIT
+if ! python3 "$SCRIPT_DIR/reviewed-events.py" "$RAW_LOG" > "$LOG"; then
+  echo 'cannot read override audit history' >&2
+  exit 1
 fi
 
 # Build a jq filter that applies --since + --scope + --gate filters before
@@ -103,7 +114,7 @@ fi
 
 # Phase 1: aggregate override counts + reasons per gate
 overrides_json=$(jq -cs --slurpfile _ <(/usr/bin/printf '[]') '
-  map(select(.event == "gate_override" and ('"$since_filter"') and ('"$scope_ovr"') and ('"$gate_filter_ovr"')))
+  map(select(.event == "gate_override" and .reviewed_test_fixture != true and ('"$since_filter"') and ('"$scope_ovr"') and ('"$gate_filter_ovr"')))
   | group_by(.details.gate // "" | ascii_downcase)
   | map({
       gate: (.[0].details.gate // "" | ascii_downcase),

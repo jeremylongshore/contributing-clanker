@@ -15,16 +15,17 @@
 set -uo pipefail
 
 VERBOSE="${1:-}"
-SYS="$HOME/.contribute-system"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TMPDIR=$(/usr/bin/mktemp -d)
+trap 'rm -rf "$TMPDIR"' EXIT
+source "$SCRIPT_DIR/lib-regression-state.sh"
+contribute_regression_state "$TMPDIR" "$SCRIPT_DIR"
 USER_GATES="$SYS/gates"
 
 # Plant a no-op gate in the user-override dir. Use a phase letter that runs
 # at shortlist→claimed (phase A). gate-runner globs phase-letter-prefix.sh.
 PLUGIN_GATE_NAME="azz99-plugin-test-$$.sh"
 PLUGIN_GATE="$USER_GATES/$PLUGIN_GATE_NAME"
-TMPDIR=$(/usr/bin/mktemp -d)
-trap 'rm -f "$PLUGIN_GATE"; rm -rf "$TMPDIR"' EXIT
 
 # Construct the no-op gate. Just emits PASS.
 /usr/bin/cat > "$PLUGIN_GATE" <<'EOF'
