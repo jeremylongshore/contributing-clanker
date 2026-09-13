@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The reviewed-event reader now tolerates malformed review metadata without
+  aborting the recap or override audit. Only dictionary metadata with a
+  canonical SHA-256 target and nonempty reason/evidence can classify a fixture;
+  malformed records remain in history and cannot hide an operator override.
+  Reader and public reporter regressions reproduce the old failure and pass
+  after the repair.
+
 - Contribution regression tests now use private state, including transition,
   runner, gate-log and override discovery paths. The old override test wrote a
   synthetic A05 event into the operator's live log on September 9; the daily

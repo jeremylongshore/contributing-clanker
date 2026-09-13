@@ -76,3 +76,20 @@ will display the synthetic override until it leaves their seven-day window.
 Do not roll back by deleting the original event or disabling a legitimate
 test. The next naturally scheduled email remains separate verification from
 the no-send runtime preview.
+
+## Followup: malformed review metadata
+
+Independent review of the merged reader found that valid JSON with
+`event=test_event_reviewed` and `details=null` raised `AttributeError`; a complete
+review containing an array `target_sha256` raised `TypeError`. Either could stop
+both read-only consumers instead of retaining the real override signal.
+
+The reader now validates dictionary metadata and a canonical 64-character
+hexadecimal hash before adding a reviewed target. Invalid review records stay
+in the output, but cannot classify or hide an override. The new reader cases
+and a recap/audit fixture fail against `c72f484` and pass after the correction.
+The complete Python regression suite passes ten tests. At 20:28:10 UTC on
+September 13, a no-send read against actual history still produced two actions
+and one explicitly reviewed test fixture; the raw log hash was unchanged.
+Production source provenance is verified separately after the normal PR merge.
+Followup tracking: `spine-ah3.7`.

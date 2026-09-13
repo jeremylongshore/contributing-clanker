@@ -2,6 +2,7 @@
 """Annotate exact, reviewed test events without altering append-only history."""
 import hashlib
 import json
+import re
 import sys
 
 
@@ -11,16 +12,22 @@ def event_hash(event):
 
 
 def annotate(events):
-    reviewed = {
-        e.get("details", {}).get("target_sha256")
-        for e in events
-        if e.get("event") == "test_event_reviewed"
-        and e.get("details", {}).get("classification") == "regression_fixture"
-        and isinstance(e.get("details", {}).get("reason"), str)
-        and e["details"]["reason"].strip()
-        and isinstance(e.get("details", {}).get("evidence"), str)
-        and e["details"]["evidence"].strip()
-    }
+    reviewed = set()
+    for event in events:
+        details = event.get("details")
+        if event.get("event") != "test_event_reviewed" or not isinstance(details, dict):
+            continue
+        target = details.get("target_sha256")
+        if (
+            details.get("classification") == "regression_fixture"
+            and isinstance(target, str)
+            and re.fullmatch(r"[0-9a-f]{64}", target)
+            and isinstance(details.get("reason"), str)
+            and details["reason"].strip()
+            and isinstance(details.get("evidence"), str)
+            and details["evidence"].strip()
+        ):
+            reviewed.add(target)
     for event in events:
         # A marker in an original event cannot self-certify a review. Only a
         # separate review record bound to its complete contents qualifies.
