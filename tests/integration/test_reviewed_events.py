@@ -25,6 +25,20 @@ class ReviewedEvents(unittest.TestCase):
         del self.review["details"]["evidence"]
         self.assertNotIn("reviewed_test_fixture", list(MODULE.annotate([self.event, self.review]))[0])
 
+    def test_malformed_review_details_cannot_abort_or_hide_an_override(self):
+        for details in (None, [], "invalid", 123, True):
+            with self.subTest(details=details):
+                review = dict(self.review, details=details)
+                result = list(MODULE.annotate([self.event, review]))
+                self.assertEqual(result, [self.event, review])
+
+    def test_review_target_must_be_a_canonical_sha256_string(self):
+        for target in (None, [], {}, 123, "", "x" * 64, "a" * 63, "A" * 64):
+            with self.subTest(target=target):
+                review = dict(self.review, details=dict(self.review["details"], target_sha256=target))
+                result = list(MODULE.annotate([self.event, review]))
+                self.assertEqual(result, [self.event, review])
+
     def test_event_cannot_self_certify_or_mark_unrelated_transition(self):
         event = dict(self.event, reviewed_test_fixture=True)
         self.assertNotIn("reviewed_test_fixture", list(MODULE.annotate([event]))[0])

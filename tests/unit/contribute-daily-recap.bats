@@ -142,3 +142,18 @@ PY
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq '.[0].overrides')" -eq 1 ]
 }
+
+@test "malformed review metadata preserves real overrides in recap and audit" {
+  printf '{"ts":"%s","event":"gate_override","details":{"gate":"A05","reason":"operator review","candidate":"fixture"}}\n' \
+    "$(iso '-1 day')" > "$STATE/log.jsonl"
+  cat >> "$STATE/log.jsonl" <<'EOF'
+{"event":"test_event_reviewed","details":null}
+{"event":"test_event_reviewed","details":{"classification":"regression_fixture","reason":"fixture","evidence":"fixture","target_sha256":[]}}
+EOF
+  run "$RECAP" --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"1 gate override(s) in 7d"* ]]
+  run "$GATES_DIR/../audit-overrides.sh" --since=7 --json
+  [ "$status" -eq 0 ]
+  [[ "$(printf '%s' "$output" | jq -r '.[0].overrides')" -eq 1 ]]
+}
