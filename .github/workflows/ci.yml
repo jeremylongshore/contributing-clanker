@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: lint bash (gates + scripts) # shellcheck is preinstalled on ubuntu-latest
         run: scripts/lint-bash.sh
 
@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: install bats # jq is preinstalled; npm avoids the apt-mirror hang (sudo: global prefix is root-owned)
         run: sudo npm install -g bats
       - name: deploy skill (so GATES_DIR ~/.claude/skills/contribute/scripts/gates resolves)
