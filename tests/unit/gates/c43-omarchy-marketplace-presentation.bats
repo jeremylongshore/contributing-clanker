@@ -171,6 +171,29 @@ sev() { printf '%s' "$output" | /usr/bin/jq -r '.severity'; }
   [[ "$output" == *"current plugin tree"* ]]
 }
 
+@test "c43 ignores git-ignored debris when fingerprinting the plugin tree" {
+  # Regression: only ./node_modules was excluded, so nested dependency trees and
+  # an ignored state store with executable JSON changed the fingerprint on a
+  # developer disk while the identical commit passed in CI.
+  printf 'node_modules/\n.beads/embeddeddolt/\n' > "$TREE/.gitignore"
+  mkdir -p "$TREE/web/node_modules/dep" "$TREE/api/node_modules/dep" "$TREE/.beads/embeddeddolt/db"
+  printf 'module.exports = 1\n' > "$TREE/web/node_modules/dep/index.js"
+  printf 'module.exports = 2\n' > "$TREE/api/node_modules/dep/index.js"
+  printf '{}\n' > "$TREE/.beads/embeddeddolt/db/config.json"
+  chmod +x "$TREE/.beads/embeddeddolt/db/config.json"
+  run_gate
+  [ "$status" -eq 0 ]
+  [ "$(sev)" = "PASS" ]
+}
+
+@test "c43 still counts an untracked script that git does not ignore" {
+  printf 'node_modules/\n' > "$TREE/.gitignore"
+  printf 'console.log(1)\n' > "$TREE/Extra.js"
+  run_gate
+  [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *"current plugin tree"* ]]
+}
+
 @test "c43 blocks a render receipt after its deterministic fixture changes" {
   mkdir -p "$TREE/e2e"
   printf '%s\n' '{"story":"old"}' > "$TREE/e2e/render-settings.json"
