@@ -70,7 +70,13 @@ parse_fm_field() {
 #
 # Posture: fail OPEN while the plugin tree is still unidentified (same as the
 # unmatched-candidate path below); fail CLOSED once a tree is identified.
-OMARCHY_MARKETPLACE_REPO="${OMARCHY_MARKETPLACE_REPO:-HANCORE-linux/omarchy-plugin-marketplace}"
+# The marketplace moved from HANCORE-linux to the official omacom org on
+# 2026-08-30 and the old name still redirects, so BOTH names reach it. Matching
+# only the old name made this guard silently optional: a submission filed to
+# the new name fell through to the pass-through exit with no gates, no receipt
+# check and no message. Match either owner, case-insensitively.
+OMARCHY_MARKETPLACE_REPO="${OMARCHY_MARKETPLACE_REPO:-omacom/omarchy-plugin-marketplace}"
+OMARCHY_MARKETPLACE_MATCH="${OMARCHY_MARKETPLACE_MATCH:-(omacom|HANCORE-linux)/omarchy-plugin-marketplace}"
 OMARCHY_CANONICAL_GATES="${OMARCHY_CANONICAL_GATES:-$HOME/000-projects/contributing-clanker/skills/contribute/scripts/gates}"
 
 # Run the canonical omarchy-relevant gates (c28-c37) against a plugin tree.
@@ -223,7 +229,7 @@ elif [[ "$CMD" =~ gh[[:space:]]+pr[[:space:]]+merge ]]; then
     REPO="${BASH_REMATCH[1]}"
   fi
 elif [[ "$CMD" =~ gh[[:space:]]+issue[[:space:]]+create ]] \
-  && /usr/bin/printf '%s' "$CMD" | /usr/bin/grep -qiF "$OMARCHY_MARKETPLACE_REPO"; then
+  && /usr/bin/printf '%s' "$CMD" | /usr/bin/grep -qiE "$OMARCHY_MARKETPLACE_MATCH"; then
   ACTION="omarchy-submit"
   REPO="$OMARCHY_MARKETPLACE_REPO"
 else
