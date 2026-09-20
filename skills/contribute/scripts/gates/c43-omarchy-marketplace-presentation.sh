@@ -180,10 +180,33 @@ if [[ "$GATE_ACTION" == "omarchy-submit" ]]; then
   # deterministic render controls under e2e/. C37 deliberately covers runtime
   # only; presentation proof must also change when its fixture or framing does.
   # scripts/ is the vendored gate lane and is intentionally excluded.
+  # List the files a fingerprint may cover, NUL-separated, as ./relative paths.
+  #
+  # When the tree is the root of a git work tree, only files git treats as part of
+  # the project are listed: tracked, plus untracked files that are not ignored. A
+  # bare `find` also swept in ignored debris, and a receipt is supposed to certify
+  # the tree being SUBMITTED. On 2026-09-20 a plugin whose committed tree matched
+  # its receipt exactly was blocked because 2,046 files under api/node_modules and
+  # web/node_modules (only ./node_modules was excluded) and two executable JSON
+  # files inside an ignored .beads/embeddeddolt store were hashed into it. The same
+  # commit passed in CI, where none of that exists, so the verdict depended on
+  # whose disk it ran on.
+  #
+  # On a clean checkout the two listings are identical, so every existing receipt
+  # keeps its fingerprint. Outside a git root it falls back to the plain walk.
+  _fingerprint_candidates() {
+    if [[ "$(/usr/bin/git rev-parse --show-toplevel 2>/dev/null)" == "$(pwd -P)" ]]; then
+      /usr/bin/git ls-files -z --cached --others --exclude-standard 2>/dev/null \
+        | /usr/bin/sed -z 's|^|./|'
+    else
+      /usr/bin/find . -type f -not -path './.git/*' -print0 2>/dev/null
+    fi
+  }
   presentation_fingerprint() {
     ( cd "$GATE_TREE_DIR" && \
-      /usr/bin/find . -type f \
-        -not -path './.git/*' -not -path './tests/*' \
+      _fingerprint_candidates \
+      | /usr/bin/find -files0-from - -maxdepth 0 -type f \
+        -not -path './tests/*' \
         -not -path './scripts/*' -not -path './node_modules/*' \
         \( -path './e2e/*' -o -name '*.qml' -o -name '*.js' -o -name 'manifest.json' -o -perm -u+x \) \
         -print0 2>/dev/null \
