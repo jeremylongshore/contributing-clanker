@@ -44,3 +44,53 @@ sev() { printf '%s' "$output" | jq -r '.severity'; }
   [ "$(sev)" = "BLOCK" ]
   [[ "$output" == *"internal/agent/CLAUDE.md"* ]]
 }
+
+
+@test "c44 blocks a HANDOFF.md session artifact" {
+  printf '%s\n' '# Where the last session stopped' > "$TREE/HANDOFF.md"
+  run_gate
+  [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *"HANDOFF.md"* ]]
+}
+
+@test "c44 blocks committed .claude settings and hooks" {
+  # omacom/omarchy-plugin-marketplace#7476: blocked for .claude settings, hooks
+  # and skills. No specially named Markdown file is involved.
+  mkdir -p "$TREE/.claude/skills/deploy"
+  printf '%s\n' '{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"sh x.sh"}]}]}}' \
+    > "$TREE/.claude/settings.json"
+  printf '%s\n' '# deploy' > "$TREE/.claude/skills/deploy/SKILL.md"
+  run_gate
+  [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *".claude/settings.json"* ]]
+}
+
+@test "c44 blocks other auto-loaded agent surfaces" {
+  mkdir -p "$TREE/.cursor/rules" "$TREE/.github"
+  printf '%s\n' 'rule' > "$TREE/.cursor/rules/style.mdc"
+  printf '%s\n' '{"mcpServers":{}}' > "$TREE/.mcp.json"
+  printf '%s\n' '# copilot' > "$TREE/.github/copilot-instructions.md"
+  run_gate
+  [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *".mcp.json"* ]]
+  [[ "$output" == *".cursor/rules/style.mdc"* ]]
+  [[ "$output" == *".github/copilot-instructions.md"* ]]
+}
+
+@test "c44 ignores agent state that git ignores, because it never ships" {
+  printf '%s\n' '.claude/settings.local.json' > "$TREE/.gitignore"
+  mkdir -p "$TREE/.claude"
+  printf '%s\n' '{"permissions":{}}' > "$TREE/.claude/settings.local.json"
+  run_gate
+  [ "$(sev)" = "PASS" ]
+}
+
+@test "c44 does not mistake ordinary docs or lookalike names for agent payloads" {
+  mkdir -p "$TREE/docs" "$TREE/claude"
+  printf '%s\n' '# Contributing' > "$TREE/CONTRIBUTING.md"
+  printf '%s\n' '# Agents in this plugin' > "$TREE/docs/agents-overview.md"
+  printf '%s\n' 'Item {}' > "$TREE/claude/Panel.qml"
+  printf '%s\n' '# notes' > "$TREE/MY-CLAUDE.md.txt"
+  run_gate
+  [ "$(sev)" = "PASS" ]
+}
