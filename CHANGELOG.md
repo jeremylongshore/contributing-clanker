@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- C41 now requires oversized-read evidence alongside final-entry, temporary-entry,
+  parent-directory, and FIFO evidence. Regression tests cover each missing category
+  and case-insensitive matching, alongside the existing large-corpus SIGPIPE test.
+
 - The reviewed-event reader now tolerates malformed review metadata without
   aborting the recap or override audit. Only dictionary metadata with a
   canonical SHA-256 target and nonempty reason/evidence can classify a fixture;

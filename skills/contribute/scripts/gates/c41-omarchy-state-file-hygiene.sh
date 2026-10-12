@@ -177,8 +177,8 @@ PY
 done < <(gate_shell_runtime_files)
 
 # Evidence is a separate denominator. Stateful runtime code needs hostile
-# same-UID coverage for final-file, temporary-file, parent-directory, and FIFO
-# cases. A happy-path suite cannot prove this class.
+# same-UID coverage for final-file, temporary-file, and parent-directory swaps,
+# plus FIFO and oversized-read cases. A happy-path suite cannot prove this class.
 STATEFUL=0
 while IFS= read -r REL; do
   SRC=$(gate_file_content "$REL")
@@ -193,7 +193,7 @@ if [[ "$STATEFUL" -eq 1 ]]; then
   while IFS= read -r REL; do
     TEST_EVIDENCE+=$(gate_file_content "$REL")$'\n'
   done < <(gate_tree_files '^tests/.*\.(test\.(js|sh)|spec\.(js|sh))$')
-  for token in final temp parent FIFO; do
+  for token in final temp parent FIFO oversize; do
     if ! /usr/bin/grep -qi "$token" <<<"$TEST_EVIDENCE"; then
       HITS+="state lifecycle evidence is missing hostile $token replacement coverage"$'\n'
     fi
