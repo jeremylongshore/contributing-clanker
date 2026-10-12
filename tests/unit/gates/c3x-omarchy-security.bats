@@ -304,19 +304,78 @@ EOF
   cat > "$TREE/tests/state.test.js" <<'EOF'
 // Hostile lifecycle evidence: final, temp, parent, FIFO, oversized.
 EOF
-  # Put every decisive token before more than a pipe buffer of inert evidence.
+  # Exceed a pipe buffer while staying below Linux's per-argument size limit,
+  # so the historical external printf reaches SIGPIPE rather than E2BIG.
   # The old printf | grep -q shape intermittently treated grep's successful
   # early exit plus printf's SIGPIPE as a missing-token failure.
-  for _ in $(seq 1 5000); do
-    printf '%s\n' '// deterministic inert evidence padding 0123456789' >> "$TREE/bin/descriptor-reader"
+  for _ in $(seq 1 2000); do
     printf '%s\n' '// deterministic inert test padding 0123456789' >> "$TREE/tests/state.test.js"
   done
   chmod +x "$TREE/bin/descriptor-reader"
 
-  for _ in $(seq 1 20); do
-    run_tree_gate c41-omarchy-state-file-hygiene.sh
-    [ "$(sev)" = "PASS" ]
+  # Exercise the evidence scan first, then the runtime scan too. Otherwise a
+  # false "no stateful helper" PASS can mask broken evidence-token searches.
+  for corpus in evidence runtime; do
+    if [[ "$corpus" = runtime ]]; then
+      for _ in $(seq 1 2000); do
+        printf '%s\n' '// deterministic inert evidence padding 0123456789' >> "$TREE/bin/descriptor-reader"
+      done
+    fi
+    for _ in $(seq 1 20); do
+      run_tree_gate c41-omarchy-state-file-hygiene.sh
+      [ "$(sev)" = "PASS" ]
+      [[ "$output" == *"mutable local state uses descriptor lifecycle primitives"* ]]
+    done
   done
+}
+
+assert_missing_state_evidence_blocks() {
+  local missing="$1" tokens="$2"
+  mkdir -p "$TREE/bin" "$TREE/tests"
+  cat > "$TREE/bin/descriptor-reader" <<'EOF'
+#!/usr/bin/perl
+use Fcntl qw(O_NOFOLLOW O_NONBLOCK O_RDONLY);
+my $root = $ENV{XDG_STATE_HOME};
+sysopen(my $fh, "$root/state", O_RDONLY | O_NONBLOCK | O_NOFOLLOW);
+EOF
+  chmod +x "$TREE/bin/descriptor-reader"
+  printf '// Hostile lifecycle evidence: %s.\n' "$tokens" > "$TREE/tests/state.test.js"
+  run_tree_gate c41-omarchy-state-file-hygiene.sh
+  [ "$(sev)" = "BLOCK" ]
+  [[ "$output" == *"missing hostile $missing replacement coverage"* ]]
+}
+
+@test "c41 blocks missing final-entry evidence" {
+  assert_missing_state_evidence_blocks final 'temp, parent, FIFO, oversized'
+}
+
+@test "c41 blocks missing temporary-entry evidence" {
+  assert_missing_state_evidence_blocks temp 'final, parent, FIFO, oversized'
+}
+
+@test "c41 blocks missing parent-directory evidence" {
+  assert_missing_state_evidence_blocks parent 'final, temp, FIFO, oversized'
+}
+
+@test "c41 blocks missing FIFO evidence" {
+  assert_missing_state_evidence_blocks FIFO 'final, temp, parent, oversized'
+}
+
+@test "c41 blocks missing oversized-read evidence" {
+  assert_missing_state_evidence_blocks oversize 'final, temp, parent, FIFO'
+}
+
+@test "c41 evidence matching remains case-insensitive" {
+  mkdir -p "$TREE/bin" "$TREE/tests"
+  cat > "$TREE/bin/stateful" <<'EOF'
+#!/usr/bin/env bash
+root="${XDG_STATE_HOME:-$HOME/.local/state}/sample"
+exec secure-state read "$root"
+EOF
+  chmod +x "$TREE/bin/stateful"
+  printf '// FINAL TeMp PARENT fifo OvErSiZeD\n' > "$TREE/tests/state.test.js"
+  run_tree_gate c41-omarchy-state-file-hygiene.sh
+  [ "$(sev)" = "PASS" ]
 }
 
 @test "c41 excludes isolated e2e fixture hooks from shipped runtime" {
