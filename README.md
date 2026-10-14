@@ -1,5 +1,11 @@
 # contributing-clanker v0.3.0
 
+<!-- intent-select-partner:start -->
+[![Intent Solutions: Claude Partner Network Select Services Partner](https://raw.githubusercontent.com/intent-solutions-io/.github/b82af5d3e7951d85e39ea9e65cc24ee8278722a7/assets/brand/claude-select-partner.svg)](https://intentsolutions.io/)
+
+Intent Solutions is a Claude Partner Network Select Services Partner.
+<!-- intent-select-partner:end -->
+
 Make AI-assisted open-source contributions land cleanly — caught by deterministic gates before they reach maintainers as slop.
 
 A local-only Claude Code skill plus workspace for contributing to open-source projects you don't own. It runs 65 deterministic safety gates over every claim comment, design issue, and pull request, so AI-generated work never reaches an upstream maintainer as low-quality "slop." State is plain markdown — greppable, git-trackable, no database, no cloud calls.
