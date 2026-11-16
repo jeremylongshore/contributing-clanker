@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- C42 (local resource budget) now scans shipped Perl runtime helpers, selected by
+  a `.pl`/`.pm` name or a Perl shebang. It previously matched shell files only,
+  so it never opened capture-conveyor's Perl scanner and returned PASS over a
+  corpus of one git hook. New Perl rules WARN when `sort` consumes `readdir`,
+  `glob` or `<*>` output, or a container filled from them, with no entry budget
+  first. The only accepted budget is a numeric `last` inside a scalar
+  `while (readdir ...)` loop, because `glob` and `for (readdir ...)` build the
+  whole list before the loop runs. They also WARN when backticks, `qx//`,
+  `readpipe`, a pipe `open` or `system`/`exec` run `hyprctl` or another
+  input-sized command with no `alarm` or `timeout`. A PASS now names every file
+  it scanned by language. An empty corpus is now a SKIP instead of a PASS.
+  Shell rules are unchanged. Twelve regression cases exercise C42 in both
+  languages. Ten fail against the previous gate, and the two shell-severity
+  cases pass against both versions.
+
 - C41 now requires oversized-read evidence alongside final-entry, temporary-entry,
   parent-directory, and FIFO evidence. Regression tests cover each missing category
   and case-insensitive matching, alongside the existing large-corpus SIGPIPE test.
