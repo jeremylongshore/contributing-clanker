@@ -130,7 +130,9 @@ ${CLAUDE_SKILL_DIR}/scripts/gate-runner.sh omarchy-submit ENTRY_REPOSITORY
 The dedicated gates cover prose voice, private names, Markdown rendering, QML
 text safety, validator results, command injection, runtime dependencies, layout
 overflow, rig evidence, SSRF destination policy, state-file hygiene, bounded
-resource use, and marketplace presentation. The scripts beneath
+resource use in shipped shell and Perl helpers, and marketplace presentation.
+C42 names the files it scanned when it passes and skips when its corpus is
+empty, so read its PASS for what it covered. The scripts beneath
 `scripts/gates/c28-*` through `c44-*` are authoritative for exact checks.
 
 Deterministic gates do not replace judgment about product taste, unnecessary

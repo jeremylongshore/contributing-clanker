@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Unit tests for the Omarchy content gates: c28-c31, c34-c36, c38, c40.
+# Unit tests for the Omarchy content gates: c28-c31, c34-c36, c38, c40-c42.
 #
 # These twelve gates shipped with NO coverage while the other fifty-one had it,
 # and they are the ones that encode real shipped VULNERABILITIES: a token in
@@ -391,6 +391,14 @@ EOF
   [ "$(sev)" = "PASS" ]
 }
 
+# ------------------------------------------------------------------------ c42
+#
+# C42 used to select shell files only. capture-conveyor's scanner is Perl, so
+# the gate never opened it and answered PASS over a corpus of one git hook.
+# Every case asserts an exact severity AND the file or line it is about, so a
+# vacuous PASS or an empty-corpus SKIP cannot satisfy a WARN case, and a PASS
+# has to name what it actually read.
+
 @test "c42 excludes isolated e2e fixture hooks from shipped runtime" {
   mkdir -p "$TREE/e2e"
   cat > "$TREE/e2e/rig-before-shell.sh" <<'EOF'
@@ -399,7 +407,242 @@ find "$HOME" -type f | sort | head -10
 EOF
   chmod +x "$TREE/e2e/rig-before-shell.sh"
   run_tree_gate c42-omarchy-local-resource-budget.sh
+  # The hook would WARN if it were selected. With it excluded nothing is left
+  # to scan, and an empty corpus is a SKIP, never a PASS.
+  [ "$(sev)" = "SKIP" ]
+  [[ "$output" == *"no shipped shell or Perl runtime file to scan"* ]]
+}
+
+@test "c42 still warns on a shell find piped to sort before any head" {
+  mkdir -p "$TREE/bin"
+  cat > "$TREE/bin/loose-scan" <<'EOF'
+#!/usr/bin/env bash
+find "$HOME" -name .git -print0 | sort -zu | head -z -n 25
+EOF
+  chmod +x "$TREE/bin/loose-scan"
+  run_tree_gate c42-omarchy-local-resource-budget.sh
+  [ "$(sev)" = "WARN" ]
+  [[ "$output" == *"bin/loose-scan:2"* ]]
+}
+
+@test "c42 still warns on a shell hyprctl capture with no timeout" {
+  mkdir -p "$TREE/bin"
+  cat > "$TREE/bin/board-scan" <<'EOF'
+#!/usr/bin/env bash
+clients="$(hyprctl clients -j)"
+printf '%s\n' "${#clients}"
+EOF
+  chmod +x "$TREE/bin/board-scan"
+  run_tree_gate c42-omarchy-local-resource-budget.sh
+  [ "$(sev)" = "WARN" ]
+  [[ "$output" == *"bin/board-scan:2 captures hyprctl output"* ]]
+}
+
+@test "c42 passes a shell scanner that budgets find and times hyprctl, and names it" {
+  mkdir -p "$TREE/bin"
+  cat > "$TREE/bin/board-scan" <<'EOF'
+#!/usr/bin/env bash
+find "$HOME/Pictures" -maxdepth 1 -print0 | head -z -n 512 | sort -z | head -z -n 25
+clients="$(timeout 2 hyprctl clients -j | head -c 65536)"
+printf '%s\n' "${#clients}"
+EOF
+  chmod +x "$TREE/bin/board-scan"
+  run_tree_gate c42-omarchy-local-resource-budget.sh
   [ "$(sev)" = "PASS" ]
+  [[ "$output" == *"scanned 1 shipped runtime file(s) (shell: bin/board-scan)"* ]]
+}
+
+@test "c42 warns on a Perl readdir loop sorted with no entry budget" {
+  # Selected by its .pl name alone: there is no shebang line.
+  mkdir -p "$TREE/bin"
+  cat > "$TREE/bin/inventory.pl" <<'EOF'
+use strict;
+use warnings;
+opendir(my $dh, "$ENV{HOME}/Pictures") or exit 0;
+my @captures;
+while (defined(my $name = readdir($dh))) {
+    next unless $name =~ /\.png\z/;
+    push @captures, $name;
+}
+closedir($dh);
+@captures = sort @captures;
+splice(@captures, 24) if @captures > 24;
+print "$_\n" for @captures;
+EOF
+  run_tree_gate c42-omarchy-local-resource-budget.sh
+  [ "$(sev)" = "WARN" ]
+  [[ "$output" == *"bin/inventory.pl:10"* ]]
+  [[ "$output" == *"@captures, filled at line 5 with no entry budget"* ]]
+}
+
+@test "c42 passes budgeted Perl scanners and names each one it scanned" {
+  # The capture-conveyor shape: a counter checked inside the readdir loop,
+  # in block form, and the crew-chief shape: an array-size cap in modifier
+  # form, sorted later through a reference.
+  mkdir -p "$TREE/bin"
+  cat > "$TREE/bin/capture-scan" <<'EOF'
+#!/usr/bin/perl
+use strict;
+use warnings;
+my $SCAN_BUDGET = 512;
+opendir(my $dh, "$ENV{HOME}/Pictures") or exit 0;
+my @captures;
+my $seen = 0;
+while (defined(my $name = readdir($dh))) {
+    next if $name eq '.' || $name eq '..';
+    if (++$seen > $SCAN_BUDGET) {
+        last;
+    }
+    next unless $name =~ /^screenshot-.*\.png$/;
+    push @captures, { path => $name, modified => (stat "$ENV{HOME}/Pictures/$name")[9] };
+}
+@captures = sort { $b->{modified} <=> $a->{modified} } @captures;
+splice(@captures, 24) if @captures > 24;
+EOF
+  cat > "$TREE/bin/spool-scan" <<'EOF'
+#!/usr/bin/perl
+use strict;
+sub candidates {
+    my ($cap) = @_;
+    opendir(my $dh, '.') or die "cannot enumerate spool\n";
+    my @rows;
+    while (defined(my $name = readdir($dh))) {
+        push @rows, $name;
+        last if @rows >= $cap;
+    }
+    return \@rows;
+}
+my $rows = candidates(256);
+my @newest = sort { $b cmp $a } @$rows;
+EOF
+  chmod +x "$TREE/bin/capture-scan" "$TREE/bin/spool-scan"
+  run_tree_gate c42-omarchy-local-resource-budget.sh
+  [ "$(sev)" = "PASS" ]
+  [[ "$output" == *"scanned 2 shipped runtime file(s) (Perl: bin/capture-scan, bin/spool-scan)"* ]]
+}
+
+@test "c42 selects Perl by shebang without an extension and flags a direct readdir sort" {
+  mkdir -p "$TREE/bin"
+  cat > "$TREE/bin/recent" <<'EOF'
+#!/usr/bin/env perl
+use strict;
+opendir(my $dh, $ENV{HOME}) or exit 0;
+my @names = sort grep { !/^\./ } readdir($dh);
+print "$_\n" for @names[0 .. 9];
+EOF
+  chmod +x "$TREE/bin/recent"
+  run_tree_gate c42-omarchy-local-resource-budget.sh
+  [ "$(sev)" = "WARN" ]
+  [[ "$output" == *"bin/recent:4"* ]]
+  [[ "$output" == *"consumes"*"readdir"*"output directly"* ]]
+}
+
+@test "c42 does not accept a last inside a glob or foreach-readdir loop as a budget" {
+  # glob and list-context readdir build the whole list before the loop's
+  # first iteration, so the counter caps nothing upstream of the buffer.
+  mkdir -p "$TREE/bin"
+  cat > "$TREE/bin/shots" <<'EOF'
+#!/usr/bin/perl
+my @shots;
+my $n = 0;
+for my $f (glob("$ENV{HOME}/Pictures/*.png")) {
+    last if ++$n > 50;
+    push @shots, $f;
+}
+print for sort @shots;
+EOF
+  cat > "$TREE/bin/names" <<'EOF'
+#!/usr/bin/perl
+opendir(my $dh, $ENV{HOME}) or exit 0;
+my (@names, $n);
+foreach my $e (readdir $dh) {
+    last if ++$n > 50;
+    push @names, $e;
+}
+print for sort @names;
+EOF
+  chmod +x "$TREE/bin/shots" "$TREE/bin/names"
+  run_tree_gate c42-omarchy-local-resource-budget.sh
+  [ "$(sev)" = "WARN" ]
+  [[ "$output" == *"(2 in 2 scanned runtime file(s))"* ]]
+  [[ "$output" == *"bin/names:8"* ]]
+  [[ "$output" == *"bin/shots:8"* ]]
+}
+
+@test "c42 follows Perl entries through copies, statement modifiers and hash keys" {
+  mkdir -p "$TREE/bin"
+  cat > "$TREE/bin/copy" <<'EOF'
+#!/usr/bin/perl
+opendir(my $dh, $ENV{HOME}) or exit 0;
+my @all = readdir $dh;
+my @png = grep { /\.png\z/ } @all;
+print for sort @png;
+EOF
+  cat > "$TREE/bin/modifier" <<'EOF'
+#!/usr/bin/perl
+opendir(my $dh, $ENV{HOME}) or exit 0;
+my @names;
+push @names, $_ for readdir $dh;
+print for sort @names;
+EOF
+  cat > "$TREE/bin/seen" <<'EOF'
+#!/usr/bin/perl
+my %seen;
+$seen{$_}++ for glob("$ENV{HOME}/*");
+print for sort keys %seen;
+EOF
+  chmod +x "$TREE/bin/copy" "$TREE/bin/modifier" "$TREE/bin/seen"
+  run_tree_gate c42-omarchy-local-resource-budget.sh
+  [ "$(sev)" = "WARN" ]
+  [[ "$output" == *"(3 in 3 scanned runtime file(s))"* ]]
+  [[ "$output" == *"bin/copy:5"*"copied from @all"* ]]
+  [[ "$output" == *"bin/modifier:5"* ]]
+}
+
+@test "c42 warns on Perl hyprctl captures with no alarm or timeout" {
+  mkdir -p "$TREE/bin"
+  cat > "$TREE/bin/storyboard-scan" <<'EOF'
+#!/usr/bin/perl
+use strict;
+my $clients = `hyprctl clients -j`;
+my $active = qx{hyprctl activewindow -j};
+open(my $fh, '-|', 'hyprctl', 'workspaces', '-j') or exit 0;
+EOF
+  chmod +x "$TREE/bin/storyboard-scan"
+  run_tree_gate c42-omarchy-local-resource-budget.sh
+  [ "$(sev)" = "WARN" ]
+  [[ "$output" == *"(3 in 1 scanned runtime file(s))"* ]]
+  [[ "$output" == *"bin/storyboard-scan:3 runs"*"hyprctl"*"through backticks"* ]]
+  [[ "$output" == *"bin/storyboard-scan:4 runs"*"through qx//"* ]]
+}
+
+@test "c42 passes Perl commands bounded by timeout or alarm, and ignores non-command mentions" {
+  mkdir -p "$TREE/bin"
+  cat > "$TREE/bin/timed" <<'EOF'
+#!/usr/bin/perl
+use strict;
+open(my $fh, '-|', '/usr/bin/timeout', '2', 'hyprctl', 'clients', '-j') or exit 0;
+my $active = qx{timeout 1 hyprctl activewindow -j | head -c 65536};
+EOF
+  cat > "$TREE/bin/alarmed" <<'EOF'
+#!/usr/bin/perl
+use strict;
+local $SIG{ALRM} = sub { die "timeout\n" };
+alarm 2;
+my $clients = `hyprctl clients -j`;
+alarm 0;
+EOF
+  cat > "$TREE/bin/mover" <<'EOF'
+#!/usr/bin/perl
+use strict;
+my ($from, $to) = @ARGV;
+system('/usr/bin/mv', '--no-clobber', '--', $from, $to) == 0
+    or die "cannot find $to after the move\n";
+EOF
+  chmod +x "$TREE/bin/timed" "$TREE/bin/alarmed" "$TREE/bin/mover"
+  run_tree_gate c42-omarchy-local-resource-budget.sh
+  [ "$(sev)" = "PASS" ]
+  [[ "$output" == *"(Perl: bin/alarmed, bin/mover, bin/timed)"* ]]
 }
 
 # ----------------------------------------------------------- empty-corpus rule
@@ -410,7 +653,7 @@ EOF
   # never established.
   rm -f "$TREE"/*.qml "$TREE"/*.js
   for g in c31-omarchy-qml-security.sh c34-omarchy-exec-injection.sh \
-           c36-omarchy-qml-overflow.sh; do
+           c36-omarchy-qml-overflow.sh c42-omarchy-local-resource-budget.sh; do
     run_tree_gate "$g"
     [ "$(sev)" = "SKIP" ]
   done
